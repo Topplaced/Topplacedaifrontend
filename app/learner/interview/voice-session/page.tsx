@@ -95,6 +95,24 @@ const defaultLanguage = config.language;
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [interviewProgress, setInterviewProgress] = useState(0);
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
+  
+  // Response time tracking like testInterview.html
+  const [responseStartTime, setResponseStartTime] = useState<number | null>(null);
+  const [lastResponseTime, setLastResponseTime] = useState<number | null>(null);
+  
+  // Debug panel like testInterview.html
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [debugLogs, setDebugLogs] = useState<any[]>([]);
+  const [codeExecutionSuccess, setCodeExecutionSuccess] = useState(false);
+  const [lastExecutionResult, setLastExecutionResult] = useState<any>(null);
+  
+  // Progress tracking function like testInterview.html
+  const updateProgress = (answered: number, total: number) => {
+    setQuestionsAnswered(answered);
+    setTotalQuestions(total);
+    const percentage = total > 0 ? Math.round((answered / total) * 100) : 0;
+    setInterviewProgress(percentage);
+  };
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [showCodeEditor, setShowCodeEditor] = useState(hasCodeEditor); // Show by default if available
   const [recognition, setRecognition] = useState<any>(null);
@@ -429,12 +447,20 @@ const defaultLanguage = config.language;
   };
 
   const sendAnswerToAPI = async (answer: string, isCode: boolean = false) => {
+    // Calculate response time if tracking started
+    let responseTime = 18; // Default response time
+    if (responseStartTime) {
+      responseTime = Math.round((Date.now() - responseStartTime) / 1000); // Convert to seconds
+      setLastResponseTime(responseTime);
+      setResponseStartTime(null); // Reset for next question
+    }
+    
     try {
       const body: any = {
         sessionId: sessionId,
         message: answer,
         questionId: currentQuestionId,
-        responseTime: 18, // Default response time
+        responseTime: responseTime,
       };
 
       if (isCode) {
@@ -459,6 +485,12 @@ const defaultLanguage = config.language;
       if (response.ok) {
         const data = await response.json();
         console.log("✅ Enhanced conversation response:", data);
+        
+        // Add to debug logs like testInterview.html
+        if (showDebugPanel) {
+          const debugEntry = `[${new Date().toLocaleTimeString()}] Enhanced API Response: ${JSON.stringify(data, null, 2)}`;
+          setDebugLogs(prev => [...prev.slice(-9), debugEntry]); // Keep last 10 entries
+        }
 
         // Handle AI response
         if (data.aiResponse) {
@@ -476,7 +508,12 @@ const defaultLanguage = config.language;
         if (data.currentQuestion) {
           setCurrentQuestionId(data.currentQuestion.id);
           setCurrentQuestionNumber(data.currentQuestion.questionNumber);
-          setTotalQuestions(data.currentQuestion.totalQuestions);
+          if (data.currentQuestion.totalQuestions) {
+            setTotalQuestions(data.currentQuestion.totalQuestions);
+          }
+          
+          // Start timing for next question
+          setResponseStartTime(Date.now());
           
           const questionMessage: Message = {
             id: `question_${Date.now()}`,
@@ -490,12 +527,7 @@ const defaultLanguage = config.language;
 
         // Update progress
         if (data.progress) {
-          setQuestionsAnswered(data.progress.questionsAnswered || questionsAnswered);
-          setTotalQuestions(data.progress.totalQuestions || totalQuestions);
-          const progressPercentage = Math.round(
-            ((data.progress.questionsAnswered || questionsAnswered) / (data.progress.totalQuestions || totalQuestions)) * 100
-          );
-          setInterviewProgress(progressPercentage);
+          updateProgress(data.progress.questionsAnswered || questionsAnswered, data.progress.totalQuestions || totalQuestions);
         }
       } else {
         throw new Error(`HTTP ${response.status}`);
@@ -552,7 +584,11 @@ const defaultLanguage = config.language;
         console.log("✅ Interview started:", data);
 
         setSessionId(data.sessionId);
-        setTotalQuestions(data.firstQuestion?.totalQuestions || 6);
+        if (data.firstQuestion?.totalQuestions) {
+          updateProgress(0, data.firstQuestion.totalQuestions);
+        } else {
+          setTotalQuestions(6);
+        }
 
         const welcomeMessage: Message = {
           id: `welcome_${Date.now()}`,
@@ -659,7 +695,8 @@ const defaultLanguage = config.language;
     setMessages((prev) => [...prev, codeMessage]);
 
     try {
-      const response = await fetch(`${API_URL}/interview/code/execute`, {
+      // First execute the code
+      const executeResponse = await fetch(`${API_URL}/interview/code/execute`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -667,8 +704,9 @@ const defaultLanguage = config.language;
         },
         body: JSON.stringify({
           sessionId: sessionId,
-          code: code,
           language: language.toUpperCase(),
+          code: code,
+          stdin: "", // Add stdin support like testInterview.html
           codeContext: {
             questionId: currentQuestionId || `code_${Date.now()}`,
             question: `Code execution for ${language}`,
@@ -676,31 +714,78 @@ const defaultLanguage = config.language;
         }),
       });
 
-      if (response.ok) {
-        const result = await response.json();
+      if (executeResponse.ok) {
+        const result = await executeResponse.json();
         console.log("✅ Code execution result:", result);
 
+        // Store execution result and mark as successful
+        setLastExecutionResult(result);
+        setCodeExecutionSuccess(true);
+
+        // Display execution results with enhanced formatting like testInterview.html
+        const executionTime = Number(result.executionTime).toFixed(3);
         const resultMessage: Message = {
           id: `result_${Date.now()}`,
           type: "ai",
-          content: `Code executed successfully!\n\nOutput: ${
+          content: `Code Execution Results:\n→ Output: ${
             result.output || "No output"
-          }\n\n${result.feedback || "Good job!"}`,
+          }\n→ Time: ${executionTime}s\n→ Memory: ${result.memory}\n\n✅ Code ran successfully! You can now submit your solution.`,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, resultMessage]);
-
-        // Play audio feedback
-        playAIAudio("", result.feedback || "Code executed successfully!");
       } else {
-        throw new Error(`HTTP ${response.status}`);
+        const errorData = await executeResponse.json().catch(() => ({}));
+        const errorMsg = errorData.message || `HTTP ${executeResponse.status}`;
+        throw new Error(errorMsg);
       }
     } catch (error) {
       console.error("❌ Code execution error:", error);
+      setCodeExecutionSuccess(false);
+      setLastExecutionResult(null);
       const errorMessage: Message = {
         id: `error_${Date.now()}`,
         type: "system",
         content: `❌ Code execution failed: ${
+          error && typeof error === "object" && "message" in error
+            ? (error as { message: string }).message
+            : String(error)
+        }`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    }
+  };
+
+  const submitCode = async () => {
+    if (!codeExecutionSuccess || !lastExecutionResult) {
+      setWarningMessage("Please run your code successfully before submitting.");
+      setShowWarning(true);
+      return;
+    }
+
+    console.log("📤 Submitting code solution...");
+
+    try {
+      // Send code submission to enhanced conversation API with execution results
+      await sendAnswerToAPI(`Code submitted and executed. Output: ${lastExecutionResult.output || "No output"}`, true);
+      
+      // Reset code execution state after successful submission
+      setCodeExecutionSuccess(false);
+      setLastExecutionResult(null);
+      
+      const submitMessage: Message = {
+        id: `submit_${Date.now()}`,
+        type: "system",
+        content: "✅ Code solution submitted successfully!",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, submitMessage]);
+    } catch (error) {
+      console.error("❌ Code submission error:", error);
+      const errorMessage: Message = {
+        id: `submit_error_${Date.now()}`,
+        type: "system",
+        content: `❌ Code submission failed: ${
           error && typeof error === "object" && "message" in error
             ? (error as { message: string }).message
             : String(error)
@@ -807,6 +892,249 @@ const defaultLanguage = config.language;
     router.push("/learner/interview/results");
   };
 
+  // Additional API functions from testInterview.html
+  const getConversationHistory = async () => {
+    if (!sessionId) {
+      console.warn("⚠️ No session ID available for history retrieval");
+      const errorMessage: Message = {
+        id: `error_${Date.now()}`,
+        type: "system",
+        content: "No session ID available for loading history.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_URL}/interview/conversation/history/${encodeURIComponent(sessionId)}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("✅ Conversation history loaded:", data);
+        
+        if (data.success && data.conversations && data.conversations.length > 0) {
+          // Convert history to messages and replace current messages
+          const historyMessages: Message[] = data.conversations.map((conv: any, index: number) => ({
+            id: `history_${index}_${conv.timestamp}`,
+            type: conv.role === 'user' ? 'user' : 'ai',
+            content: conv.message,
+            timestamp: new Date(conv.timestamp)
+          }));
+          
+          // Replace current messages with history
+          setMessages(historyMessages);
+          
+          // Add confirmation message
+          const confirmationMessage: Message = {
+            id: `history_loaded_${Date.now()}`,
+            type: "system",
+            content: `✅ Conversation history loaded: ${data.conversations.length} messages from ${new Date(data.conversations[0]?.timestamp).toLocaleString()} to ${new Date(data.conversations[data.conversations.length - 1]?.timestamp).toLocaleString()}`,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, confirmationMessage]);
+          
+          // Update progress if available in history
+          if (data.progress) {
+            updateProgress(data.progress.answered || questionsAnswered, data.progress.total || totalQuestions);
+          }
+        } else {
+          const noHistoryMessage: Message = {
+            id: `no_history_${Date.now()}`,
+            type: "system",
+            content: "No conversation history found for this session.",
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, noHistoryMessage]);
+        }
+      } else {
+        throw new Error(`HTTP ${response.status}`);
+      }
+    } catch (error) {
+      console.error("❌ Error loading conversation history:", error);
+      const errorMessage: Message = {
+        id: `error_${Date.now()}`,
+        type: "system",
+        content: "Error loading conversation history. Please try again.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    }
+  };
+
+  const getInterviewResults = async () => {
+    if (!sessionId) {
+      console.warn("⚠️ No session ID available for results retrieval");
+      const errorMessage: Message = {
+        id: `error_${Date.now()}`,
+        type: "system",
+        content: "No session ID available for fetching results.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_URL}/interview/results/${encodeURIComponent(sessionId)}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("✅ Interview results fetched:", data);
+        
+        if (data.success && data.results) {
+          // Format detailed results like testInterview.html
+          const results = data.results;
+          let resultsContent = `🎯 **Interview Results Summary**\n\n`;
+          
+          if (results.overallScore !== undefined) {
+            resultsContent += `📊 **Overall Score:** ${results.overallScore}%\n`;
+          }
+          
+          if (results.skillScores) {
+            resultsContent += `\n🔧 **Skill Breakdown:**\n`;
+            Object.entries(results.skillScores).forEach(([skill, score]) => {
+              resultsContent += `• ${skill}: ${score}%\n`;
+            });
+          }
+          
+          if (results.feedback) {
+            resultsContent += `\n💬 **Feedback:**\n${results.feedback}\n`;
+          }
+          
+          if (results.strengths && results.strengths.length > 0) {
+            resultsContent += `\n✅ **Strengths:**\n`;
+            results.strengths.forEach((strength: string) => {
+              resultsContent += `• ${strength}\n`;
+            });
+          }
+          
+          if (results.improvements && results.improvements.length > 0) {
+            resultsContent += `\n🔄 **Areas for Improvement:**\n`;
+            results.improvements.forEach((improvement: string) => {
+              resultsContent += `• ${improvement}\n`;
+            });
+          }
+          
+          if (results.duration) {
+            resultsContent += `\n⏱️ **Interview Duration:** ${Math.round(results.duration / 60)} minutes\n`;
+          }
+          
+          if (results.questionsAnswered && results.totalQuestions) {
+            resultsContent += `📝 **Questions:** ${results.questionsAnswered}/${results.totalQuestions} answered\n`;
+          }
+          
+          const resultsMessage: Message = {
+            id: `results_${Date.now()}`,
+            type: "system",
+            content: resultsContent,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, resultsMessage]);
+        } else {
+          const noResultsMessage: Message = {
+            id: `no_results_${Date.now()}`,
+            type: "system",
+            content: "No interview results available for this session.",
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, noResultsMessage]);
+        }
+        return data;
+      } else {
+        throw new Error(`HTTP ${response.status}`);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching interview results:", error);
+      const errorMessage: Message = {
+        id: `error_${Date.now()}`,
+        type: "system",
+        content: "Error fetching interview results. Please try again.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    }
+  };
+
+  const getNextQuestion = async () => {
+    if (!sessionId) {
+      console.warn("⚠️ No session ID available for next question");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_URL}/interview/question/${encodeURIComponent(sessionId)}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("✅ Next question fetched:", data);
+        
+        if (data.question) {
+          setCurrentQuestionId(data.id || currentQuestionId);
+          setCurrentQuestionNumber(data.questionNumber || currentQuestionNumber + 1);
+          
+          // Update progress if total questions provided
+          if (data.totalQuestions) {
+            updateProgress(questionsAnswered, data.totalQuestions);
+          }
+          
+          const questionMessage: Message = {
+            id: `next_question_${Date.now()}`,
+            type: "ai",
+            content: `Question ${data.questionNumber || currentQuestionNumber + 1}: ${data.question}`,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, questionMessage]);
+          playAIAudio("", data.question);
+        } else if (data.message?.includes('completed')) {
+          const completionMessage: Message = {
+            id: `completion_${Date.now()}`,
+            type: "ai",
+            content: "Interview completed. No more questions available.",
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, completionMessage]);
+        }
+        return data;
+      } else {
+        throw new Error(`HTTP ${response.status}`);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching next question:", error);
+      const errorMessage: Message = {
+        id: `error_${Date.now()}`,
+        type: "system",
+        content: "Error fetching next question. Please try again.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    }
+  };
+
   const downloadTranscript = () => {
     const transcript = messages
       .map(
@@ -889,17 +1217,24 @@ const defaultLanguage = config.language;
                 Voice Interview • {category?.toUpperCase()} •{" "}
                 {level?.toUpperCase()}
               </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-400">Progress:</span>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <span className="px-2 py-1 bg-blue-900/50 border border-blue-700/50 rounded-full text-xs text-blue-200">
+                    Answered: <span className="font-semibold">{questionsAnswered}</span>
+                  </span>
+                  <span className="px-2 py-1 bg-purple-900/50 border border-purple-700/50 rounded-full text-xs text-purple-200">
+                    Total: <span className="font-semibold">{totalQuestions}</span>
+                  </span>
+                  <span className="px-2 py-1 bg-green-900/50 border border-green-700/50 rounded-full text-xs text-green-200">
+                    Completion: <span className="font-semibold">{interviewProgress}%</span>
+                  </span>
+                </div>
                 <div className="w-32 bg-[#1A1A1A] rounded-full h-2">
                   <div
-                    className="bg-gradient-to-r from-[#00FFB2] to-[#00CC8E] h-2 rounded-full transition-all duration-300"
+                    className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${interviewProgress}%` }}
                   />
                 </div>
-                <span className="text-sm text-[#00FFB2]">
-                  {questionsAnswered}/{totalQuestions}
-                </span>
               </div>
               {sessionId && (
                 <div className="text-xs text-gray-500">
@@ -937,6 +1272,57 @@ const defaultLanguage = config.language;
               >
                 <Download size={20} />
               </button>
+
+              <button
+                  onClick={getNextQuestion}
+                  className="p-2 rounded-full bg-purple-600/20 text-purple-400 hover:bg-purple-600/30"
+                  title="Get Next Question"
+                  disabled={!sessionId}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                
+                {/* Conversation History Button */}
+                <button
+                  onClick={getConversationHistory}
+                  className="p-2 rounded-full bg-green-600/20 text-green-400 hover:bg-green-600/30"
+                  title="Load Conversation History"
+                  disabled={!sessionId}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </button>
+                
+                {/* Interview Results Button */}
+                 <button
+                   onClick={getInterviewResults}
+                   className="p-2 rounded-full bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30"
+                   title="Get Interview Results"
+                   disabled={!sessionId}
+                 >
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                   </svg>
+                 </button>
+                 
+                 {/* Debug Panel Toggle */}
+                 <button
+                   onClick={() => setShowDebugPanel(!showDebugPanel)}
+                   className={`p-2 rounded-full transition-colors ${
+                     showDebugPanel 
+                       ? 'bg-red-600/30 text-red-400' 
+                       : 'bg-gray-600/20 text-gray-400 hover:bg-gray-600/30'
+                   }`}
+                   title="Toggle Debug Panel"
+                 >
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                   </svg>
+                 </button>
 
               {hasCodeEditor && (
                 <button
@@ -1146,6 +1532,15 @@ const defaultLanguage = config.language;
                       <Terminal size={14} />
                       <span>Run</span>
                     </button>
+                    {codeExecutionSuccess && (
+                      <button
+                        onClick={submitCode}
+                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 text-sm rounded flex items-center space-x-1"
+                      >
+                        <Send size={14} />
+                        <span>Submit Solution</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1153,7 +1548,14 @@ const defaultLanguage = config.language;
               <div className="flex-1">
                 <CodeEditor
                   value={code}
-                  onChange={setCode}
+                  onChange={(newCode) => {
+                    setCode(newCode);
+                    // Reset execution success when code is modified
+                    if (codeExecutionSuccess) {
+                      setCodeExecutionSuccess(false);
+                      setLastExecutionResult(null);
+                    }
+                  }}
                   language={language}
                   theme="dark"
                 />
@@ -1201,7 +1603,38 @@ const defaultLanguage = config.language;
             </div>
           ) : null}
         </div>
-
+        
+        {/* Debug Panel like testInterview.html */}
+        {showDebugPanel && (
+          <div className="fixed bottom-4 right-4 w-96 max-h-80 bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-4 overflow-hidden z-50">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-white">Debug Panel - Raw API Responses</h3>
+              <button
+                onClick={() => setDebugLogs([])}
+                className="text-xs text-gray-400 hover:text-white"
+                title="Clear Logs"
+              >
+                Clear
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-64 space-y-2">
+              {debugLogs.length === 0 ? (
+                <p className="text-xs text-gray-500">No debug logs yet...</p>
+              ) : (
+                debugLogs.map((log, index) => (
+                  <div key={index} className="text-xs text-green-400 font-mono bg-gray-800/50 p-2 rounded border-l-2 border-green-500">
+                    <pre className="whitespace-pre-wrap break-words">{log}</pre>
+                  </div>
+                ))
+              )}
+            </div>
+            {lastResponseTime && (
+              <div className="mt-2 pt-2 border-t border-gray-700">
+                <p className="text-xs text-blue-400">Last Response Time: {lastResponseTime}s</p>
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
     </div>
