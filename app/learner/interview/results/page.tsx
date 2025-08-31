@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Trophy, 
   TrendingUp, 
@@ -14,7 +14,8 @@ import {
   Star,
   Download,
   Share2,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
@@ -22,15 +23,63 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-export default function InterviewResultsPage() {
+
+function InterviewResultsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, token } = useSelector((state: RootState) => state.auth);
   const [isVisible, setIsVisible] = useState(false);
   const [freeInterviewsUsed, setFreeInterviewsUsed] = useState(0);
   const [hasPaidPlan, setHasPaidPlan] = useState(false);
+  const [interviewData, setInterviewData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const interviewId = searchParams.get('id');
 
   useEffect(() => {
     setIsVisible(true);
+    
+    const fetchInterviewData = async () => {
+      if (!interviewId || !user?._id || !token) {
+        setError('Missing interview ID or authentication');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        
+        // Fetch interview history to get the specific interview
+        const response = await fetch(`${API_URL}/users/${user._id}/interview-history`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch interview data');
+        }
+        
+        const data = await response.json();
+        const interview = data.interviews?.find((int: any) => int.sessionId === interviewId);
+        
+        if (!interview) {
+          throw new Error('Interview not found');
+        }
+        
+        console.log('Interview data structure:', interview);
+        console.log('Scores object:', interview.scores);
+        console.log('Scoreboard object:', interview.scoreboard);
+        setInterviewData(interview);
+      } catch (error) {
+        console.error('Error fetching interview data:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load interview data');
+      } finally {
+        setLoading(false);
+      }
+    };
     
     // Check updated free trial usage
     const checkFreeTrialUsage = async () => {
@@ -67,54 +116,84 @@ export default function InterviewResultsPage() {
     };
 
     if (user?._id && token) {
+      fetchInterviewData();
       checkFreeTrialUsage();
     }
-  }, []);
+  }, [interviewId, user?._id, token]);
 
-  // Mock results data - replace with actual data from your backend
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <Sidebar userType="learner" />
+        <div className="ml-64 pt-20 pb-12">
+          <div className="container-custom flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <Loader2 className="h-12 w-12 animate-spin text-[#00FFB2] mx-auto mb-4" />
+              <p className="text-gray-400">Loading interview results...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !interviewData) {
+    return (
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <Sidebar userType="learner" />
+        <div className="ml-64 pt-20 pb-12">
+          <div className="container-custom flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <div className="text-red-400 text-6xl mb-4">⚠️</div>
+              <h2 className="text-2xl font-bold mb-2">Interview Not Found</h2>
+              <p className="text-gray-400 mb-6">{error || 'The requested interview could not be found.'}</p>
+              <button 
+                onClick={() => router.push('/learner/history')}
+                className="btn-primary"
+              >
+                Back to History
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Extract data from API response
   const results = {
-    overallScore: 87,
-    category: 'Full-Stack Developer',
-    level: 'Mid Level',
-    duration: '45 minutes',
-    completedAt: new Date().toLocaleDateString(),
+    overallScore: interviewData.scores?.overall || 0,
+    category: interviewData.configuration?.category || 'Interview',
+    level: interviewData.configuration?.level || 'Unknown',
+    duration: `${interviewData.configuration?.duration || 0} minutes`,
+    completedAt: interviewData.createdAt ? new Date(interviewData.createdAt).toLocaleDateString() : 'Unknown',
     scores: {
-      technical: 92,
-      communication: 78,
-      problemSolving: 85,
-      codeQuality: 89
+      technical: interviewData.scores?.technical || interviewData.scoreboard?.detailedScores?.technical || 0,
+      communication: interviewData.scores?.communication || interviewData.scoreboard?.detailedScores?.communication || 0,
+      problemSolving: interviewData.scores?.problemSolving || interviewData.scoreboard?.detailedScores?.problemSolving || 0,
+      codeQuality: interviewData.scores?.codeQuality || interviewData.scoreboard?.detailedScores?.codeQuality || 0
     },
-    strengths: [
-      'Excellent problem-solving approach',
-      'Clean and well-structured code',
-      'Good understanding of algorithms',
-      'Clear explanation of thought process'
+    strengths: interviewData.results?.detailedAnalysis?.strengths || [
+      'Completed the interview successfully',
+      'Demonstrated problem-solving skills',
+      'Showed technical knowledge'
     ],
-    improvements: [
-      'Work on explaining complex concepts more simply',
-      'Practice system design patterns',
-      'Improve time management during coding challenges'
+    improvements: interviewData.results?.detailedAnalysis?.improvements || [
+      'Continue practicing coding challenges',
+      'Work on communication skills',
+      'Review technical concepts'
     ],
     detailedFeedback: {
-      technical: 'Strong technical foundation with good knowledge of data structures and algorithms. Code implementation was clean and efficient.',
-      communication: 'Good verbal communication but could improve on explaining complex technical concepts in simpler terms.',
-      problemSolving: 'Demonstrated excellent analytical thinking and approached problems systematically.',
-      codeQuality: 'Code was well-structured with proper naming conventions and good commenting practices.'
+      technical: interviewData.results?.technicalFeedback || 'Technical performance was evaluated based on problem-solving approach and code quality.',
+      communication: interviewData.results?.communicationFeedback || 'Communication skills were assessed throughout the interview process.',
+      problemSolving: interviewData.results?.problemSolvingFeedback || 'Problem-solving approach and analytical thinking were evaluated.',
+      codeQuality: interviewData.results?.codeQualityFeedback || 'Code structure, readability, and best practices were reviewed.'
     },
-    codeSubmissions: [
-      {
-        question: 'Two Sum Problem',
-        language: 'JavaScript',
-        score: 95,
-        feedback: 'Optimal solution with O(n) time complexity. Good use of hash map.'
-      },
-      {
-        question: 'Binary Tree Traversal',
-        language: 'JavaScript',
-        score: 88,
-        feedback: 'Correct implementation but could be optimized for space complexity.'
-      }
-    ]
+    codeSubmissions: interviewData.results?.codeSubmissions || []
   };
 
   const getScoreColor = (score: number) => {
@@ -410,5 +489,26 @@ export default function InterviewResultsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function InterviewResultsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <Sidebar userType="learner" />
+        <div className="ml-64 pt-20 pb-12">
+          <div className="container-custom flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <Loader2 className="h-12 w-12 animate-spin text-[#00FFB2] mx-auto mb-4" />
+              <p className="text-gray-400">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <InterviewResultsContent />
+    </Suspense>
   );
 }
