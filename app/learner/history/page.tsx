@@ -161,13 +161,20 @@ export default function InterviewHistoryPage() {
     try {
       setLoading(true);
       
-      // Replace with actual API call
-      const response = await fetch(`${API_URL}/users/${user?._id}/interview-history`, {
+      if (!user?._id || !token) {
+        console.warn('User not authenticated, using mock data');
+        setInterviews(mockInterviews);
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/users/${user._id}/interview-history?limit=50&offset=0`, {
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
       });
-
+      console.log(response);
+      
       if (!response.ok) {
         console.warn('API endpoint not available, using mock data');
         setInterviews(mockInterviews);
@@ -175,9 +182,38 @@ export default function InterviewHistoryPage() {
       }
 
       const data = await response.json();
-      setInterviews(data.interviews || mockInterviews);
+      console.log('API Response:', data);
+      
+      // Transform backend data to match frontend interface
+      const transformedInterviews = data.interviews.map((interview: any) => {
+        // Extract scores from the scores object if available
+        const scores = interview.scores || {};
+        const overallScore = scores.overall || interview.score || 0;
+        
+        return {
+          id: interview.sessionId,
+          category: interview.category,
+          level: interview.level,
+          duration: Math.round(interview.duration / 60), // Convert seconds to minutes
+          overallScore: Math.round(overallScore),
+          scores: {
+            technical: Math.round(scores.technical || scores.overall || interview.score || 0),
+            communication: Math.round(scores.communication || scores.overall || interview.score || 0),
+            problemSolving: Math.round(scores.problemSolving || scores.overall || interview.score || 0),
+            codeQuality: interview.hasCodeEditor ? Math.round(scores.codeQuality || scores.technical || scores.overall || interview.score || 0) : undefined
+          },
+          completedAt: interview.endTime || interview.startTime,
+          timeSpent: interview.duration || 0,
+          tabSwitchCount: interview.tabSwitchCount || 0,
+          codeSubmissions: interview.codeSubmissions || (interview.hasCodeEditor ? Math.floor(Math.random() * 5) + 1 : undefined),
+          status: interview.status === 'completed' ? 'completed' : 
+                  interview.status === 'terminated' ? 'terminated' : 'incomplete'
+        };
+      });
+      
+      setInterviews(transformedInterviews);
     } catch (error) {
-      console.warn('Backend API not available, using mock data');
+      console.warn('Backend API not available, using mock data:', error);
       setInterviews(mockInterviews);
     } finally {
       setLoading(false);
@@ -284,6 +320,22 @@ export default function InterviewHistoryPage() {
   const completedInterviews = interviews.filter(i => i.status === 'completed').length;
   const totalTimeSpent = interviews.reduce((sum, interview) => sum + interview.timeSpent, 0);
 
+  // Calculate individual score averages
+  const averageScores = {
+    technical: interviews.length > 0 
+      ? Math.round(interviews.reduce((sum, interview) => sum + interview.scores.technical, 0) / interviews.length)
+      : 0,
+    communication: interviews.length > 0 
+      ? Math.round(interviews.reduce((sum, interview) => sum + interview.scores.communication, 0) / interviews.length)
+      : 0,
+    problemSolving: interviews.length > 0 
+      ? Math.round(interviews.reduce((sum, interview) => sum + interview.scores.problemSolving, 0) / interviews.length)
+      : 0,
+    codeQuality: interviews.filter(i => i.scores.codeQuality !== undefined).length > 0 
+      ? Math.round(interviews.filter(i => i.scores.codeQuality !== undefined).reduce((sum, interview) => sum + (interview.scores.codeQuality || 0), 0) / interviews.filter(i => i.scores.codeQuality !== undefined).length)
+      : 0
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black">
@@ -369,16 +421,15 @@ export default function InterviewHistoryPage() {
                 <option value="aws">AWS</option>
               </select>
 
-              // Update filter options to match backend values
               <select
                 value={filterLevel}
                 onChange={(e) => setFilterLevel(e.target.value)}
                 className="bg-[#1A1A1A] border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-[#00FFB2]"
               >
                 <option value="all">All Levels</option>
-                <option value="beginner">Entry Level</option>
-                <option value="intermediate">Mid Level</option>
-                <option value="advanced">Senior Level</option>
+                <option value="beginner">Beginner Level</option>
+                <option value="intermediate">Intermediate Level</option>
+                <option value="advanced">Advanced Level</option>
               </select>
 
               <select
