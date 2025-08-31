@@ -339,6 +339,13 @@ const defaultLanguage = config.language;
     initializeMedia();
   }, []);
 
+  // Auto-start interview when component mounts
+  useEffect(() => {
+    if (!interviewStarted && !isStartingInterview) {
+      startInterview();
+    }
+  }, []);
+
   // Timer countdown
   useEffect(() => {
     if (!interviewStarted) return;
@@ -421,37 +428,74 @@ const defaultLanguage = config.language;
     }
   };
 
-  const sendAnswerToAPI = async (answer: string) => {
+  const sendAnswerToAPI = async (answer: string, isCode: boolean = false) => {
     try {
-      const response = await fetch(`${API_URL}/interview/conversation`, {
+      const body: any = {
+        sessionId: sessionId,
+        message: answer,
+        questionId: currentQuestionId,
+        responseTime: 18, // Default response time
+      };
+
+      if (isCode) {
+        body.codeContext = {
+          isCodeSubmission: true,
+          questionId: currentQuestionId,
+          language: language,
+          code: code,
+          stdin: "", // Empty stdin for now
+        };
+      }
+
+      const response = await fetch(`${API_URL}/interview/conversation/enhanced`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           // "ngrok-skip-browser-warning": "true",
         },
-        body: JSON.stringify({
-          sessionId: sessionId,
-          message: answer,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (response.ok) {
         const data = await response.json();
-        console.log("✅ Answer sent successfully:", data);
+        console.log("✅ Enhanced conversation response:", data);
 
-        if (data.response) {
+        // Handle AI response
+        if (data.aiResponse) {
           const aiMessage: Message = {
             id: `ai_${Date.now()}`,
             type: "ai",
-            content: data.response,
+            content: data.aiResponse,
             timestamp: new Date(),
           };
           setMessages((prev) => [...prev, aiMessage]);
+          playAIAudio("", data.aiResponse);
+        }
 
-          // Play AI audio response
-          playAIAudio("", data.response);
+        // Handle current question
+        if (data.currentQuestion) {
+          setCurrentQuestionId(data.currentQuestion.id);
+          setCurrentQuestionNumber(data.currentQuestion.questionNumber);
+          setTotalQuestions(data.currentQuestion.totalQuestions);
+          
+          const questionMessage: Message = {
+            id: `question_${Date.now()}`,
+            type: "ai",
+            content: `Next Question (${data.currentQuestion.questionNumber}/${data.currentQuestion.totalQuestions}): ${data.currentQuestion.question}`,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, questionMessage]);
+          playAIAudio("", data.currentQuestion.question);
+        }
 
-          setQuestionsAnswered((prev) => prev + 1);
+        // Update progress
+        if (data.progress) {
+          setQuestionsAnswered(data.progress.questionsAnswered || questionsAnswered);
+          setTotalQuestions(data.progress.totalQuestions || totalQuestions);
+          const progressPercentage = Math.round(
+            ((data.progress.questionsAnswered || questionsAnswered) / (data.progress.totalQuestions || totalQuestions)) * 100
+          );
+          setInterviewProgress(progressPercentage);
         }
       } else {
         throw new Error(`HTTP ${response.status}`);
@@ -472,8 +516,13 @@ const defaultLanguage = config.language;
     }
   };
 
+  const [isStartingInterview, setIsStartingInterview] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+
   const startInterview = async () => {
     console.log("🚀 Starting interview...");
+    setIsStartingInterview(true);
+    setStartError(null);
 
     const interviewPayload = buildInterviewPayload();
     console.log(
@@ -482,6 +531,10 @@ const defaultLanguage = config.language;
     );
 
     try {
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
       const response = await fetch(`${API_URL}/interview/start`, {
         method: "POST",
         headers: {
@@ -489,7 +542,10 @@ const defaultLanguage = config.language;
           // "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify(interviewPayload),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -519,26 +575,34 @@ const defaultLanguage = config.language;
 
           playAIAudio("", data.firstQuestion.question);
         }
+
+        setInterviewStarted(true);
       } else {
-        throw new Error(`API failed: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || `Server error: ${response.status}`;
+        throw new Error(errorMessage);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Failed to start interview:", error);
-
-      const systemMessage: Message = {
-        id: `system_start_${Date.now()}`,
-        type: "system",
-        content: `❌ Failed to start interview: ${
-          error && typeof error === "object" && "message" in error
-            ? (error as { message: string }).message
-            : String(error)
-        }`,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, systemMessage]);
+      
+      let errorMessage = "Failed to start interview. ";
+      if (error.name === 'AbortError') {
+        errorMessage += "Request timed out. Please check your connection and try again.";
+      } else if (error.message?.includes('fetch')) {
+        errorMessage += "Unable to connect to server. Please check your internet connection.";
+      } else {
+        errorMessage += error.message || "Unknown error occurred.";
+      }
+      
+      setStartError(errorMessage);
+    } finally {
+      setIsStartingInterview(false);
     }
+  };
 
-    setInterviewStarted(true);
+  const retryStartInterview = () => {
+    setStartError(null);
+    startInterview();
   };
 
   const startListening = async () => {
@@ -843,8 +907,7 @@ const defaultLanguage = config.language;
                 </div>
               )}
             </div>
-
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
               <button
                 onClick={toggleMic}
                 className={`p-2 rounded-full ${
@@ -1139,35 +1202,7 @@ const defaultLanguage = config.language;
           ) : null}
         </div>
 
-        {/* Start Interview Overlay */}
-        {!interviewStarted && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="glass-card p-8 text-center max-w-md">
-              <Bot size={64} className="text-[#00FFB2] mx-auto mb-4" />
-              <h2 className="text-2xl font-bold mb-4">Voice Interview Ready</h2>
-              <p className="text-gray-400 mb-6">
-                Your {category} voice interview at {level} level is about to
-                begin. Duration: {duration} minutes.
-              </p>
 
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6">
-                <p className="text-blue-400 text-sm">
-                  <strong>Voice Interview:</strong> The AI will ask questions
-                  with voice. Click the microphone button to respond with your
-                  voice.
-                </p>
-              </div>
-
-              <button
-                onClick={startInterview}
-                className="btn-primary px-8 py-3 text-lg flex items-center justify-center mx-auto"
-              >
-                <Play className="h-5 w-5 mr-2" />
-                Start Voice Interview
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
