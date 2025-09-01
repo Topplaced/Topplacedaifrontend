@@ -357,9 +357,11 @@ const defaultLanguage = config.language;
     initializeMedia();
   }, []);
 
-  // Auto-start interview when component mounts
+  // Auto-start interview when component mounts (only once)
   useEffect(() => {
-    if (!interviewStarted && !isStartingInterview) {
+    if (!hasInitialized.current && !interviewStarted && !isStartingInterview) {
+      console.log("🎬 Auto-starting interview on component mount");
+      hasInitialized.current = true;
       startInterview();
     }
   }, []);
@@ -492,19 +494,15 @@ const defaultLanguage = config.language;
           setDebugLogs(prev => [...prev.slice(-9), debugEntry]); // Keep last 10 entries
         }
 
-        // Handle AI response
+        // Handle AI response and current question to avoid duplication
+        let messageContent = "";
+        let audioContent = "";
+        
         if (data.aiResponse) {
-          const aiMessage: Message = {
-            id: `ai_${Date.now()}`,
-            type: "ai",
-            content: data.aiResponse,
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, aiMessage]);
-          playAIAudio("", data.aiResponse);
+          messageContent = data.aiResponse;
+          audioContent = data.aiResponse;
         }
-
-        // Handle current question
+        
         if (data.currentQuestion) {
           setCurrentQuestionId(data.currentQuestion.id);
           setCurrentQuestionNumber(data.currentQuestion.questionNumber);
@@ -515,14 +513,27 @@ const defaultLanguage = config.language;
           // Start timing for next question
           setResponseStartTime(Date.now());
           
-          const questionMessage: Message = {
-            id: `question_${Date.now()}`,
+          const questionText = `Next Question (${data.currentQuestion.questionNumber}/${data.currentQuestion.totalQuestions}): ${data.currentQuestion.question}`;
+          
+          if (messageContent) {
+            messageContent += `\n\n${questionText}`;
+            audioContent = questionText; // Play only the question for audio
+          } else {
+            messageContent = questionText;
+            audioContent = questionText;
+          }
+        }
+        
+        // Add single combined message if we have content
+        if (messageContent) {
+          const combinedMessage: Message = {
+            id: `ai_${Date.now()}`,
             type: "ai",
-            content: `Next Question (${data.currentQuestion.questionNumber}/${data.currentQuestion.totalQuestions}): ${data.currentQuestion.question}`,
+            content: messageContent,
             timestamp: new Date(),
           };
-          setMessages((prev) => [...prev, questionMessage]);
-          playAIAudio("", data.currentQuestion.question);
+          setMessages((prev) => [...prev, combinedMessage]);
+          playAIAudio("", audioContent);
         }
 
         // Update progress
@@ -550,9 +561,51 @@ const defaultLanguage = config.language;
 
   const [isStartingInterview, setIsStartingInterview] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [showStartingPopup, setShowStartingPopup] = useState(false);
+  const [popupTimer, setPopupTimer] = useState(5);
+  const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null);
+  const hasInitialized = useRef(false);
+
+  // Cleanup countdown timer on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+      }
+    };
+  }, [countdownInterval]);
 
   const startInterview = async () => {
     console.log("🚀 Starting interview...");
+    setShowStartingPopup(true);
+    setPopupTimer(5);
+    
+    // Clear any existing countdown
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+    }
+    
+    // Start countdown timer
+    const countdown = setInterval(() => {
+      setPopupTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdown);
+          setCountdownInterval(null);
+          setShowStartingPopup(false);
+          // Actually start the interview after timer
+          setTimeout(() => {
+            actuallyStartInterview();
+          }, 100);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    setCountdownInterval(countdown);
+  };
+
+  const actuallyStartInterview = async () => {
     setIsStartingInterview(true);
     setStartError(null);
 
@@ -590,26 +643,24 @@ const defaultLanguage = config.language;
           setTotalQuestions(6);
         }
 
+        // Combine welcome message and first question to avoid duplication
+        let combinedContent = data.message;
+        if (data.firstQuestion) {
+          combinedContent += `\n\n${data.firstQuestion.question}`;
+          setCurrentQuestionNumber(data.firstQuestion.questionNumber);
+          setCurrentQuestionId(data.firstQuestion.id);
+        }
+
         const welcomeMessage: Message = {
           id: `welcome_${Date.now()}`,
           type: "ai",
-          content: data.message,
+          content: combinedContent,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, welcomeMessage]);
 
         if (data.firstQuestion) {
-          const questionMessage: Message = {
-            id: `q1_${Date.now()}`,
-            type: "ai",
-            content: data.firstQuestion.question,
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, questionMessage]);
-          setCurrentQuestionNumber(data.firstQuestion.questionNumber);
-          setCurrentQuestionId(data.firstQuestion.id);
-
-          playAIAudio("", data.firstQuestion.question);
+          playAIAudio("", combinedContent);
         }
 
         setInterviewStarted(true);
@@ -1198,6 +1249,74 @@ const defaultLanguage = config.language;
             >
               I Understand
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Starting Interview Popup */}
+      {showStartingPopup && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[70] flex items-center justify-center">
+          <div className="glass-card p-8 max-w-lg text-center border-2 border-[#00FFB2]/50">
+            <div className="relative mb-6">
+              <div className="w-20 h-20 mx-auto mb-4 relative">
+                <div className="absolute inset-0 rounded-full border-4 border-[#00FFB2]/20"></div>
+                <div 
+                  className="absolute inset-0 rounded-full border-4 border-[#00FFB2] border-t-transparent animate-spin"
+                  style={{
+                    animationDuration: `${popupTimer}s`,
+                    animationTimingFunction: 'linear'
+                  }}
+                ></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-[#00FFB2]">{popupTimer}</span>
+                </div>
+              </div>
+            </div>
+            
+            <h3 className="text-2xl font-bold mb-4 text-[#00FFB2]">
+              🚀 Preparing Your Interview
+            </h3>
+            
+            <div className="text-left space-y-3 mb-6">
+              <p className="text-gray-300 text-center mb-4">
+                Your AI interviewer is getting ready! Here's what to expect:
+              </p>
+              
+              <div className="space-y-2">
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-[#00FFB2] rounded-full"></div>
+                  <span className="text-sm text-gray-300">📋 {category} interview at {level} level</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-[#00FFB2] rounded-full"></div>
+                  <span className="text-sm text-gray-300">⏱️ Duration: {duration} minutes</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-[#00FFB2] rounded-full"></div>
+                  <span className="text-sm text-gray-300">🎤 Voice-based conversation</span>
+                </div>
+                {hasCodeEditor && (
+                  <div className="flex items-center space-x-3">
+                    <div className="w-2 h-2 bg-[#00FFB2] rounded-full"></div>
+                    <span className="text-sm text-gray-300">💻 Coding challenges included</span>
+                  </div>
+                )}
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-[#00FFB2] rounded-full"></div>
+                  <span className="text-sm text-gray-300">🤖 AI-powered evaluation</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-[#00FFB2]/10 border border-[#00FFB2]/30 rounded-lg p-4 mb-4">
+              <p className="text-sm text-[#00FFB2] font-medium">
+                💡 Tip: Speak clearly and take your time to think before answering!
+              </p>
+            </div>
+            
+            <p className="text-xs text-gray-400">
+              Starting automatically in {popupTimer} seconds...
+            </p>
           </div>
         </div>
       )}
