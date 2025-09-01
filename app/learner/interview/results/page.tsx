@@ -50,7 +50,52 @@ function InterviewResultsContent() {
       try {
         setLoading(true);
         
-        // Fetch interview history to get the specific interview
+        // First check localStorage for fresh interview results
+        const storedResults = localStorage.getItem('interviewResults');
+        if (storedResults) {
+          try {
+            const parsedResults = JSON.parse(storedResults);
+            console.log('📊 Using stored interview results:', parsedResults);
+            
+            // Convert the formatted results back to the expected structure
+            const formattedData = {
+              sessionId: interviewId,
+              scores: {
+                overall: parsedResults.overallScore,
+                technical: parsedResults.scores.technical,
+                communication: parsedResults.scores.communication,
+                problemSolving: parsedResults.scores.problemSolving,
+                codeQuality: parsedResults.scores.codeQuality
+              },
+              configuration: {
+                category: parsedResults.category,
+                level: parsedResults.level,
+                duration: parseInt(parsedResults.duration) || 0
+              },
+              createdAt: parsedResults.completedAt,
+              results: {
+                detailedAnalysis: {
+                  strengths: parsedResults.strengths,
+                  improvements: parsedResults.improvements
+                },
+                technicalFeedback: parsedResults.detailedFeedback.technical,
+                communicationFeedback: parsedResults.detailedFeedback.communication,
+                problemSolvingFeedback: parsedResults.detailedFeedback.problemSolving,
+                codeQualityFeedback: parsedResults.detailedFeedback.codeQuality,
+                codeSubmissions: parsedResults.codeSubmissions
+              }
+            };
+            
+            setInterviewData(formattedData);
+            // Clear localStorage after using it
+            localStorage.removeItem('interviewResults');
+            return;
+          } catch (parseError) {
+            console.warn('Failed to parse stored results, falling back to API:', parseError);
+          }
+        }
+        
+        // Fallback to API if no localStorage data
         const response = await fetch(`${API_URL}/users/${user._id}/interview-history`, {
           headers: {
             'Authorization': `Bearer ${token}`,

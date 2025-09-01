@@ -359,10 +359,18 @@ const defaultLanguage = config.language;
 
   // Auto-start interview when component mounts (only once)
   useEffect(() => {
+    console.log("🔍 useEffect check:", {
+      hasInitialized: hasInitialized.current,
+      interviewStarted,
+      isStartingInterview
+    });
+    
     if (!hasInitialized.current && !interviewStarted && !isStartingInterview) {
       console.log("🎬 Auto-starting interview on component mount");
       hasInitialized.current = true;
       startInterview();
+    } else {
+      console.log("⏭️ Skipping interview start - already initialized or in progress");
     }
   }, []);
 
@@ -463,6 +471,16 @@ const defaultLanguage = config.language;
         message: answer,
         questionId: currentQuestionId,
         responseTime: responseTime,
+        metadata: {
+          userAgent: navigator.userAgent,
+          deviceType: /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? 'mobile' : 'desktop',
+          messageType: isCode ? 'code_submission' : 'answer',
+          timestamp: new Date().toISOString(),
+          questionNumber: currentQuestionNumber,
+          totalQuestions: totalQuestions,
+          sessionDuration: Date.now() - (responseStartTime || Date.now())
+        },
+        advanceToNext: true
       };
 
       if (isCode) {
@@ -472,6 +490,7 @@ const defaultLanguage = config.language;
           language: language,
           code: code,
           stdin: "", // Empty stdin for now
+          executionResult: null // Will be populated by backend
         };
       }
 
@@ -501,6 +520,31 @@ const defaultLanguage = config.language;
         if (data.aiResponse) {
           messageContent = data.aiResponse;
           audioContent = data.aiResponse;
+          
+          // Check for detailed feedback in the response
+          if (data.feedback && data.feedback.score !== undefined) {
+            const feedbackDetails = `\n\n📊 **Score: ${data.feedback.score}/100**`;
+            messageContent += feedbackDetails;
+            
+            // Add detailed scores if available
+            if (data.detailedScores) {
+              const detailsText = `\n\n**Detailed Analysis:**\n` +
+                `• Correctness: ${data.detailedScores.correctness}/100\n` +
+                `• Completeness: ${data.detailedScores.completeness}/100\n` +
+                `• Clarity: ${data.detailedScores.clarity}/100\n` +
+                `• Technical Accuracy: ${data.detailedScores.technicalAccuracy}/100\n` +
+                `• Communication: ${data.detailedScores.communicationQuality}/100`;
+              messageContent += detailsText;
+            }
+            
+            // Add strengths and improvements if available
+            if (data.strengths && data.strengths.length > 0) {
+              messageContent += `\n\n✅ **Strengths:** ${data.strengths.join(', ')}`;
+            }
+            if (data.improvements && data.improvements.length > 0) {
+              messageContent += `\n\n🔄 **Areas for Improvement:** ${data.improvements.join(', ')}`;
+            }
+          }
         }
         
         if (data.currentQuestion) {
@@ -565,6 +609,7 @@ const defaultLanguage = config.language;
   const [popupTimer, setPopupTimer] = useState(5);
   const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null);
   const hasInitialized = useRef(false);
+  const isStartingRef = useRef(false);
 
   // Cleanup countdown timer on unmount
   useEffect(() => {
@@ -576,7 +621,20 @@ const defaultLanguage = config.language;
   }, [countdownInterval]);
 
   const startInterview = async () => {
-    console.log("🚀 Starting interview...");
+    console.log("🚀 Starting interview...", {
+      isStartingRef: isStartingRef.current,
+      isStartingInterview,
+      interviewStarted,
+      hasInitialized: hasInitialized.current
+    });
+    
+    // Prevent multiple simultaneous starts
+    if (isStartingRef.current || isStartingInterview || interviewStarted) {
+      console.log("⏭️ Skipping startInterview - already in progress or started");
+      return;
+    }
+    
+    isStartingRef.current = true;
     setShowStartingPopup(true);
     setPopupTimer(5);
     
@@ -606,6 +664,18 @@ const defaultLanguage = config.language;
   };
 
   const actuallyStartInterview = async () => {
+    console.log("🚀 actuallyStartInterview called", {
+      isStartingRef: isStartingRef.current,
+      isStartingInterview,
+      interviewStarted
+    });
+    
+    // Additional protection against multiple calls
+    if (isStartingInterview || interviewStarted) {
+      console.log("⏭️ Skipping actuallyStartInterview - already in progress or started");
+      return;
+    }
+    
     setIsStartingInterview(true);
     setStartError(null);
 
@@ -664,6 +734,7 @@ const defaultLanguage = config.language;
         }
 
         setInterviewStarted(true);
+        isStartingRef.current = false; // Reset the ref on successful start
       } else {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.message || `Server error: ${response.status}`;
@@ -684,11 +755,13 @@ const defaultLanguage = config.language;
       setStartError(errorMessage);
     } finally {
       setIsStartingInterview(false);
+      isStartingRef.current = false; // Reset the ref on error or completion
     }
   };
 
   const retryStartInterview = () => {
     setStartError(null);
+    isStartingRef.current = false; // Reset before retry
     startInterview();
   };
 
@@ -914,8 +987,45 @@ const defaultLanguage = config.language;
       });
 
       if (response.ok) {
-        const result = await response.json();
-        console.log("✅ Interview ended successfully:", result);
+        const interviewData = await response.json();
+        console.log("✅ Interview ended successfully:", interviewData);
+        
+        // Format the results according to the specified structure
+        const results = {
+          overallScore: interviewData.scores?.overall || 0,
+          category: interviewData.configuration?.category || 'Interview',
+          level: interviewData.configuration?.level || 'Unknown',
+          duration: `${interviewData.configuration?.duration || 0} minutes`,
+          completedAt: interviewData.createdAt ? new Date(interviewData.createdAt).toLocaleDateString() : 'Unknown',
+          scores: {
+            technical: interviewData.scores?.technical || interviewData.scoreboard?.detailedScores?.technical || 0,
+            communication: interviewData.scores?.communication || interviewData.scoreboard?.detailedScores?.communication || 0,
+            problemSolving: interviewData.scores?.problemSolving || interviewData.scoreboard?.detailedScores?.problemSolving || 0,
+            codeQuality: interviewData.scores?.codeQuality || interviewData.scoreboard?.detailedScores?.codeQuality || 0
+          },
+          strengths: interviewData.results?.detailedAnalysis?.strengths || [
+            'Completed the interview successfully',
+            'Demonstrated problem-solving skills',
+            'Showed technical knowledge'
+          ],
+          improvements: interviewData.results?.detailedAnalysis?.improvements || [
+            'Continue practicing coding challenges',
+            'Work on communication skills',
+            'Review technical concepts'
+          ],
+          detailedFeedback: {
+            technical: interviewData.results?.technicalFeedback || 'Technical performance was evaluated based on problem-solving approach and code quality.',
+            communication: interviewData.results?.communicationFeedback || 'Communication skills were assessed throughout the interview process.',
+            problemSolving: interviewData.results?.problemSolvingFeedback || 'Problem-solving approach and analytical thinking were evaluated.',
+            codeQuality: interviewData.results?.codeQualityFeedback || 'Code structure, readability, and best practices were reviewed.'
+          },
+          codeSubmissions: interviewData.results?.codeSubmissions || []
+        };
+        
+        console.log("📊 Formatted interview results:", results);
+        
+        // Store results in localStorage or state for the results page
+        localStorage.setItem('interviewResults', JSON.stringify(results));
       } else {
         console.error("❌ Failed to end interview:", response.status);
       }
