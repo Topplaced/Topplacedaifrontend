@@ -417,7 +417,7 @@ function InterviewResultsContent() {
                     <div>
                       <div className="font-medium text-green-400 mb-2">Strengths</div>
                       <ul className="text-sm text-gray-300 space-y-1">
-                        {results.strengths.map((strength, index) => (
+                        {results.strengths.map((strength: string, index: number) => (
                           <li key={index}>• {strength}</li>
                         ))}
                       </ul>
@@ -431,7 +431,7 @@ function InterviewResultsContent() {
                     <div>
                       <div className="font-medium text-yellow-400 mb-2">Areas for Improvement</div>
                       <ul className="text-sm text-gray-300 space-y-1">
-                        {results.improvements.map((improvement, index) => (
+                        {results.improvements.map((improvement: string, index: number) => (
                           <li key={index}>• {improvement}</li>
                         ))}
                       </ul>
@@ -470,7 +470,7 @@ function InterviewResultsContent() {
               </h2>
               
               <div className="space-y-4">
-                {results.codeSubmissions.map((submission, index) => (
+                {results.codeSubmissions.map((submission: any, index: number) => (
                   <div key={index} className="p-4 bg-[#1A1A1A] rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <div>

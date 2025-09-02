@@ -2,11 +2,10 @@
 import { io } from 'socket.io-client';
 
 import { 
-  InitializeInterviewPayload, 
-  AIConversationPayload, 
+  StartInterviewPayload, 
+  ChatConversationPayload, 
   CodeExecutionPayload,
-  CompleteInterviewPayload,
-  GetAIResponsePayload 
+  EndInterviewPayload
 } from '@/types/interview-payloads';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -27,27 +26,10 @@ interface EnhancedConversationPayload {
   };
 }
 
-interface StartInterviewPayload {
-  user: {
-    id?: string;
-    name: string;
-    email: string;
-    role: string;
-    experience: number;
-    skills: string[];
-    goals?: string;
-  };
-  configuration: {
-    level: 'beginner' | 'intermediate' | 'advanced';
-    category: string;
-    duration: number;
-    hasCodeEditor: boolean;
-    language: string;
-  };
-}
+
 
 // 1. Initialize Interview Session
-export async function initializeInterview(payload: InitializeInterviewPayload) {
+export async function initializeInterview(payload: StartInterviewPayload) {
   const response = await fetch(`${API_URL}/interview/initialize`, {
     method: 'POST',
     headers: {
@@ -61,7 +43,7 @@ export async function initializeInterview(payload: InitializeInterviewPayload) {
 }
 
 // 2. Send Message to AI (Real-time conversation)
-export async function sendMessageToAI(payload: AIConversationPayload) {
+export async function sendMessageToAI(payload: ChatConversationPayload) {
   const response = await fetch(`${API_URL}/interview/ai-conversation`, {
     method: 'POST',
     headers: {
@@ -103,7 +85,7 @@ export async function updateInterviewProgress(payload: any) {
 }
 
 // 5. Complete Interview
-export async function completeInterview(payload: CompleteInterviewPayload) {
+export async function completeInterview(payload: EndInterviewPayload) {
   const response = await fetch(`${API_URL}/interview/complete`, {
     method: 'POST',
     headers: {
@@ -117,7 +99,7 @@ export async function completeInterview(payload: CompleteInterviewPayload) {
 }
 
 // 6. Get AI Response (Alternative endpoint)
-export async function getAIResponse(payload: GetAIResponsePayload) {
+export async function getAIResponse(payload: ChatConversationPayload) {
   const response = await fetch(`${API_URL}/ai/interview-response`, {
     method: 'POST',
     headers: {
@@ -148,14 +130,14 @@ export function buildUserProfile(user: any) {
 }
 
 // Add this helper function at the top of the file
-function mapLevelToBackend(frontendLevel: string): 'beginner' | 'intermediate' | 'advanced' {
-  const levelMap: Record<string, 'beginner' | 'intermediate' | 'advanced'> = {
-    'entry': 'beginner',
-    'mid': 'intermediate', 
-    'senior': 'advanced',
-    'lead': 'advanced'
+function mapLevelToBackend(frontendLevel: string): 'entry' | 'mid' | 'senior' | 'lead' {
+  const levelMap: Record<string, 'entry' | 'mid' | 'senior' | 'lead'> = {
+    'beginner': 'entry',
+    'intermediate': 'mid', 
+    'advanced': 'senior',
+    'expert': 'lead'
   };
-  return levelMap[frontendLevel] || 'intermediate';
+  return levelMap[frontendLevel] || 'mid';
 }
 
 // Helper function to build interview configuration
@@ -167,7 +149,10 @@ export function buildInterviewConfig(level: string, category: string, duration: 
     category: category as any,
     duration: parseInt(duration),
     hasCodeEditor,
-    language: getDefaultLanguage(category)
+    language: getDefaultLanguage(category),
+    interviewType: (hasCodeEditor ? 'voice+code' : 'voice') as 'voice+code' | 'voice' | 'text',
+    questionsLimit: 10,
+    aiPersonality: 'professional' as 'professional' | 'friendly'
   };
 }
 
@@ -450,7 +435,7 @@ export const validateSession = async (sessionId: string): Promise<boolean> => {
     
     return data.valid === true;
   } catch (error) {
-    handleAPIError('Session validation failed', error);
+    handleAPIError('Session validation failed', error as string);
     return false;
   }
 };
@@ -474,7 +459,7 @@ export const cleanupSession = async (sessionId: string): Promise<void> => {
       throw new Error(data.message || 'Session cleanup failed');
     }
   } catch (error) {
-    handleAPIError('Session cleanup failed', error);
+    handleAPIError('Session cleanup failed', error as string);
     throw error;
   }
 };
@@ -500,7 +485,7 @@ export const recoverSession = async (sessionId: string): Promise<any> => {
     
     return processInterviewResponse(data);
   } catch (error) {
-    handleAPIError('Session recovery failed', error);
+    handleAPIError('Session recovery failed', error as string);
     throw error;
   }
 };
@@ -530,7 +515,7 @@ export const getSessionStatus = async (sessionId: string): Promise<any> => {
       ...data
     };
   } catch (error) {
-    handleAPIError('Get session status failed', error);
+    handleAPIError('Get session status failed', error as string);
     throw error;
   }
 };

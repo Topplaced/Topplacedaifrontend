@@ -33,7 +33,7 @@ import {
   buildUserProfile,
   buildInterviewConfig 
 } from '@/utils/api-helpers';
-import { InitializeInterviewPayload, AIConversationPayload, CodeExecutionPayload } from '@/types/interview-payloads';
+import { StartInterviewPayload, ChatConversationPayload, CodeExecutionPayload } from '@/types/interview-payloads';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -306,7 +306,7 @@ function InterviewSessionContent() {
     try {
       const sessionId = `session_${Date.now()}_${user?._id}`;
       
-      const initPayload: InitializeInterviewPayload = {
+      const initPayload: StartInterviewPayload = {
         user: buildUserProfile(user),
         configuration: buildInterviewConfig(level || 'mid', category || 'fullstack', duration || '30'),
         context: {
@@ -314,7 +314,18 @@ function InterviewSessionContent() {
           startTime: new Date().toISOString(),
           userAgent: navigator.userAgent,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          isFreeInterview: true
+          isFreeInterview: true,
+          deviceInfo: {
+            platform: navigator.platform || 'Unknown',
+            browser: navigator.userAgent.split(' ').pop() || 'Unknown',
+            screenResolution: `${screen.width}x${screen.height}`
+          }
+        },
+        preferences: {
+          voiceEnabled: true,
+          cameraEnabled: false,
+          microphoneEnabled: true,
+          fullscreenMode: false
         }
       };
       
@@ -359,7 +370,7 @@ function InterviewSessionContent() {
 
     try {
       // Send comprehensive AI conversation payload
-      const conversationPayload: AIConversationPayload = {
+      const conversationPayload: ChatConversationPayload = {
         sessionId: `session_${Date.now()}_${user?._id}`,
         user: {
           id: user?._id || '',
@@ -384,10 +395,22 @@ function InterviewSessionContent() {
           timeElapsed: (parseInt(duration || '45') * 60) - timeRemaining,
           timeRemaining,
           currentTopic: category || 'general',
-          difficulty: level || 'mid'
+          difficulty: level || 'mid',
+          expectedResponseType: hasCodeEditor ? 'code' : 'text' as 'text' | 'code' | 'explanation'
         },
-        userSkills: user?.tech_stack ? user.tech_stack.split(',') : [],
-        interviewGoals: user?.goals ? [user.goals] : [],
+        userPerformance: {
+          responseTime: 0,
+          communicationScore: 85,
+          clarityScore: 80,
+          confidenceLevel: 75
+        },
+        interviewState: {
+          tabSwitchCount: 0,
+          violations: [],
+          isFullscreen: false,
+          microphoneActive: true,
+          cameraActive: false
+        },
         codeContext: hasCodeEditor ? {
           hasCodeEditor: true,
           currentCode: code,
@@ -440,13 +463,19 @@ function InterviewSessionContent() {
           content: code,
           language,
           questionContext: currentQuestion || 'Code execution',
-          submissionNumber: messages.filter(m => m.content.includes('Code execution result')).length + 1
+          submissionNumber: messages.filter(m => m.content.includes('Code execution result')).length + 1,
+          timestamp: new Date().toISOString()
         },
         interviewContext: {
           timeElapsed: (parseInt(duration || '45') * 60) - timeRemaining,
           currentQuestion: currentQuestion || 'Code Challenge',
           expectedOutput: undefined,
           testCases: []
+        },
+        executionEnvironment: {
+          timeout: 30,
+          memoryLimit: '128MB',
+          allowedLibraries: ['standard']
         }
       };
 
@@ -473,18 +502,13 @@ function InterviewSessionContent() {
         user: buildUserProfile(user),
         configuration: buildInterviewConfig(level || 'mid', category || 'fullstack', duration || '30'),
         results: {
-          status: tabSwitchCount >= 3 ? 'terminated' : 'completed',
-          completedAt: new Date().toISOString(),
+          status: (tabSwitchCount >= 3 ? 'terminated' : 'completed') as 'terminated' | 'completed' | 'incomplete',
+          endTime: new Date().toISOString(),
           totalTimeSpent: (parseInt(duration || '45') * 60) - timeRemaining,
           questionsAnswered: messages.filter(m => m.type === 'user').length,
           totalQuestions: messages.filter(m => m.type === 'ai').length,
-          finalScores: {
-            overall: 0, // Will be calculated by backend
-            technical: 0,
-            communication: 0,
-            problemSolving: 0,
-            codeQuality: hasCodeEditor ? 0 : undefined
-          }
+          completionPercentage: Math.round((messages.filter(m => m.type === 'user').length / Math.max(messages.filter(m => m.type === 'ai').length, 1)) * 100),
+          terminationReason: (tabSwitchCount >= 3 ? 'violations' : 'user_ended') as 'time_up' | 'user_ended' | 'violations' | 'technical_error'
         },
         conversationHistory: messages.map(msg => ({
           id: msg.id,
@@ -498,15 +522,29 @@ function InterviewSessionContent() {
           code,
           language,
           submittedAt: new Date().toISOString(),
-          executionResult: null,
-          score: 0,
-          feedback: ''
+          executionResult: undefined
         }] : undefined,
         violations: Array.from({ length: tabSwitchCount }, (_, i) => ({
-          type: 'tab_switch',
+          type: 'tab_switch' as 'tab_switch' | 'fullscreen_exit' | 'right_click' | 'keyboard_shortcut' | 'copy_paste',
           timestamp: new Date().toISOString(),
-          description: `Tab switch violation #${i + 1}`
+          description: `Tab switch violation #${i + 1}`,
+          severity: 'medium' as 'low' | 'medium' | 'high'
         })),
+        performanceMetrics: {
+          averageResponseTime: 30,
+          totalSpeakingTime: 0,
+          totalListeningTime: 0,
+          communicationQuality: 75,
+          technicalAccuracy: 70,
+          problemSolvingApproach: 80
+        },
+        deviceMetrics: {
+          tabSwitchCount: tabSwitchCount,
+          fullscreenExits: 0,
+          microphoneIssues: 0,
+          cameraIssues: 0,
+          networkInterruptions: 0
+        },
         aiAnalysis: {
           strengths: [],
           improvements: [],

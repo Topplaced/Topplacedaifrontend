@@ -126,7 +126,7 @@ export async function startInterview(
     },
     context: {
       sessionId: "",
-      startTime: new Date().toISOString(),
+      startTime: new Date(),
       userAgent:
         typeof navigator !== "undefined" ? navigator.userAgent : "Unknown",
       timezone:
@@ -146,7 +146,6 @@ export async function startInterview(
   const response: StartInterviewResponse = {
     sessionId: result.sessionId,
     interview: {
-      id: result.sessionId,
       sessionId: result.sessionId,
       userId: payload.userId,
       userName: payload.userName,
@@ -157,7 +156,7 @@ export async function startInterview(
       language: payload.language,
       hasCodeEditor: payload.hasCodeEditor,
       status: "active",
-      startTime: new Date().toISOString(),
+      startTime: new Date(),
       scores: {
         overall: 0,
         technical: 0,
@@ -170,6 +169,8 @@ export async function startInterview(
         totalQuestions: 0,
         completionPercentage: 0,
       },
+      conversationHistory: [],
+      questionIds: [],
       configuration: {
         level: payload.level, // Keep original frontend level for UI consistency
         category: payload.category,
@@ -180,14 +181,13 @@ export async function startInterview(
       },
     },
     firstQuestion: result.firstQuestion,
-    message: result.message,
   };
 
   lsSet(INTERVIEW_STORAGE_KEYS.CURRENT_SESSION, {
     sessionId: result.sessionId,
     interview: response.interview,
     currentQuestion: result.firstQuestion,
-    startTime: new Date().toISOString(),
+    startTime: new Date(),
   });
 
   return response;

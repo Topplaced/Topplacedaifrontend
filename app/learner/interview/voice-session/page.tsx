@@ -114,7 +114,7 @@ const defaultLanguage = config.language;
     setInterviewProgress(percentage);
   };
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [showCodeEditor, setShowCodeEditor] = useState(hasCodeEditor); // Show by default if available
+  const [showCodeEditor, setShowCodeEditor] = useState<boolean>(hasCodeEditor); // Show by default if available
   const [recognition, setRecognition] = useState<any>(null);
   const [speechSynthesis, setSpeechSynthesis] = useState<any>(null);
 

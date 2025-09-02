@@ -56,7 +56,7 @@ export default function InterviewSetupPage() {
         setFreeInterviewsUsed(data.freeInterviewsUsed || 0);
         setHasPaidPlan(data.hasPaidPlan || false);
       } catch (error) {
-        console.warn('Error checking trial usage, using default values:', error.message);
+        console.warn('Error checking trial usage, using default values:', error instanceof Error ? error.message : String(error));
         setFreeInterviewsUsed(0);
         setHasPaidPlan(false);
       }
@@ -187,7 +187,7 @@ export default function InterviewSetupPage() {
       
     } catch (error) {
       console.error('Error starting interview:', error);
-      alert(`Failed to start interview: ${error.message}`);
+      alert(`Failed to start interview: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setLoading(false);
     }

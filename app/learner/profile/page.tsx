@@ -129,6 +129,7 @@ export default function LearnerProfilePage() {
         setProfileData({
           name: backendData.name || user.name || "",
           email: backendData.email || user.email || "",
+          phone: backendData.phone || user.phone || "",
           location: backendData.location || "",
           linkedinProfile:
             backendData.linkedin_url || user.linkedin_profile || "",
@@ -477,6 +478,7 @@ export default function LearnerProfilePage() {
     setProfileData({
       name: user?.name || "",
       email: user?.email || "",
+      phone: user?.phone || "",
       location: "",
       linkedinProfile: user?.linkedin_profile || "",
       goals: user?.goals || "",
