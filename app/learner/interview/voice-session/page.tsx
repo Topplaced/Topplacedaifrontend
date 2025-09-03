@@ -375,11 +375,7 @@ function VoiceInterviewContent() {
     initializeMedia();
   }, []);
 
-  // Initialize component (removed auto-start logic)
-  useEffect(() => {
-    console.log("🔍 Component initialized - waiting for manual start");
-    hasInitialized.current = true;
-  }, []);
+
 
   // Timer countdown
   useEffect(() => {
@@ -629,8 +625,8 @@ function VoiceInterviewContent() {
 
   const [isStartingInterview, setIsStartingInterview] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
-  const [showInstructionsPopup, setShowInstructionsPopup] = useState(true);
-  const [showStartingPopup, setShowStartingPopup] = useState(false);
+  const [showInstructionsPopup, setShowInstructionsPopup] = useState(false);
+  const [showStartingPopup, setShowStartingPopup] = useState(true);
   const [popupTimer, setPopupTimer] = useState(5);
   const [countdownInterval, setCountdownInterval] =
     useState<NodeJS.Timeout | null>(null);
@@ -646,7 +642,7 @@ function VoiceInterviewContent() {
     };
   }, [countdownInterval]);
 
-  const startInterview = async () => {
+  const startInterview = useCallback(async () => {
     console.log("🚀 Starting interview...", {
       isStartingRef: isStartingRef.current,
       isStartingInterview,
@@ -689,7 +685,30 @@ function VoiceInterviewContent() {
     }, 1000);
 
     setCountdownInterval(countdown);
-  };
+  }, [isStartingInterview, interviewStarted, countdownInterval]);
+
+  // Initialize component and auto-start timer
+  useEffect(() => {
+    if (hasInitialized.current) return;
+    
+    console.log("🔍 Component initialized - auto-starting timer");
+    hasInitialized.current = true;
+    
+    // Auto-start the interview timer after component initialization
+    const autoStartTimer = setTimeout(() => {
+      // Check if manual start hasn't already been triggered
+      if (!isStartingRef.current && !isStartingInterview && !interviewStarted) {
+        startInterview();
+      } else {
+        console.log("⏭️ Skipping auto-start - manual start already triggered");
+      }
+    }, 1000); // Small delay to ensure everything is loaded
+    
+    // Cleanup timer on unmount
+    return () => {
+      clearTimeout(autoStartTimer);
+    };
+  }, []); // Empty dependency array to run only once
 
   const actuallyStartInterview = async () => {
     console.log("🚀 actuallyStartInterview called", {
@@ -801,6 +820,20 @@ function VoiceInterviewContent() {
 
   const handleManualStart = async () => {
     console.log("🎯 Manual start triggered from instructions popup");
+    
+    // Prevent duplicate calls if already starting or started
+    if (isStartingRef.current || isStartingInterview || interviewStarted) {
+      console.log("⏭️ Skipping manual start - already in progress or started");
+      return;
+    }
+    
+    // Clear any existing countdown to prevent auto-start
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      setCountdownInterval(null);
+    }
+    
+    isStartingRef.current = true;
     setShowInstructionsPopup(false);
     setShowStartingPopup(true);
     setIsStartingInterview(true);

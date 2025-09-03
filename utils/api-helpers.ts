@@ -156,16 +156,45 @@ export function buildInterviewConfig(level: string, category: string, duration: 
   };
 }
 
-// Helper function to get default programming language
+// Helper function to get default programming language or tool
 function getDefaultLanguage(category: string): string {
   switch (category) {
+    // Development categories
     case 'frontend': return 'javascript';
     case 'backend': return 'python';
     case 'fullstack': return 'javascript';
-    case 'sql': return 'sql';
+    case 'mobile-developer': return 'react-native';
+    
+    // Marketing categories
+    case 'digital-marketing': return 'google-ads';
+    case 'content-marketing': return 'copywriting';
+    case 'social-media-marketing': return 'social-media-strategy';
+    
+    // Analyst categories
     case 'data-analyst': return 'python';
+    case 'business-analyst': return 'requirements-analysis';
+    case 'financial-analyst': return 'financial-modeling';
+    
+    // HR categories
+    case 'hr-generalist': return 'recruitment';
+    case 'hr-recruiter': return 'recruitment';
+    case 'hr-business-partner': return 'strategic-hr';
+    
+    // Content categories
+    case 'content-writer': return 'content-writing';
+    case 'copywriter': return 'copywriting';
+    case 'technical-writer': return 'technical-documentation';
+    
+    // Design & Cloud categories
+    case 'ui-ux-designer': return 'figma';
+    case 'cloud-architect': return 'aws';
+    case 'devops-engineer': return 'docker';
+    
+    // Legacy categories
+    case 'sql': return 'sql';
     case 'aws': return 'yaml';
     case 'devops': return 'bash';
+    
     default: return 'javascript';
   }
 }

@@ -1,53 +1,65 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Play, Code, Users, Brain, Database, Cloud, Briefcase } from 'lucide-react';
-import Navbar from '@/components/Navbar';
-import Sidebar from '@/components/Sidebar';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/store/store';
-import { 
-  CreateInterviewPayload, 
-  InterviewLevel, 
-  InterviewCategory
-} from '@/types/interview-schema';
-import { startInterview } from '@/utils/interview-api';
-import { buildInterviewConfig } from '@/utils/api-helpers';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Play,
+  Code,
+  Users,
+  Brain,
+  Database,
+  Cloud,
+  Briefcase,
+} from "lucide-react";
+import Navbar from "@/components/Navbar";
+import Sidebar from "@/components/Sidebar";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
+import {
+  CreateInterviewPayload,
+  InterviewLevel,
+  InterviewCategory,
+} from "@/types/interview-schema";
+import { startInterview } from "@/utils/interview-api";
+import { buildInterviewConfig } from "@/utils/api-helpers";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function InterviewSetupPage() {
   const router = useRouter();
   const { user, token } = useSelector((state: RootState) => state.auth);
-  const [selectedLevel, setSelectedLevel] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedLanguage, setSelectedLanguage] = useState('');
-  const [selectedDuration, setSelectedDuration] = useState('45');
+  const [selectedLevel, setSelectedLevel] = useState("");
+  const [selectedPrimaryCategory, setSelectedPrimaryCategory] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState("");
+  const [selectedDuration, setSelectedDuration] = useState("45");
   const [freeInterviewsUsed, setFreeInterviewsUsed] = useState(0);
   const [hasPaidPlan, setHasPaidPlan] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Check free trial usage on component mount
-  useState(() => {
+  useEffect(() => {
     const checkFreeTrialUsage = async () => {
       try {
-        const response = await fetch(`${API_URL}/users/${user?._id}/interview-usage`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        
+        const response = await fetch(
+          `${API_URL}/users/${user?._id}/interview-usage`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
         if (!response.ok) {
-          console.warn('API not available, using default values');
+          console.warn("Failed to fetch trial usage, using default values");
           setFreeInterviewsUsed(0);
           setHasPaidPlan(false);
           return;
         }
 
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          console.warn('API returned non-JSON response, using default values');
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          console.warn("API returned non-JSON response, using default values");
           setFreeInterviewsUsed(0);
           setHasPaidPlan(false);
           return;
@@ -57,7 +69,10 @@ export default function InterviewSetupPage() {
         setFreeInterviewsUsed(data.freeInterviewsUsed || 0);
         setHasPaidPlan(data.hasPaidPlan || false);
       } catch (error) {
-        console.warn('Error checking trial usage, using default values:', error instanceof Error ? error.message : String(error));
+        console.warn(
+          "Error checking trial usage, using default values:",
+          error instanceof Error ? error.message : String(error)
+        );
         setFreeInterviewsUsed(0);
         setHasPaidPlan(false);
       }
@@ -66,127 +81,530 @@ export default function InterviewSetupPage() {
     if (user?._id && token) {
       checkFreeTrialUsage();
     }
-  });
+  }, [user?._id, token]);
+
   const interviewLevels = [
     {
       id: InterviewLevel.BEGINNER,
-      name: 'Beginner Level',
-      description: 'For beginners and fresh graduates',
-      icon: '🌱',
-      difficulty: 'Easy'
+      name: "Beginner Level",
+      description: "For beginners and fresh graduates",
+      icon: "🌱",
+      difficulty: "Easy",
     },
     {
       id: InterviewLevel.INTERMEDIATE,
-      name: 'Intermediate Level',
-      description: '2-5 years of experience',
-      icon: '🚀',
-      difficulty: 'Medium'
+      name: "Intermediate Level",
+      description: "2-5 years of experience",
+      icon: "🚀",
+      difficulty: "Medium",
     },
     {
       id: InterviewLevel.ADVANCED,
-      name: 'Advanced Level',
-      description: '5+ years of experience',
-      icon: '⭐',
-      difficulty: 'Hard'
-    }
+      name: "Advanced Level",
+      description: "5+ years of experience",
+      icon: "⭐",
+      difficulty: "Hard",
+    },
   ];
 
-  const interviewCategories = [
+  const primaryCategories = [
     {
-      id: InterviewCategory.FRONTEND,
-      name: 'Frontend Developer',
-      description: 'React, JavaScript, CSS, UI/UX',
+      id: "development",
+      name: "Development",
+      description: "Software development and programming roles",
       icon: Code,
-      color: 'text-yellow-400',
-      hasCodeEditor: true,
-      languages: [
-        { id: 'javascript', name: 'JavaScript', description: 'Vanilla JavaScript fundamentals' },
-        { id: 'typescript', name: 'TypeScript', description: 'TypeScript with type safety' },
-        { id: 'react', name: 'React', description: 'React.js framework' },
-        { id: 'vue', name: 'Vue.js', description: 'Vue.js framework' },
-        { id: 'angular', name: 'Angular', description: 'Angular framework' }
-      ]
+      color: "text-blue-400",
     },
     {
-      id: InterviewCategory.BACKEND,
-      name: 'Backend Developer',
-      description: 'APIs, databases, server architecture',
-      icon: Database,
-      color: 'text-red-400',
-      hasCodeEditor: true,
-      languages: [
-        { id: 'java', name: 'Java', description: 'Java with Spring Boot' },
-        { id: 'javascript', name: 'JavaScript', description: 'Node.js backend development' },
-        { id: 'python', name: 'Python', description: 'Python with Django/Flask' },
-        { id: 'php', name: 'PHP', description: 'PHP with Laravel/Symfony' },
-        { id: 'csharp', name: 'C#', description: 'C# with .NET Core' },
-        { id: 'go', name: 'Go', description: 'Go programming language' }
-      ]
+      id: "marketing",
+      name: "Marketing",
+      description: "Digital marketing and growth roles",
+      icon: Users,
+      color: "text-green-400",
     },
     {
-      id: InterviewCategory.FULLSTACK,
-      name: 'Full-Stack Developer',
-      description: 'Frontend, backend, and system design',
-      icon: Code,
-      color: 'text-[#00FFB2]',
-      hasCodeEditor: true,
-      languages: [
-        { id: 'javascript', name: 'JavaScript Stack', description: 'MERN/MEAN stack' },
-        { id: 'typescript', name: 'TypeScript Stack', description: 'Full-stack TypeScript' },
-        { id: 'python', name: 'Python Stack', description: 'Django + React/Vue' },
-        { id: 'java', name: 'Java Stack', description: 'Spring Boot + React' },
-        { id: 'php', name: 'PHP Stack', description: 'Laravel + Vue/React' }
-      ]
+      id: "analyst",
+      name: "Analyst",
+      description: "Data analysis and business intelligence",
+      icon: Brain,
+      color: "text-purple-400",
     },
     {
-      id: InterviewCategory.MOBILE,
-      name: 'Mobile Developer',
-      description: 'iOS, Android, React Native, Flutter',
-      icon: Code,
-      color: 'text-purple-400',
-      hasCodeEditor: true,
-      languages: [
-        { id: 'react-native', name: 'React Native', description: 'Cross-platform with React Native' },
-        { id: 'flutter', name: 'Flutter', description: 'Cross-platform with Flutter/Dart' },
-        { id: 'swift', name: 'Swift', description: 'Native iOS development' },
-        { id: 'kotlin', name: 'Kotlin', description: 'Native Android development' },
-        { id: 'java', name: 'Java', description: 'Android development with Java' }
-      ]
-    }
+      id: "hr",
+      name: "HR",
+      description: "Human resources and talent management",
+      icon: Users,
+      color: "text-orange-400",
+    },
+    {
+      id: "content",
+      name: "Content",
+      description: "Content creation and management",
+      icon: Briefcase,
+      color: "text-pink-400",
+    },
+    {
+      id: "design-cloud",
+      name: "Design & Cloud",
+      description: "UI/UX design and cloud infrastructure",
+      icon: Cloud,
+      color: "text-cyan-400",
+    },
   ];
+
+  const categoryMapping = {
+    development: [
+      {
+        id: InterviewCategory.FRONTEND,
+        name: "Frontend Developer",
+        description: "React, JavaScript, CSS, UI/UX",
+        icon: Code,
+        color: "text-yellow-400",
+        hasCodeEditor: true,
+        languages: [
+          {
+            id: "javascript",
+            name: "JavaScript",
+            description: "Vanilla JavaScript fundamentals",
+          },
+          {
+            id: "react",
+            name: "React",
+            description: "React framework and ecosystem",
+          },
+          { id: "vue", name: "Vue.js", description: "Vue.js framework" },
+          { id: "angular", name: "Angular", description: "Angular framework" },
+          {
+            id: "typescript",
+            name: "TypeScript",
+            description: "TypeScript language",
+          },
+        ],
+      },
+      {
+        id: InterviewCategory.BACKEND,
+        name: "Backend Developer",
+        description: "Node.js, Python, APIs, Databases",
+        icon: Database,
+        color: "text-green-400",
+        hasCodeEditor: true,
+        languages: [
+          {
+            id: "javascript",
+            name: "Node.js",
+            description: "Server-side JavaScript",
+          },
+          { id: "python", name: "Python", description: "Python programming" },
+          { id: "java", name: "Java", description: "Java programming" },
+          { id: "csharp", name: "C#", description: "C# and .NET" },
+          { id: "go", name: "Go", description: "Go programming language" },
+        ],
+      },
+      {
+        id: InterviewCategory.FULLSTACK,
+        name: "Full-Stack Developer",
+        description: "Frontend + Backend development",
+        icon: Code,
+        color: "text-purple-400",
+        hasCodeEditor: true,
+        languages: [
+          {
+            id: "javascript",
+            name: "JavaScript/Node.js",
+            description: "Full-stack JavaScript",
+          },
+          {
+            id: "python",
+            name: "Python/Django",
+            description: "Python full-stack",
+          },
+          { id: "java", name: "Java/Spring", description: "Java full-stack" },
+          { id: "csharp", name: "C#/.NET", description: "Microsoft stack" },
+          { id: "php", name: "PHP/Laravel", description: "PHP full-stack" },
+        ],
+      },
+      {
+        id: "mobile-developer",
+        name: "Mobile Developer",
+        description: "iOS, Android, React Native",
+        icon: Code,
+        color: "text-blue-400",
+        hasCodeEditor: true,
+        languages: [
+          {
+            id: "react-native",
+            name: "React Native",
+            description: "Cross-platform mobile development",
+          },
+          {
+            id: "flutter",
+            name: "Flutter",
+            description: "Google's UI toolkit",
+          },
+          { id: "swift", name: "Swift", description: "iOS development" },
+          { id: "kotlin", name: "Kotlin", description: "Android development" },
+          { id: "java", name: "Java", description: "Android development" },
+        ],
+      },
+    ],
+    marketing: [
+      {
+        id: "digital-marketing",
+        name: "Digital Marketing",
+        description: "SEO, SEM, Social Media, Analytics",
+        icon: Users,
+        color: "text-green-400",
+        hasCodeEditor: false,
+        languages: [
+          {
+            id: "google-ads",
+            name: "Google Ads",
+            description: "Pay-per-click advertising",
+          },
+          {
+            id: "facebook-ads",
+            name: "Facebook Ads",
+            description: "Social media advertising",
+          },
+          { id: "seo", name: "SEO", description: "Search engine optimization" },
+          {
+            id: "analytics",
+            name: "Google Analytics",
+            description: "Web analytics",
+          },
+          {
+            id: "email-marketing",
+            name: "Email Marketing",
+            description: "Email campaign management",
+          },
+        ],
+      },
+      {
+        id: "content-marketing",
+        name: "Content Marketing",
+        description: "Content strategy, copywriting, blogging",
+        icon: Briefcase,
+        color: "text-pink-400",
+        hasCodeEditor: false,
+        languages: [
+          {
+            id: "copywriting",
+            name: "Copywriting",
+            description: "Persuasive writing techniques",
+          },
+          {
+            id: "content-strategy",
+            name: "Content Strategy",
+            description: "Strategic content planning",
+          },
+          {
+            id: "blogging",
+            name: "Blogging",
+            description: "Blog content creation",
+          },
+          {
+            id: "social-media",
+            name: "Social Media",
+            description: "Social media content",
+          },
+          {
+            id: "video-marketing",
+            name: "Video Marketing",
+            description: "Video content creation",
+          },
+        ],
+      },
+    ],
+    analyst: [
+      {
+        id: "data-analyst",
+        name: "Data Analyst",
+        description: "SQL, Python, Excel, Visualization",
+        icon: Brain,
+        color: "text-purple-400",
+        hasCodeEditor: true,
+        languages: [
+          {
+            id: "sql",
+            name: "SQL",
+            description: "Database querying and analysis",
+          },
+          {
+            id: "python",
+            name: "Python",
+            description: "Data analysis with Python",
+          },
+          { id: "r", name: "R", description: "Statistical analysis with R" },
+          {
+            id: "excel",
+            name: "Excel",
+            description: "Advanced Excel techniques",
+          },
+          { id: "tableau", name: "Tableau", description: "Data visualization" },
+        ],
+      },
+      {
+        id: "business-analyst",
+        name: "Business Analyst",
+        description: "Requirements analysis, process improvement",
+        icon: Briefcase,
+        color: "text-blue-400",
+        hasCodeEditor: false,
+        languages: [
+          {
+            id: "requirements-analysis",
+            name: "Requirements Analysis",
+            description: "Gathering and documenting requirements",
+          },
+          {
+            id: "process-mapping",
+            name: "Process Mapping",
+            description: "Business process analysis",
+          },
+          {
+            id: "stakeholder-management",
+            name: "Stakeholder Management",
+            description: "Managing stakeholder relationships",
+          },
+          {
+            id: "agile-methodologies",
+            name: "Agile Methodologies",
+            description: "Agile and Scrum practices",
+          },
+          {
+            id: "data-analysis",
+            name: "Data Analysis",
+            description: "Business data interpretation",
+          },
+        ],
+      },
+    ],
+    hr: [
+      {
+        id: "hr-generalist",
+        name: "HR Generalist",
+        description: "Recruitment, employee relations, policies",
+        icon: Users,
+        color: "text-orange-400",
+        hasCodeEditor: false,
+        languages: [
+          {
+            id: "recruitment",
+            name: "Recruitment",
+            description: "Talent acquisition strategies",
+          },
+          {
+            id: "employee-relations",
+            name: "Employee Relations",
+            description: "Managing workplace relationships",
+          },
+          {
+            id: "performance-management",
+            name: "Performance Management",
+            description: "Employee performance systems",
+          },
+          {
+            id: "hr-policies",
+            name: "HR Policies",
+            description: "Policy development and implementation",
+          },
+          {
+            id: "compensation",
+            name: "Compensation & Benefits",
+            description: "Salary and benefits management",
+          },
+        ],
+      },
+    ],
+    content: [
+      {
+        id: "content-writer",
+        name: "Content Writer",
+        description: "Writing, editing, content strategy",
+        icon: Briefcase,
+        color: "text-pink-400",
+        hasCodeEditor: false,
+        languages: [
+          {
+            id: "creative-writing",
+            name: "Creative Writing",
+            description: "Creative content creation",
+          },
+          {
+            id: "technical-writing",
+            name: "Technical Writing",
+            description: "Technical documentation",
+          },
+          {
+            id: "copywriting",
+            name: "Copywriting",
+            description: "Marketing copy creation",
+          },
+          {
+            id: "editing",
+            name: "Editing & Proofreading",
+            description: "Content editing skills",
+          },
+          {
+            id: "seo-writing",
+            name: "SEO Writing",
+            description: "Search-optimized content",
+          },
+        ],
+      },
+    ],
+    "design-cloud": [
+      {
+        id: "ui-ux-designer",
+        name: "UI/UX Designer",
+        description: "User interface and experience design",
+        icon: Briefcase,
+        color: "text-cyan-400",
+        hasCodeEditor: false,
+        languages: [
+          {
+            id: "figma",
+            name: "Figma",
+            description: "Design and prototyping tool",
+          },
+          { id: "sketch", name: "Sketch", description: "UI design tool" },
+          {
+            id: "adobe-xd",
+            name: "Adobe XD",
+            description: "User experience design",
+          },
+          {
+            id: "prototyping",
+            name: "Prototyping",
+            description: "Interactive prototypes",
+          },
+          {
+            id: "user-research",
+            name: "User Research",
+            description: "User research and testing",
+          },
+        ],
+      },
+      {
+        id: "cloud-engineer",
+        name: "Cloud Engineer",
+        description: "Cloud infrastructure and DevOps",
+        icon: Cloud,
+        color: "text-blue-400",
+        hasCodeEditor: true,
+        languages: [
+          { id: "aws", name: "AWS", description: "Amazon Web Services" },
+          { id: "azure", name: "Azure", description: "Microsoft Azure" },
+          {
+            id: "gcp",
+            name: "Google Cloud",
+            description: "Google Cloud Platform",
+          },
+          {
+            id: "docker",
+            name: "Docker",
+            description: "Containerization with Docker",
+          },
+          {
+            id: "kubernetes",
+            name: "Kubernetes",
+            description: "Container orchestration",
+          },
+        ],
+      },
+    ],
+  };
+
+  const handlePrimaryCategorySelect = (primaryCategoryId: string) => {
+    setSelectedPrimaryCategory(primaryCategoryId);
+    setSelectedCategory(""); // Reset category when primary category changes
+    setSelectedLanguage(""); // Reset language when primary category changes
+  };
+
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setSelectedLanguage(""); // Reset language when category changes
+    
+    // Auto-select the first available language for the category
+    const availableCategories = categoryMapping[
+      selectedPrimaryCategory as keyof typeof categoryMapping
+    ] || [];
+    const category = availableCategories.find((cat) => cat.id === categoryId);
+    if (category && category.languages && category.languages.length > 0) {
+      setSelectedLanguage(category.languages[0].id);
+    }
+  };
+
+  const getAvailableCategories = () => {
+    return (
+      categoryMapping[
+        selectedPrimaryCategory as keyof typeof categoryMapping
+      ] || []
+    );
+  };
+
+  const getAvailableLanguages = () => {
+    const availableCategories = getAvailableCategories();
+    const category = availableCategories.find(
+      (cat) => cat.id === selectedCategory
+    );
+    return category?.languages || [];
+  };
 
   const durations = [
-    { value: '30', label: '30 minutes', description: 'Quick assessment' },
-    { value: '45', label: '45 minutes', description: 'Standard interview' },
-    { value: '60', label: '60 minutes', description: 'Comprehensive interview' },
-    { value: '90', label: '90 minutes', description: 'In-depth technical interview' }
+    { value: "30", label: "30 minutes", description: "Quick assessment" },
+    { value: "45", label: "45 minutes", description: "Standard interview" },
+    {
+      value: "60",
+      label: "60 minutes",
+      description: "Comprehensive interview",
+    },
+    {
+      value: "90",
+      label: "90 minutes",
+      description: "In-depth technical interview",
+    },
   ];
 
   const handleStartInterview = async () => {
-    if (!selectedLevel || !selectedCategory || !selectedLanguage) {
-      alert('Please select interview level, category, and programming language');
+    if (
+      !selectedLevel ||
+      !selectedPrimaryCategory ||
+      !selectedCategory ||
+      !selectedLanguage
+    ) {
+      alert(
+        "Please select interview level, field, category, and language/tool"
+      );
       return;
     }
 
     // Check if user has exceeded free interviews
     if (freeInterviewsUsed >= 2 && !hasPaidPlan) {
-      router.push('/pricing');
+      router.push("/pricing");
       return;
     }
 
     if (!user?._id || !user?.name || !user?.email) {
-      alert('User information is missing. Please log in again.');
+      alert("User information is missing. Please log in again.");
       return;
     }
 
     setLoading(true);
 
     try {
-      const selectedCategoryData = interviewCategories.find(cat => cat.id === selectedCategory);
-      
+      const availableCategories = getAvailableCategories();
+      const selectedCategoryData = availableCategories.find(
+        (cat) => cat.id === selectedCategory
+      );
+
       // Get the proper language for the category
-      const config = buildInterviewConfig(selectedLevel, selectedCategory, selectedDuration);
-      
+      const config = buildInterviewConfig(
+        selectedLevel,
+        selectedCategory,
+        selectedDuration
+      );
+
       // Navigate directly to the interview session page with all necessary parameters
       // The actual interview start will be triggered manually from the instructions popup
       const params = new URLSearchParams({
@@ -194,24 +612,30 @@ export default function InterviewSetupPage() {
         category: selectedCategory,
         duration: selectedDuration,
         language: selectedLanguage, // Use the selected language instead of config.language
-        hasCodeEditor: (selectedCategoryData?.hasCodeEditor || false).toString(),
+        hasCodeEditor: (
+          selectedCategoryData?.hasCodeEditor || false
+        ).toString(),
         userId: user._id,
         userName: user.name,
         userEmail: user.email,
-        isFreeInterview: (!hasPaidPlan).toString()
+        isFreeInterview: (!hasPaidPlan).toString(),
       });
-      
+
       router.push(`/learner/interview/voice-session?${params.toString()}`);
-      
     } catch (error) {
-      console.error('Error navigating to interview:', error);
-      alert(`Failed to navigate to interview: ${error instanceof Error ? error.message : String(error)}`);
+      console.error("Error navigating to interview:", error);
+      alert(
+        `Failed to navigate to interview: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const canStartFreeInterview = freeInterviewsUsed < 2 || hasPaidPlan;
+
   return (
     <div className="min-h-screen bg-black">
       <Navbar />
@@ -221,44 +645,43 @@ export default function InterviewSetupPage() {
         <div className="container-custom space-y-10">
           {/* Header */}
           <div className="text-center">
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">
-              Setup Your <span className="gradient-text">AI Interview</span>
-            </h1>
+            <h1 className="text-4xl font-bold mb-4">Interview Setup</h1>
             <p className="text-gray-400 text-lg">
-              Choose your interview preferences and let our AI conduct a personalized session
+              Configure your AI-powered interview session
             </p>
-            
-            {/* Free Trial Status */}
-            <div className="mt-6 max-w-md mx-auto">
-              {!hasPaidPlan && (
-                <div className={`p-4 rounded-lg border ${
-                  freeInterviewsUsed >= 2 
-                    ? 'bg-red-500/10 border-red-500/20 text-red-400' 
-                    : 'bg-[#00FFB2]/10 border-[#00FFB2]/20 text-[#00FFB2]'
-                }`}>
-                  <p className="text-sm">
-                    {freeInterviewsUsed >= 2 
-                      ? '🚫 Free interviews exhausted. Upgrade to continue.' 
-                      : `🎉 Free interviews remaining: ${2 - freeInterviewsUsed}/2`
-                    }
-                  </p>
-                  {freeInterviewsUsed >= 2 && (
-                    <button
-                      onClick={() => router.push('/pricing')}
-                      className="mt-2 text-sm underline hover:no-underline"
-                    >
-                      View Pricing Plans
-                    </button>
-                  )}
-                </div>
+          </div>
+
+          {/* Free Trial Warning */}
+          {!hasPaidPlan && (
+            <div
+              className={`p-4 rounded-lg border ${
+                freeInterviewsUsed >= 2
+                  ? "border-red-500 bg-red-500/10"
+                  : "border-yellow-500 bg-yellow-500/10"
+              }`}
+            >
+              <p className="text-sm">
+                {freeInterviewsUsed >= 2
+                  ? "🚫 You have used all your free interviews. Upgrade to continue practicing."
+                  : `⚡ Free Trial: ${freeInterviewsUsed}/2 interviews used. Upgrade for unlimited access.`}
+              </p>
+              {freeInterviewsUsed >= 2 && (
+                <button
+                  onClick={() => router.push("/pricing")}
+                  className="mt-2 px-4 py-2 bg-[#00FFB2] text-black rounded-lg font-medium hover:bg-[#00FFB2]/80 transition-colors"
+                >
+                  Upgrade Now
+                </button>
               )}
             </div>
-          </div>
+          )}
 
           {/* Interview Level Selection */}
           <div className="glass-card p-8">
-            <h2 className="text-2xl font-semibold mb-6">Select Interview Level</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <h2 className="text-2xl font-semibold mb-6">
+              Select Interview Level
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {interviewLevels.map((level) => (
                 <button
                   key={level.id}
@@ -266,19 +689,28 @@ export default function InterviewSetupPage() {
                   disabled={!canStartFreeInterview}
                   className={`p-6 rounded-lg border-2 transition-all text-left ${
                     selectedLevel === level.id
-                      ? 'border-[#00FFB2] bg-[#00FFB2]/10'
-                      : 'border-[#333] hover:border-[#00FFB2]/50'
-                  } ${!canStartFreeInterview ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      ? "border-[#00FFB2] bg-[#00FFB2]/10"
+                      : "border-[#333] hover:border-[#00FFB2]/50"
+                  } ${
+                    !canStartFreeInterview
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
                 >
                   <div className="text-3xl mb-3">{level.icon}</div>
-                  <h3 className="font-semibold mb-2">{level.name}</h3>
-                  <p className="text-sm text-gray-400 mb-3">{level.description}</p>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    level.difficulty === 'Easy' ? 'bg-green-500/20 text-green-400' :
-                    level.difficulty === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                    level.difficulty === 'Hard' ? 'bg-red-500/20 text-red-400' :
-                    'bg-purple-500/20 text-purple-400'
-                  }`}>
+                  <h3 className="font-semibold text-lg mb-2">{level.name}</h3>
+                  <p className="text-sm text-gray-400 mb-3">
+                    {level.description}
+                  </p>
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full ${
+                      level.difficulty === "Easy"
+                        ? "bg-green-500/20 text-green-400"
+                        : level.difficulty === "Medium"
+                        ? "bg-yellow-500/20 text-yellow-400"
+                        : "bg-red-500/20 text-red-400"
+                    }`}
+                  >
                     {level.difficulty}
                   </span>
                 </button>
@@ -286,96 +718,147 @@ export default function InterviewSetupPage() {
             </div>
           </div>
 
-          {/* Interview Category Selection */}
+          {/* Primary Category Selection */}
           <div className="glass-card p-8">
-            <h2 className="text-2xl font-semibold mb-6">Select Interview Category</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {interviewCategories.map((category) => {
-                const IconComponent = category.icon;
+            <h2 className="text-2xl font-semibold mb-6">Select Field</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {primaryCategories.map((field) => {
+                const IconComponent = field.icon;
                 return (
                   <button
-                    key={category.id}
-                    onClick={() => {
-                      setSelectedCategory(category.id);
-                      setSelectedLanguage(''); // Reset language when category changes
-                    }}
+                    key={field.id}
+                    onClick={() => handlePrimaryCategorySelect(field.id)}
                     disabled={!canStartFreeInterview}
                     className={`p-6 rounded-lg border-2 transition-all text-left ${
-                      selectedCategory === category.id
-                        ? 'border-[#00FFB2] bg-[#00FFB2]/10'
-                        : 'border-[#333] hover:border-[#00FFB2]/50'
-                    } ${!canStartFreeInterview ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      selectedPrimaryCategory === field.id
+                        ? "border-[#00FFB2] bg-[#00FFB2]/10"
+                        : "border-[#333] hover:border-[#00FFB2]/50"
+                    } ${
+                      !canStartFreeInterview
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
                   >
                     <div className="flex items-center mb-4">
-                      <IconComponent size={24} className={`${category.color} mr-3`} />
-                      <div className="flex items-center space-x-2">
-                        <h3 className="font-semibold">{category.name}</h3>
-                        {category.hasCodeEditor && (
-                          <span className="text-xs bg-[#00FFB2]/20 text-[#00FFB2] px-2 py-1 rounded-full">
-                            Code Editor
-                          </span>
-                        )}
-                      </div>
+                      <IconComponent className="h-8 w-8 text-[#00FFB2] mr-3" />
+                      <h3 className="font-semibold text-lg">{field.name}</h3>
                     </div>
-                    <p className="text-sm text-gray-400">{category.description}</p>
+                    <p className="text-sm text-gray-400">{field.description}</p>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Programming Language Selection - Shows only when category is selected */}
+          {/* Interview Category Selection */}
+          {selectedPrimaryCategory && (
+            <div className="glass-card p-8">
+              <h2 className="text-2xl font-semibold mb-6">Select Category</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {getAvailableCategories().map((category) => {
+                  const IconComponent = category.icon;
+                  return (
+                    <button
+                      key={category.id}
+                      onClick={() => handleCategorySelect(category.id)}
+                      disabled={!canStartFreeInterview}
+                      className={`p-6 rounded-lg border-2 transition-all text-left ${
+                        selectedCategory === category.id
+                          ? "border-[#00FFB2] bg-[#00FFB2]/10"
+                          : "border-[#333] hover:border-[#00FFB2]/50"
+                      } ${
+                        !canStartFreeInterview
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center">
+                          <IconComponent className="h-6 w-6 text-[#00FFB2] mr-3" />
+                          <h3 className="font-semibold">{category.name}</h3>
+                        </div>
+                        {category.hasCodeEditor && (
+                          <span className="text-xs bg-[#00FFB2]/20 text-[#00FFB2] px-2 py-1 rounded-full">
+                            Code Editor
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-400">
+                        {category.description}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Language/Tool Selection */}
           {selectedCategory && (
             <div className="glass-card p-8">
-              <h2 className="text-2xl font-semibold mb-6">Select Programming Language</h2>
+              <h2 className="text-2xl font-semibold mb-6">
+                Select{" "}
+                {selectedPrimaryCategory === "development"
+                  ? "Programming Language"
+                  : "Tool/Technology"}
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {interviewCategories
-                  .find(cat => cat.id === selectedCategory)
-                  ?.languages.map((language) => (
-                    <button
-                      key={language.id}
-                      onClick={() => setSelectedLanguage(language.id)}
-                      disabled={!canStartFreeInterview}
-                      className={`p-4 rounded-lg border-2 transition-all text-left ${
-                        selectedLanguage === language.id
-                          ? 'border-[#00FFB2] bg-[#00FFB2]/10'
-                          : 'border-[#333] hover:border-[#00FFB2]/50'
-                      } ${!canStartFreeInterview ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      <h3 className="font-semibold mb-2">{language.name}</h3>
-                      <p className="text-sm text-gray-400">{language.description}</p>
-                    </button>
-                  ))
-                }
+                {getAvailableLanguages().map((language) => (
+                  <button
+                    key={language.id}
+                    onClick={() => setSelectedLanguage(language.id)}
+                    disabled={!canStartFreeInterview}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      selectedLanguage === language.id
+                        ? "border-[#00FFB2] bg-[#00FFB2]/10"
+                        : "border-[#333] hover:border-[#00FFB2]/50"
+                    } ${
+                      !canStartFreeInterview
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
+                  >
+                    <h3 className="font-semibold mb-2">{language.name}</h3>
+                    <p className="text-sm text-gray-400">
+                      {language.description}
+                    </p>
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
           {/* Duration Selection */}
           <div className="glass-card p-8">
-            <h2 className="text-2xl font-semibold mb-6">Interview Duration</h2>
-            <div className="mb-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-              <p className="text-yellow-400 text-sm">
-                <strong>Note:</strong> Only 30-minute interviews are available for free users. 
-                Upgrade to access longer durations.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <h2 className="text-2xl font-semibold mb-6">Select Duration</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {durations.map((duration) => (
                 <button
                   key={duration.value}
                   onClick={() => setSelectedDuration(duration.value)}
-                  disabled={!canStartFreeInterview || (!hasPaidPlan && duration.value !== '30')}
+                  disabled={
+                    !canStartFreeInterview ||
+                    (!hasPaidPlan && duration.value !== "30")
+                  }
                   className={`p-4 rounded-lg border-2 transition-all text-center ${
                     selectedDuration === duration.value
-                      ? 'border-[#00FFB2] bg-[#00FFB2]/10'
-                      : 'border-[#333] hover:border-[#00FFB2]/50'
-                  } ${(!canStartFreeInterview || (!hasPaidPlan && duration.value !== '30')) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      ? "border-[#00FFB2] bg-[#00FFB2]/10"
+                      : "border-[#333] hover:border-[#00FFB2]/50"
+                  } ${
+                    !canStartFreeInterview ||
+                    (!hasPaidPlan && duration.value !== "30")
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
                 >
-                  <div className="text-xl font-bold mb-1">{duration.label}</div>
-                  <div className="text-sm text-gray-400">{duration.description}</div>
-                  {!hasPaidPlan && duration.value !== '30' && (
-                    <div className="text-xs text-yellow-400 mt-1">Pro Only</div>
+                  <h3 className="font-semibold text-lg">{duration.label}</h3>
+                  <p className="text-sm text-gray-400">
+                    {duration.description}
+                  </p>
+                  {!hasPaidPlan && duration.value !== "30" && (
+                    <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full mt-2 inline-block">
+                      Pro Only
+                    </span>
                   )}
                 </button>
               ))}
@@ -386,22 +869,39 @@ export default function InterviewSetupPage() {
           <div className="text-center">
             <button
               onClick={handleStartInterview}
-              disabled={!selectedLevel || !selectedCategory || !selectedLanguage || !canStartFreeInterview || loading}
-              className="btn-primary px-8 py-4 text-lg flex items-center justify-center mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={
+                !selectedLevel ||
+                !selectedPrimaryCategory ||
+                !selectedCategory ||
+                !selectedLanguage ||
+                !canStartFreeInterview ||
+                loading
+              }
+              className="btn-primary px-8 py-4 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto min-w-[200px]"
             >
-              <Play className="h-5 w-5 mr-2" />
-              {loading ? 'Starting...' : 
-               !canStartFreeInterview ? 'Upgrade Required' : 
-               'Start AI Interview'}
+              <Play className="mr-2 h-5 w-5" />
+              {loading
+                ? "Starting..."
+                : !canStartFreeInterview
+                ? "Upgrade Required"
+                : "Start Interview"}
             </button>
-            {(!selectedLevel || !selectedCategory || !selectedLanguage) && canStartFreeInterview && (
-              <p className="text-red-400 text-sm mt-2">
-                Please select interview level, category, and programming language to continue
-              </p>
-            )}
+            {(!selectedLevel ||
+              !selectedPrimaryCategory ||
+              !selectedCategory ||
+              !selectedLanguage) &&
+              canStartFreeInterview && (
+                <p className="text-sm text-gray-400 mt-2">
+                  Please select interview level, field, category, and{" "}
+                  {selectedPrimaryCategory === "development"
+                    ? "programming language"
+                    : "tool/technology"}
+                </p>
+              )}
             {!canStartFreeInterview && (
-              <p className="text-red-400 text-sm mt-2">
-                You have used your 2 free interviews. Please upgrade to continue.
+              <p className="text-sm text-red-400 mt-2">
+                You have reached the free interview limit. Please upgrade to
+                continue.
               </p>
             )}
           </div>
