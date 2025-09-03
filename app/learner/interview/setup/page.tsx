@@ -157,37 +157,25 @@ export default function InterviewSetupPage() {
       // Get the proper language for the category
       const config = buildInterviewConfig(selectedLevel, selectedCategory, selectedDuration);
       
-      // Create interview payload matching backend schema
-      const interviewPayload: CreateInterviewPayload = {
-        userId: user._id,
-        userName: user.name,
-        userEmail: user.email,
-        level: selectedLevel as InterviewLevel,
-        category: selectedCategory as InterviewCategory,
-        duration: parseInt(selectedDuration),
-        language: config.language, // Use the mapped language instead of hardcoded 'javascript'
-        hasCodeEditor: selectedCategoryData?.hasCodeEditor || false,
-        isFreeInterview: !hasPaidPlan
-      };
-
-      // Start interview session using the API helper
-      const { sessionId } = await startInterview(interviewPayload, token);
-
-      // Navigate to the interview session page with all necessary parameters
+      // Navigate directly to the interview session page with all necessary parameters
+      // The actual interview start will be triggered manually from the instructions popup
       const params = new URLSearchParams({
-        sessionId,
         level: selectedLevel,
         category: selectedCategory,
         duration: selectedDuration,
-        language: config.language, // Pass the correct language
-        hasCodeEditor: (selectedCategoryData?.hasCodeEditor || false).toString()
+        language: config.language,
+        hasCodeEditor: (selectedCategoryData?.hasCodeEditor || false).toString(),
+        userId: user._id,
+        userName: user.name,
+        userEmail: user.email,
+        isFreeInterview: (!hasPaidPlan).toString()
       });
       
       router.push(`/learner/interview/voice-session?${params.toString()}`);
       
     } catch (error) {
-      console.error('Error starting interview:', error);
-      alert(`Failed to start interview: ${error instanceof Error ? error.message : String(error)}`);
+      console.error('Error navigating to interview:', error);
+      alert(`Failed to navigate to interview: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setLoading(false);
     }

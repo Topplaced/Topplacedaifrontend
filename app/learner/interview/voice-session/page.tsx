@@ -32,7 +32,10 @@ import AIAvatar from "@/components/AIAvatar";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { io, Socket } from "socket.io-client";
-import { buildInterviewConfig, updateInterviewProgress } from '@/utils/api-helpers';
+import {
+  buildInterviewConfig,
+  updateInterviewProgress,
+} from "@/utils/api-helpers";
 
 // Your backend URL
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -57,23 +60,27 @@ function VoiceInterviewContent() {
   // Add level mapping function
   const mapLevelToBackend = (frontendLevel: string): string => {
     const levelMap: { [key: string]: string } = {
-      'entry': 'beginner',
-      'mid': 'intermediate', 
-      'senior': 'advanced',
-      'lead': 'advanced'
+      entry: "beginner",
+      mid: "intermediate",
+      senior: "advanced",
+      lead: "advanced",
     };
-    return levelMap[frontendLevel] || 'intermediate';
+    return levelMap[frontendLevel] || "intermediate";
   };
 
-// Interview configuration
-const level = searchParams.get("level") || "mid";
-const category = searchParams.get("category") || "fullstack";
-const duration = searchParams.get("duration") || "30";
-const hasCodeEditor = searchParams.get("hasCodeEditor") === "true" || true;
+  // Interview configuration from URL parameters
+  const level = searchParams.get("level") || "mid";
+  const category = searchParams.get("category") || "fullstack";
+  const duration = searchParams.get("duration") || "30";
+  const hasCodeEditor = searchParams.get("hasCodeEditor") === "true" || true;
+  const userId = searchParams.get("userId") || user?._id || "";
+  const userName = searchParams.get("userName") || user?.name || "";
+  const userEmail = searchParams.get("userEmail") || user?.email || "";
+  const isFreeInterview = searchParams.get("isFreeInterview") === "true";
 
-// Get the correct language for the category
-const config = buildInterviewConfig(level, category, duration);
-const defaultLanguage = config.language;
+  // Get the correct language for the category
+  const config = buildInterviewConfig(level, category, duration);
+  const defaultLanguage = config.language;
 
   // State management
   const [isRecording, setIsRecording] = useState(false);
@@ -95,17 +102,19 @@ const defaultLanguage = config.language;
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [interviewProgress, setInterviewProgress] = useState(0);
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
-  
+
   // Response time tracking like testInterview.html
-  const [responseStartTime, setResponseStartTime] = useState<number | null>(null);
+  const [responseStartTime, setResponseStartTime] = useState<number | null>(
+    null
+  );
   const [lastResponseTime, setLastResponseTime] = useState<number | null>(null);
-  
+
   // Debug panel like testInterview.html
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [debugLogs, setDebugLogs] = useState<any[]>([]);
   const [codeExecutionSuccess, setCodeExecutionSuccess] = useState(false);
   const [lastExecutionResult, setLastExecutionResult] = useState<any>(null);
-  
+
   // Progress tracking function like testInterview.html
   const updateProgress = (answered: number, total: number) => {
     setQuestionsAnswered(answered);
@@ -123,13 +132,13 @@ const defaultLanguage = config.language;
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
   const [currentQuestionId, setCurrentQuestionId] = useState<string>("");
 
-  // Build interview payload from user data
+  // Build interview payload from URL parameters and user data
   const buildInterviewPayload = () => {
     return {
       user: {
-        id: user?._id || "user123",
-        name: user?.name || "John Doe",
-        email: user?.email || "john@example.com",
+        id: userId || "user123",
+        name: userName || "John Doe",
+        email: userEmail || "john@example.com",
         role: user?.role || "user",
         experience: user?.experience || "3 years in full-stack development",
         skills: user?.tech_stack
@@ -171,11 +180,11 @@ const defaultLanguage = config.language;
         language: language,
       },
       context: {
-        sessionId: `session_${Date.now()}_${user?._id}`,
+        sessionId: `session_${Date.now()}_${userId}`,
         startTime: new Date().toISOString(),
         userAgent: navigator.userAgent,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        isFreeInterview: true,
+        isFreeInterview: isFreeInterview,
       },
     };
   };
@@ -245,19 +254,19 @@ const defaultLanguage = config.language;
 
     try {
       // Try ElevenLabs TTS API first with proper error handling
-      const response = await fetch('/api/text-to-speech', {
+      const response = await fetch("/api/text-to-speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           text,
-          voice_id: 'EXAVITQu4vr4xnSDxMaL', // Sarah voice
-          model_id: 'eleven_monolingual_v1'
+          voice_id: "EXAVITQu4vr4xnSDxMaL", // Sarah voice
+          model_id: "eleven_monolingual_v1",
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        console.log('🔊 ElevenLabs TTS API response:', data);
+        console.log("🔊 ElevenLabs TTS API response:", data);
 
         if (data.useBrowserTTS && speechSynthesis) {
           // Use browser's built-in speech synthesis
@@ -287,7 +296,7 @@ const defaultLanguage = config.language;
           };
 
           utterance.onerror = (event) => {
-            console.error('Speech synthesis error:', event);
+            console.error("Speech synthesis error:", event);
             setIsAISpeaking(false);
             setIsAudioPlaying(false);
             setCurrentAudioUrl(null);
@@ -298,7 +307,7 @@ const defaultLanguage = config.language;
           // Use ElevenLabs TTS audio
           const audio = new Audio(data.audioUrl);
           audio.onerror = (error) => {
-            console.error('Audio playback error:', error);
+            console.error("Audio playback error:", error);
             setIsAISpeaking(false);
             setIsAudioPlaying(false);
             setCurrentAudioUrl(null);
@@ -308,21 +317,30 @@ const defaultLanguage = config.language;
             setIsAudioPlaying(false);
             setCurrentAudioUrl(null);
           };
-          audio.play().catch(error => {
-            console.error('Audio play failed:', error);
+          audio.play().catch((error) => {
+            console.error("Audio play failed:", error);
             setIsAISpeaking(false);
             setIsAudioPlaying(false);
             setCurrentAudioUrl(null);
           });
         } else {
-          throw new Error('No audio content from ElevenLabs or browser TTS available');
+          throw new Error(
+            "No audio content from ElevenLabs or browser TTS available"
+          );
         }
       } else {
         const errorData = await response.json();
-        throw new Error(`ElevenLabs TTS API failed: ${response.status} - ${errorData.error || 'Unknown error'}`);
+        throw new Error(
+          `ElevenLabs TTS API failed: ${response.status} - ${
+            errorData.error || "Unknown error"
+          }`
+        );
       }
     } catch (error) {
-      console.error("❌ ElevenLabs TTS error, using simulation fallback:", error);
+      console.error(
+        "❌ ElevenLabs TTS error, using simulation fallback:",
+        error
+      );
       // Fallback to simulation
       const duration = Math.random() * 2000 + 3000;
       setTimeout(() => {
@@ -357,21 +375,10 @@ const defaultLanguage = config.language;
     initializeMedia();
   }, []);
 
-  // Auto-start interview when component mounts (only once)
+  // Initialize component (removed auto-start logic)
   useEffect(() => {
-    console.log("🔍 useEffect check:", {
-      hasInitialized: hasInitialized.current,
-      interviewStarted,
-      isStartingInterview
-    });
-    
-    if (!hasInitialized.current && !interviewStarted && !isStartingInterview) {
-      console.log("🎬 Auto-starting interview on component mount");
-      hasInitialized.current = true;
-      startInterview();
-    } else {
-      console.log("⏭️ Skipping interview start - already initialized or in progress");
-    }
+    console.log("🔍 Component initialized - waiting for manual start");
+    hasInitialized.current = true;
   }, []);
 
   // Timer countdown
@@ -404,19 +411,19 @@ const defaultLanguage = config.language;
   }, [questionsAnswered, totalQuestions]);
 
   // Auto-save interview progress every 10 seconds
-  useEffect(() => {
-    if (sessionId && interviewStarted) {
-      const interval = setInterval(async () => {
-        await updateInterviewProgress({
-          sessionId,
-          progress: interviewProgress,
-          questionsAnswered,
-          timeRemaining
-        });
-      }, 10000);
-      return () => clearInterval(interval);
-    }
-  }, [sessionId, interviewStarted, interviewProgress]);
+  // useEffect(() => {
+  //   if (sessionId && interviewStarted) {
+  //     const interval = setInterval(async () => {
+  //       await updateInterviewProgress({
+  //         sessionId,
+  //         progress: interviewProgress,
+  //         questionsAnswered,
+  //         timeRemaining,
+  //       });
+  //     }, 10000);
+  //     return () => clearInterval(interval);
+  //   }
+  // }, [sessionId, interviewStarted, interviewProgress]);
 
   // Cleanup on component unmount
   useEffect(() => {
@@ -464,7 +471,7 @@ const defaultLanguage = config.language;
       setLastResponseTime(responseTime);
       setResponseStartTime(null); // Reset for next question
     }
-    
+
     try {
       const body: any = {
         sessionId: sessionId,
@@ -473,14 +480,16 @@ const defaultLanguage = config.language;
         responseTime: responseTime,
         metadata: {
           userAgent: navigator.userAgent,
-          deviceType: /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? 'mobile' : 'desktop',
-          messageType: isCode ? 'code_submission' : 'answer',
+          deviceType: /Mobile|Android|iPhone|iPad/.test(navigator.userAgent)
+            ? "mobile"
+            : "desktop",
+          messageType: isCode ? "code_submission" : "answer",
           timestamp: new Date().toISOString(),
           questionNumber: currentQuestionNumber,
           totalQuestions: totalQuestions,
-          sessionDuration: Date.now() - (responseStartTime || Date.now())
+          sessionDuration: Date.now() - (responseStartTime || Date.now()),
         },
-        advanceToNext: true
+        advanceToNext: true,
       };
 
       if (isCode) {
@@ -490,45 +499,53 @@ const defaultLanguage = config.language;
           language: language,
           code: code,
           stdin: "", // Empty stdin for now
-          executionResult: null // Will be populated by backend
+          executionResult: null, // Will be populated by backend
         };
       }
 
-      const response = await fetch(`${API_URL}/interview/conversation/enhanced`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify(body),
-      });
+      const response = await fetch(
+        `${API_URL}/interview/conversation/enhanced`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            // "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify(body),
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
         console.log("✅ Enhanced conversation response:", data);
-        
+
         // Add to debug logs like testInterview.html
         if (showDebugPanel) {
-          const debugEntry = `[${new Date().toLocaleTimeString()}] Enhanced API Response: ${JSON.stringify(data, null, 2)}`;
-          setDebugLogs(prev => [...prev.slice(-9), debugEntry]); // Keep last 10 entries
+          const debugEntry = `[${new Date().toLocaleTimeString()}] Enhanced API Response: ${JSON.stringify(
+            data,
+            null,
+            2
+          )}`;
+          setDebugLogs((prev) => [...prev.slice(-9), debugEntry]); // Keep last 10 entries
         }
 
         // Handle AI response and current question to avoid duplication
         let messageContent = "";
         let audioContent = "";
-        
+
         if (data.aiResponse) {
           messageContent = data.aiResponse;
           audioContent = data.aiResponse;
-          
+
           // Check for detailed feedback in the response
           if (data.feedback && data.feedback.score !== undefined) {
             const feedbackDetails = `\n\n📊 **Score: ${data.feedback.score}/100**`;
             messageContent += feedbackDetails;
-            
+
             // Add detailed scores if available
             if (data.detailedScores) {
-              const detailsText = `\n\n**Detailed Analysis:**\n` +
+              const detailsText =
+                `\n\n**Detailed Analysis:**\n` +
                 `• Correctness: ${data.detailedScores.correctness}/100\n` +
                 `• Completeness: ${data.detailedScores.completeness}/100\n` +
                 `• Clarity: ${data.detailedScores.clarity}/100\n` +
@@ -536,29 +553,33 @@ const defaultLanguage = config.language;
                 `• Communication: ${data.detailedScores.communicationQuality}/100`;
               messageContent += detailsText;
             }
-            
+
             // Add strengths and improvements if available
             if (data.strengths && data.strengths.length > 0) {
-              messageContent += `\n\n✅ **Strengths:** ${data.strengths.join(', ')}`;
+              messageContent += `\n\n✅ **Strengths:** ${data.strengths.join(
+                ", "
+              )}`;
             }
             if (data.improvements && data.improvements.length > 0) {
-              messageContent += `\n\n🔄 **Areas for Improvement:** ${data.improvements.join(', ')}`;
+              messageContent += `\n\n🔄 **Areas for Improvement:** ${data.improvements.join(
+                ", "
+              )}`;
             }
           }
         }
-        
+
         if (data.currentQuestion) {
           setCurrentQuestionId(data.currentQuestion.id);
           setCurrentQuestionNumber(data.currentQuestion.questionNumber);
           if (data.currentQuestion.totalQuestions) {
             setTotalQuestions(data.currentQuestion.totalQuestions);
           }
-          
+
           // Start timing for next question
           setResponseStartTime(Date.now());
-          
+
           const questionText = `Next Question (${data.currentQuestion.questionNumber}/${data.currentQuestion.totalQuestions}): ${data.currentQuestion.question}`;
-          
+
           if (messageContent) {
             messageContent += `\n\n${questionText}`;
             audioContent = questionText; // Play only the question for audio
@@ -567,7 +588,7 @@ const defaultLanguage = config.language;
             audioContent = questionText;
           }
         }
-        
+
         // Add single combined message if we have content
         if (messageContent) {
           const combinedMessage: Message = {
@@ -582,7 +603,10 @@ const defaultLanguage = config.language;
 
         // Update progress
         if (data.progress) {
-          updateProgress(data.progress.questionsAnswered || questionsAnswered, data.progress.totalQuestions || totalQuestions);
+          updateProgress(
+            data.progress.questionsAnswered || questionsAnswered,
+            data.progress.totalQuestions || totalQuestions
+          );
         }
       } else {
         throw new Error(`HTTP ${response.status}`);
@@ -605,9 +629,11 @@ const defaultLanguage = config.language;
 
   const [isStartingInterview, setIsStartingInterview] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [showInstructionsPopup, setShowInstructionsPopup] = useState(true);
   const [showStartingPopup, setShowStartingPopup] = useState(false);
   const [popupTimer, setPopupTimer] = useState(5);
-  const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null);
+  const [countdownInterval, setCountdownInterval] =
+    useState<NodeJS.Timeout | null>(null);
   const hasInitialized = useRef(false);
   const isStartingRef = useRef(false);
 
@@ -625,24 +651,26 @@ const defaultLanguage = config.language;
       isStartingRef: isStartingRef.current,
       isStartingInterview,
       interviewStarted,
-      hasInitialized: hasInitialized.current
+      hasInitialized: hasInitialized.current,
     });
-    
+
     // Prevent multiple simultaneous starts
     if (isStartingRef.current || isStartingInterview || interviewStarted) {
-      console.log("⏭️ Skipping startInterview - already in progress or started");
+      console.log(
+        "⏭️ Skipping startInterview - already in progress or started"
+      );
       return;
     }
-    
+
     isStartingRef.current = true;
     setShowStartingPopup(true);
     setPopupTimer(5);
-    
+
     // Clear any existing countdown
     if (countdownInterval) {
       clearInterval(countdownInterval);
     }
-    
+
     // Start countdown timer
     const countdown = setInterval(() => {
       setPopupTimer((prev) => {
@@ -659,7 +687,7 @@ const defaultLanguage = config.language;
         return prev - 1;
       });
     }, 1000);
-    
+
     setCountdownInterval(countdown);
   };
 
@@ -667,15 +695,17 @@ const defaultLanguage = config.language;
     console.log("🚀 actuallyStartInterview called", {
       isStartingRef: isStartingRef.current,
       isStartingInterview,
-      interviewStarted
+      interviewStarted,
     });
-    
+
     // Additional protection against multiple calls
     if (isStartingInterview || interviewStarted) {
-      console.log("⏭️ Skipping actuallyStartInterview - already in progress or started");
+      console.log(
+        "⏭️ Skipping actuallyStartInterview - already in progress or started"
+      );
       return;
     }
-    
+
     setIsStartingInterview(true);
     setStartError(null);
 
@@ -734,24 +764,28 @@ const defaultLanguage = config.language;
         }
 
         setInterviewStarted(true);
+        setShowStartingPopup(false); // Close the popup on successful start
         isStartingRef.current = false; // Reset the ref on successful start
       } else {
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.message || `Server error: ${response.status}`;
+        const errorMessage =
+          errorData.message || `Server error: ${response.status}`;
         throw new Error(errorMessage);
       }
     } catch (error: any) {
       console.error("❌ Failed to start interview:", error);
-      
+
       let errorMessage = "Failed to start interview. ";
-      if (error.name === 'AbortError') {
-        errorMessage += "Request timed out. Please check your connection and try again.";
-      } else if (error.message?.includes('fetch')) {
-        errorMessage += "Unable to connect to server. Please check your internet connection.";
+      if (error.name === "AbortError") {
+        errorMessage +=
+          "Request timed out. Please check your connection and try again.";
+      } else if (error.message?.includes("fetch")) {
+        errorMessage +=
+          "Unable to connect to server. Please check your internet connection.";
       } else {
         errorMessage += error.message || "Unknown error occurred.";
       }
-      
+
       setStartError(errorMessage);
     } finally {
       setIsStartingInterview(false);
@@ -763,6 +797,16 @@ const defaultLanguage = config.language;
     setStartError(null);
     isStartingRef.current = false; // Reset before retry
     startInterview();
+  };
+
+  const handleManualStart = async () => {
+    console.log("🎯 Manual start triggered from instructions popup");
+    setShowInstructionsPopup(false);
+    setShowStartingPopup(true);
+    setIsStartingInterview(true);
+
+    // Call actuallyStartInterview directly to avoid countdown popup
+    await actuallyStartInterview();
   };
 
   const startListening = async () => {
@@ -853,7 +897,9 @@ const defaultLanguage = config.language;
           type: "ai",
           content: `Code Execution Results:\n→ Output: ${
             result.output || "No output"
-          }\n→ Time: ${executionTime}s\n→ Memory: ${result.memory}\n\n✅ Code ran successfully! You can now submit your solution.`,
+          }\n→ Time: ${executionTime}s\n→ Memory: ${
+            result.memory
+          }\n\n✅ Code ran successfully! You can now submit your solution.`,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, resultMessage]);
@@ -891,12 +937,17 @@ const defaultLanguage = config.language;
 
     try {
       // Send code submission to enhanced conversation API with execution results
-      await sendAnswerToAPI(`Code submitted and executed. Output: ${lastExecutionResult.output || "No output"}`, true);
-      
+      await sendAnswerToAPI(
+        `Code submitted and executed. Output: ${
+          lastExecutionResult.output || "No output"
+        }`,
+        true
+      );
+
       // Reset code execution state after successful submission
       setCodeExecutionSuccess(false);
       setLastExecutionResult(null);
-      
+
       const submitMessage: Message = {
         id: `submit_${Date.now()}`,
         type: "system",
@@ -989,43 +1040,66 @@ const defaultLanguage = config.language;
       if (response.ok) {
         const interviewData = await response.json();
         console.log("✅ Interview ended successfully:", interviewData);
-        
+
         // Format the results according to the specified structure
         const results = {
           overallScore: interviewData.scores?.overall || 0,
-          category: interviewData.configuration?.category || 'Interview',
-          level: interviewData.configuration?.level || 'Unknown',
+          category: interviewData.configuration?.category || "Interview",
+          level: interviewData.configuration?.level || "Unknown",
           duration: `${interviewData.configuration?.duration || 0} minutes`,
-          completedAt: interviewData.createdAt ? new Date(interviewData.createdAt).toLocaleDateString() : 'Unknown',
+          completedAt: interviewData.createdAt
+            ? new Date(interviewData.createdAt).toLocaleDateString()
+            : "Unknown",
           scores: {
-            technical: interviewData.scores?.technical || interviewData.scoreboard?.detailedScores?.technical || 0,
-            communication: interviewData.scores?.communication || interviewData.scoreboard?.detailedScores?.communication || 0,
-            problemSolving: interviewData.scores?.problemSolving || interviewData.scoreboard?.detailedScores?.problemSolving || 0,
-            codeQuality: interviewData.scores?.codeQuality || interviewData.scoreboard?.detailedScores?.codeQuality || 0
+            technical:
+              interviewData.scores?.technical ||
+              interviewData.scoreboard?.detailedScores?.technical ||
+              0,
+            communication:
+              interviewData.scores?.communication ||
+              interviewData.scoreboard?.detailedScores?.communication ||
+              0,
+            problemSolving:
+              interviewData.scores?.problemSolving ||
+              interviewData.scoreboard?.detailedScores?.problemSolving ||
+              0,
+            codeQuality:
+              interviewData.scores?.codeQuality ||
+              interviewData.scoreboard?.detailedScores?.codeQuality ||
+              0,
           },
           strengths: interviewData.results?.detailedAnalysis?.strengths || [
-            'Completed the interview successfully',
-            'Demonstrated problem-solving skills',
-            'Showed technical knowledge'
+            "Completed the interview successfully",
+            "Demonstrated problem-solving skills",
+            "Showed technical knowledge",
           ],
-          improvements: interviewData.results?.detailedAnalysis?.improvements || [
-            'Continue practicing coding challenges',
-            'Work on communication skills',
-            'Review technical concepts'
+          improvements: interviewData.results?.detailedAnalysis
+            ?.improvements || [
+            "Continue practicing coding challenges",
+            "Work on communication skills",
+            "Review technical concepts",
           ],
           detailedFeedback: {
-            technical: interviewData.results?.technicalFeedback || 'Technical performance was evaluated based on problem-solving approach and code quality.',
-            communication: interviewData.results?.communicationFeedback || 'Communication skills were assessed throughout the interview process.',
-            problemSolving: interviewData.results?.problemSolvingFeedback || 'Problem-solving approach and analytical thinking were evaluated.',
-            codeQuality: interviewData.results?.codeQualityFeedback || 'Code structure, readability, and best practices were reviewed.'
+            technical:
+              interviewData.results?.technicalFeedback ||
+              "Technical performance was evaluated based on problem-solving approach and code quality.",
+            communication:
+              interviewData.results?.communicationFeedback ||
+              "Communication skills were assessed throughout the interview process.",
+            problemSolving:
+              interviewData.results?.problemSolvingFeedback ||
+              "Problem-solving approach and analytical thinking were evaluated.",
+            codeQuality:
+              interviewData.results?.codeQualityFeedback ||
+              "Code structure, readability, and best practices were reviewed.",
           },
-          codeSubmissions: interviewData.results?.codeSubmissions || []
+          codeSubmissions: interviewData.results?.codeSubmissions || [],
         };
-        
+
         console.log("📊 Formatted interview results:", results);
-        
+
         // Store results in localStorage or state for the results page
-        localStorage.setItem('interviewResults', JSON.stringify(results));
+        localStorage.setItem("interviewResults", JSON.stringify(results));
       } else {
         console.error("❌ Failed to end interview:", response.status);
       }
@@ -1069,7 +1143,9 @@ const defaultLanguage = config.language;
 
     try {
       const response = await fetch(
-        `${API_URL}/interview/conversation/history/${encodeURIComponent(sessionId)}`,
+        `${API_URL}/interview/conversation/history/${encodeURIComponent(
+          sessionId
+        )}`,
         {
           method: "GET",
           headers: {
@@ -1081,31 +1157,46 @@ const defaultLanguage = config.language;
       if (response.ok) {
         const data = await response.json();
         console.log("✅ Conversation history loaded:", data);
-        
-        if (data.success && data.conversations && data.conversations.length > 0) {
+
+        if (
+          data.success &&
+          data.conversations &&
+          data.conversations.length > 0
+        ) {
           // Convert history to messages and replace current messages
-          const historyMessages: Message[] = data.conversations.map((conv: any, index: number) => ({
-            id: `history_${index}_${conv.timestamp}`,
-            type: conv.role === 'user' ? 'user' : 'ai',
-            content: conv.message,
-            timestamp: new Date(conv.timestamp)
-          }));
-          
+          const historyMessages: Message[] = data.conversations.map(
+            (conv: any, index: number) => ({
+              id: `history_${index}_${conv.timestamp}`,
+              type: conv.role === "user" ? "user" : "ai",
+              content: conv.message,
+              timestamp: new Date(conv.timestamp),
+            })
+          );
+
           // Replace current messages with history
           setMessages(historyMessages);
-          
+
           // Add confirmation message
           const confirmationMessage: Message = {
             id: `history_loaded_${Date.now()}`,
             type: "system",
-            content: `✅ Conversation history loaded: ${data.conversations.length} messages from ${new Date(data.conversations[0]?.timestamp).toLocaleString()} to ${new Date(data.conversations[data.conversations.length - 1]?.timestamp).toLocaleString()}`,
+            content: `✅ Conversation history loaded: ${
+              data.conversations.length
+            } messages from ${new Date(
+              data.conversations[0]?.timestamp
+            ).toLocaleString()} to ${new Date(
+              data.conversations[data.conversations.length - 1]?.timestamp
+            ).toLocaleString()}`,
             timestamp: new Date(),
           };
           setMessages((prev) => [...prev, confirmationMessage]);
-          
+
           // Update progress if available in history
           if (data.progress) {
-            updateProgress(data.progress.answered || questionsAnswered, data.progress.total || totalQuestions);
+            updateProgress(
+              data.progress.answered || questionsAnswered,
+              data.progress.total || totalQuestions
+            );
           }
         } else {
           const noHistoryMessage: Message = {
@@ -1158,49 +1249,51 @@ const defaultLanguage = config.language;
       if (response.ok) {
         const data = await response.json();
         console.log("✅ Interview results fetched:", data);
-        
+
         if (data.success && data.results) {
           // Format detailed results like testInterview.html
           const results = data.results;
           let resultsContent = `🎯 **Interview Results Summary**\n\n`;
-          
+
           if (results.overallScore !== undefined) {
             resultsContent += `📊 **Overall Score:** ${results.overallScore}%\n`;
           }
-          
+
           if (results.skillScores) {
             resultsContent += `\n🔧 **Skill Breakdown:**\n`;
             Object.entries(results.skillScores).forEach(([skill, score]) => {
               resultsContent += `• ${skill}: ${score}%\n`;
             });
           }
-          
+
           if (results.feedback) {
             resultsContent += `\n💬 **Feedback:**\n${results.feedback}\n`;
           }
-          
+
           if (results.strengths && results.strengths.length > 0) {
             resultsContent += `\n✅ **Strengths:**\n`;
             results.strengths.forEach((strength: string) => {
               resultsContent += `• ${strength}\n`;
             });
           }
-          
+
           if (results.improvements && results.improvements.length > 0) {
             resultsContent += `\n🔄 **Areas for Improvement:**\n`;
             results.improvements.forEach((improvement: string) => {
               resultsContent += `• ${improvement}\n`;
             });
           }
-          
+
           if (results.duration) {
-            resultsContent += `\n⏱️ **Interview Duration:** ${Math.round(results.duration / 60)} minutes\n`;
+            resultsContent += `\n⏱️ **Interview Duration:** ${Math.round(
+              results.duration / 60
+            )} minutes\n`;
           }
-          
+
           if (results.questionsAnswered && results.totalQuestions) {
             resultsContent += `📝 **Questions:** ${results.questionsAnswered}/${results.totalQuestions} answered\n`;
           }
-          
+
           const resultsMessage: Message = {
             id: `results_${Date.now()}`,
             type: "system",
@@ -1253,25 +1346,29 @@ const defaultLanguage = config.language;
       if (response.ok) {
         const data = await response.json();
         console.log("✅ Next question fetched:", data);
-        
+
         if (data.question) {
           setCurrentQuestionId(data.id || currentQuestionId);
-          setCurrentQuestionNumber(data.questionNumber || currentQuestionNumber + 1);
-          
+          setCurrentQuestionNumber(
+            data.questionNumber || currentQuestionNumber + 1
+          );
+
           // Update progress if total questions provided
           if (data.totalQuestions) {
             updateProgress(questionsAnswered, data.totalQuestions);
           }
-          
+
           const questionMessage: Message = {
             id: `next_question_${Date.now()}`,
             type: "ai",
-            content: `Question ${data.questionNumber || currentQuestionNumber + 1}: ${data.question}`,
+            content: `Question ${
+              data.questionNumber || currentQuestionNumber + 1
+            }: ${data.question}`,
             timestamp: new Date(),
           };
           setMessages((prev) => [...prev, questionMessage]);
           playAIAudio("", data.question);
-        } else if (data.message?.includes('completed')) {
+        } else if (data.message?.includes("completed")) {
           const completionMessage: Message = {
             id: `completion_${Date.now()}`,
             type: "ai",
@@ -1363,70 +1460,257 @@ const defaultLanguage = config.language;
         </div>
       )}
 
+      {/* Instructions Popup */}
+      {showInstructionsPopup && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[70] flex items-center justify-center">
+          <div className="glass-card p-8 max-w-2xl text-center border-2 border-[#00FFB2]/50">
+            <div className="mb-6">
+              <div className="w-16 h-16 mx-auto mb-4 bg-[#00FFB2]/20 rounded-full flex items-center justify-center">
+                <Bot size={32} className="text-[#00FFB2]" />
+              </div>
+            </div>
+
+            <h2 className="text-3xl font-bold mb-6 text-[#00FFB2]">
+              🎯 AI Interview Instructions
+            </h2>
+
+            <div className="text-left space-y-4 mb-8">
+              <div className="bg-[#00FFB2]/10 border border-[#00FFB2]/30 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-[#00FFB2] mb-2">
+                  📋 Interview Details
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Category:</span>
+                    <span className="text-white font-medium">
+                      {category?.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Level:</span>
+                    <span className="text-white font-medium">
+                      {level?.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Duration:</span>
+                    <span className="text-white font-medium">
+                      {duration} minutes
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Format:</span>
+                    <span className="text-white font-medium">
+                      Voice + {hasCodeEditor ? "Coding" : "Discussion"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-blue-400 mb-3">
+                  🎤 How It Works
+                </h3>
+                <ul className="space-y-2 text-sm text-gray-300">
+                  <li className="flex items-start space-x-2">
+                    <span className="text-blue-400 mt-1">•</span>
+                    <span>
+                      The AI interviewer will ask you questions one by one
+                    </span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <span className="text-blue-400 mt-1">•</span>
+                    <span>
+                      Click the microphone button to record your answers
+                    </span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <span className="text-blue-400 mt-1">•</span>
+                    <span>Speak clearly and take your time to think</span>
+                  </li>
+                  {hasCodeEditor && (
+                    <li className="flex items-start space-x-2">
+                      <span className="text-blue-400 mt-1">•</span>
+                      <span>Use the code editor for programming questions</span>
+                    </li>
+                  )}
+                  <li className="flex items-start space-x-2">
+                    <span className="text-blue-400 mt-1">•</span>
+                    <span>
+                      The AI will provide feedback and follow-up questions
+                    </span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-yellow-400 mb-3">
+                  💡 Tips for Success
+                </h3>
+                <ul className="space-y-2 text-sm text-gray-300">
+                  <li className="flex items-start space-x-2">
+                    <span className="text-yellow-400 mt-1">•</span>
+                    <span>Ensure you&apos;re in a quiet environment</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <span className="text-yellow-400 mt-1">•</span>
+                    <span>Test your microphone and camera before starting</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <span className="text-yellow-400 mt-1">•</span>
+                    <span>
+                      Think out loud to show your problem-solving process
+                    </span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <span className="text-yellow-400 mt-1">•</span>
+                    <span>Ask clarifying questions if needed</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <span className="text-yellow-400 mt-1">•</span>
+                    <span>Stay calm and be yourself</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex space-x-4 justify-center">
+              <button
+                onClick={() => router.back()}
+                className="px-6 py-3 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={handleManualStart}
+                className="px-8 py-3 bg-[#00FFB2] hover:bg-[#00FFB2]/80 text-black font-semibold rounded-lg transition-colors flex items-center space-x-2"
+              >
+                <Play size={20} />
+                <span>Start Interview</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Starting Interview Popup */}
       {showStartingPopup && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[70] flex items-center justify-center">
           <div className="glass-card p-8 max-w-lg text-center border-2 border-[#00FFB2]/50">
-            <div className="relative mb-6">
-              <div className="w-20 h-20 mx-auto mb-4 relative">
-                <div className="absolute inset-0 rounded-full border-4 border-[#00FFB2]/20"></div>
-                <div 
-                  className="absolute inset-0 rounded-full border-4 border-[#00FFB2] border-t-transparent animate-spin"
-                  style={{
-                    animationDuration: `${popupTimer}s`,
-                    animationTimingFunction: 'linear'
-                  }}
-                ></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-[#00FFB2]">{popupTimer}</span>
-                </div>
-              </div>
-            </div>
-            
-            <h3 className="text-2xl font-bold mb-4 text-[#00FFB2]">
-              🚀 Preparing Your Interview
-            </h3>
-            
-            <div className="text-left space-y-3 mb-6">
-              <p className="text-gray-300 text-center mb-4">
-                Your AI interviewer is getting ready! Here's what to expect:
-              </p>
-              
-              <div className="space-y-2">
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-[#00FFB2] rounded-full"></div>
-                  <span className="text-sm text-gray-300">📋 {category} interview at {level} level</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-[#00FFB2] rounded-full"></div>
-                  <span className="text-sm text-gray-300">⏱️ Duration: {duration} minutes</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-[#00FFB2] rounded-full"></div>
-                  <span className="text-sm text-gray-300">🎤 Voice-based conversation</span>
-                </div>
-                {hasCodeEditor && (
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-[#00FFB2] rounded-full"></div>
-                    <span className="text-sm text-gray-300">💻 Coding challenges included</span>
+            {!isStartingInterview ? (
+              <>
+                <div className="relative mb-6">
+                  <div className="w-20 h-20 mx-auto mb-4 relative">
+                    <div className="absolute inset-0 rounded-full border-4 border-[#00FFB2]/20"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-[#00FFB2]">
+                        🚀
+                      </span>
+                    </div>
                   </div>
-                )}
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-[#00FFB2] rounded-full"></div>
-                  <span className="text-sm text-gray-300">🤖 AI-powered evaluation</span>
                 </div>
-              </div>
-            </div>
-            
-            <div className="bg-[#00FFB2]/10 border border-[#00FFB2]/30 rounded-lg p-4 mb-4">
-              <p className="text-sm text-[#00FFB2] font-medium">
-                💡 Tip: Speak clearly and take your time to think before answering!
-              </p>
-            </div>
-            
-            <p className="text-xs text-gray-400">
-              Starting automatically in {popupTimer} seconds...
-            </p>
+
+                <h3 className="text-2xl font-bold mb-4 text-[#00FFB2]">
+                  🚀 Ready to Start Your Interview?
+                </h3>
+
+                <div className="text-left space-y-3 mb-6">
+                  <p className="text-gray-300 text-center mb-4">
+                    Here&apos;s what to expect in your interview:
+                  </p>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-[#00FFB2] rounded-full"></div>
+                      <span className="text-sm text-gray-300">
+                        📋 {category} interview at {level} level
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-[#00FFB2] rounded-full"></div>
+                      <span className="text-sm text-gray-300">
+                        ⏱️ Duration: {duration} minutes
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-[#00FFB2] rounded-full"></div>
+                      <span className="text-sm text-gray-300">
+                        🎤 Voice-based conversation
+                      </span>
+                    </div>
+                    {hasCodeEditor && (
+                      <div className="flex items-center space-x-3">
+                        <div className="w-2 h-2 bg-[#00FFB2] rounded-full"></div>
+                        <span className="text-sm text-gray-300">
+                          💻 Coding challenges included
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-[#00FFB2] rounded-full"></div>
+                      <span className="text-sm text-gray-300">
+                        🤖 AI-powered evaluation
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#00FFB2]/10 border border-[#00FFB2]/30 rounded-lg p-4 mb-6">
+                  <h4 className="text-sm font-semibold text-[#00FFB2] mb-2">
+                    📝 Instructions:
+                  </h4>
+                  <ul className="text-xs text-gray-300 text-left space-y-1">
+                    <li>• Speak clearly and at a moderate pace</li>
+                    <li>• Take your time to think before answering</li>
+                    <li>• Ask for clarification if needed</li>
+                    <li>• Be honest about your experience level</li>
+                  </ul>
+                </div>
+
+                <div className="flex space-x-4">
+                  <button
+                    onClick={() => router.back()}
+                    className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                  >
+                    Go Back
+                  </button>
+                  <button
+                    onClick={handleManualStart}
+                    className="flex-1 px-4 py-2 bg-[#00FFB2] hover:bg-[#00FFB2]/80 text-black font-semibold rounded-lg transition-colors"
+                  >
+                    Start Interview
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="relative mb-6">
+                  <div className="w-20 h-20 mx-auto mb-4 relative">
+                    <div className="absolute inset-0 rounded-full border-4 border-[#00FFB2]/20"></div>
+                    <div className="absolute inset-0 rounded-full border-4 border-[#00FFB2] border-t-transparent animate-spin"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-[#00FFB2]">
+                        ⏳
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <h3 className="text-2xl font-bold mb-4 text-[#00FFB2]">
+                  🚀 Starting Your Interview...
+                </h3>
+
+                <p className="text-gray-300 mb-4">
+                  Please wait while we prepare your interview session.
+                </p>
+
+                <div className="bg-[#00FFB2]/10 border border-[#00FFB2]/30 rounded-lg p-4">
+                  <p className="text-sm text-[#00FFB2] font-medium">
+                    💡 Get ready to showcase your skills!
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -1449,13 +1733,16 @@ const defaultLanguage = config.language;
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <span className="px-2 py-1 bg-blue-900/50 border border-blue-700/50 rounded-full text-xs text-blue-200">
-                    Answered: <span className="font-semibold">{questionsAnswered}</span>
+                    Answered:{" "}
+                    <span className="font-semibold">{questionsAnswered}</span>
                   </span>
                   <span className="px-2 py-1 bg-purple-900/50 border border-purple-700/50 rounded-full text-xs text-purple-200">
-                    Total: <span className="font-semibold">{totalQuestions}</span>
+                    Total:{" "}
+                    <span className="font-semibold">{totalQuestions}</span>
                   </span>
                   <span className="px-2 py-1 bg-green-900/50 border border-green-700/50 rounded-full text-xs text-green-200">
-                    Completion: <span className="font-semibold">{interviewProgress}%</span>
+                    Completion:{" "}
+                    <span className="font-semibold">{interviewProgress}%</span>
                   </span>
                 </div>
                 <div className="w-32 bg-[#1A1A1A] rounded-full h-2">
@@ -1503,55 +1790,100 @@ const defaultLanguage = config.language;
               </button>
 
               <button
-                  onClick={getNextQuestion}
-                  className="p-2 rounded-full bg-purple-600/20 text-purple-400 hover:bg-purple-600/30"
-                  title="Get Next Question"
-                  disabled={!sessionId}
+                onClick={getNextQuestion}
+                className="p-2 rounded-full bg-purple-600/20 text-purple-400 hover:bg-purple-600/30"
+                title="Get Next Question"
+                disabled={!sessionId}
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-                
-                {/* Conversation History Button */}
-                <button
-                  onClick={getConversationHistory}
-                  className="p-2 rounded-full bg-green-600/20 text-green-400 hover:bg-green-600/30"
-                  title="Load Conversation History"
-                  disabled={!sessionId}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+
+              {/* Conversation History Button */}
+              <button
+                onClick={getConversationHistory}
+                className="p-2 rounded-full bg-green-600/20 text-green-400 hover:bg-green-600/30"
+                title="Load Conversation History"
+                disabled={!sessionId}
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </button>
-                
-                {/* Interview Results Button */}
-                 <button
-                   onClick={getInterviewResults}
-                   className="p-2 rounded-full bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30"
-                   title="Get Interview Results"
-                   disabled={!sessionId}
-                 >
-                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                   </svg>
-                 </button>
-                 
-                 {/* Debug Panel Toggle */}
-                 <button
-                   onClick={() => setShowDebugPanel(!showDebugPanel)}
-                   className={`p-2 rounded-full transition-colors ${
-                     showDebugPanel 
-                       ? 'bg-red-600/30 text-red-400' 
-                       : 'bg-gray-600/20 text-gray-400 hover:bg-gray-600/30'
-                   }`}
-                   title="Toggle Debug Panel"
-                 >
-                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                   </svg>
-                 </button>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </button>
+
+              {/* Interview Results Button */}
+              <button
+                onClick={getInterviewResults}
+                className="p-2 rounded-full bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30"
+                title="Get Interview Results"
+                disabled={!sessionId}
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </button>
+
+              {/* Debug Panel Toggle */}
+              <button
+                onClick={() => setShowDebugPanel(!showDebugPanel)}
+                className={`p-2 rounded-full transition-colors ${
+                  showDebugPanel
+                    ? "bg-red-600/30 text-red-400"
+                    : "bg-gray-600/20 text-gray-400 hover:bg-gray-600/30"
+                }`}
+                title="Toggle Debug Panel"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </button>
 
               {hasCodeEditor && (
                 <button
@@ -1832,12 +2164,14 @@ const defaultLanguage = config.language;
             </div>
           ) : null}
         </div>
-        
+
         {/* Debug Panel like testInterview.html */}
         {showDebugPanel && (
           <div className="fixed bottom-4 right-4 w-96 max-h-80 bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-4 overflow-hidden z-50">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-white">Debug Panel - Raw API Responses</h3>
+              <h3 className="text-sm font-semibold text-white">
+                Debug Panel - Raw API Responses
+              </h3>
               <button
                 onClick={() => setDebugLogs([])}
                 className="text-xs text-gray-400 hover:text-white"
@@ -1851,7 +2185,10 @@ const defaultLanguage = config.language;
                 <p className="text-xs text-gray-500">No debug logs yet...</p>
               ) : (
                 debugLogs.map((log, index) => (
-                  <div key={index} className="text-xs text-green-400 font-mono bg-gray-800/50 p-2 rounded border-l-2 border-green-500">
+                  <div
+                    key={index}
+                    className="text-xs text-green-400 font-mono bg-gray-800/50 p-2 rounded border-l-2 border-green-500"
+                  >
                     <pre className="whitespace-pre-wrap break-words">{log}</pre>
                   </div>
                 ))
@@ -1859,12 +2196,13 @@ const defaultLanguage = config.language;
             </div>
             {lastResponseTime && (
               <div className="mt-2 pt-2 border-t border-gray-700">
-                <p className="text-xs text-blue-400">Last Response Time: {lastResponseTime}s</p>
+                <p className="text-xs text-blue-400">
+                  Last Response Time: {lastResponseTime}s
+                </p>
               </div>
             )}
           </div>
         )}
-
       </div>
     </div>
   );
