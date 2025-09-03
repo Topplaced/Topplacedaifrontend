@@ -22,6 +22,7 @@ export default function InterviewSetupPage() {
   const { user, token } = useSelector((state: RootState) => state.auth);
   const [selectedLevel, setSelectedLevel] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('');
   const [selectedDuration, setSelectedDuration] = useState('45');
   const [freeInterviewsUsed, setFreeInterviewsUsed] = useState(0);
   const [hasPaidPlan, setHasPaidPlan] = useState(false);
@@ -97,7 +98,14 @@ export default function InterviewSetupPage() {
       description: 'React, JavaScript, CSS, UI/UX',
       icon: Code,
       color: 'text-yellow-400',
-      hasCodeEditor: true
+      hasCodeEditor: true,
+      languages: [
+        { id: 'javascript', name: 'JavaScript', description: 'Vanilla JavaScript fundamentals' },
+        { id: 'typescript', name: 'TypeScript', description: 'TypeScript with type safety' },
+        { id: 'react', name: 'React', description: 'React.js framework' },
+        { id: 'vue', name: 'Vue.js', description: 'Vue.js framework' },
+        { id: 'angular', name: 'Angular', description: 'Angular framework' }
+      ]
     },
     {
       id: InterviewCategory.BACKEND,
@@ -105,7 +113,15 @@ export default function InterviewSetupPage() {
       description: 'APIs, databases, server architecture',
       icon: Database,
       color: 'text-red-400',
-      hasCodeEditor: true
+      hasCodeEditor: true,
+      languages: [
+        { id: 'java', name: 'Java', description: 'Java with Spring Boot' },
+        { id: 'javascript', name: 'JavaScript', description: 'Node.js backend development' },
+        { id: 'python', name: 'Python', description: 'Python with Django/Flask' },
+        { id: 'php', name: 'PHP', description: 'PHP with Laravel/Symfony' },
+        { id: 'csharp', name: 'C#', description: 'C# with .NET Core' },
+        { id: 'go', name: 'Go', description: 'Go programming language' }
+      ]
     },
     {
       id: InterviewCategory.FULLSTACK,
@@ -113,7 +129,14 @@ export default function InterviewSetupPage() {
       description: 'Frontend, backend, and system design',
       icon: Code,
       color: 'text-[#00FFB2]',
-      hasCodeEditor: true
+      hasCodeEditor: true,
+      languages: [
+        { id: 'javascript', name: 'JavaScript Stack', description: 'MERN/MEAN stack' },
+        { id: 'typescript', name: 'TypeScript Stack', description: 'Full-stack TypeScript' },
+        { id: 'python', name: 'Python Stack', description: 'Django + React/Vue' },
+        { id: 'java', name: 'Java Stack', description: 'Spring Boot + React' },
+        { id: 'php', name: 'PHP Stack', description: 'Laravel + Vue/React' }
+      ]
     },
     {
       id: InterviewCategory.MOBILE,
@@ -121,7 +144,14 @@ export default function InterviewSetupPage() {
       description: 'iOS, Android, React Native, Flutter',
       icon: Code,
       color: 'text-purple-400',
-      hasCodeEditor: true
+      hasCodeEditor: true,
+      languages: [
+        { id: 'react-native', name: 'React Native', description: 'Cross-platform with React Native' },
+        { id: 'flutter', name: 'Flutter', description: 'Cross-platform with Flutter/Dart' },
+        { id: 'swift', name: 'Swift', description: 'Native iOS development' },
+        { id: 'kotlin', name: 'Kotlin', description: 'Native Android development' },
+        { id: 'java', name: 'Java', description: 'Android development with Java' }
+      ]
     }
   ];
 
@@ -133,8 +163,8 @@ export default function InterviewSetupPage() {
   ];
 
   const handleStartInterview = async () => {
-    if (!selectedLevel || !selectedCategory) {
-      alert('Please select both interview level and category');
+    if (!selectedLevel || !selectedCategory || !selectedLanguage) {
+      alert('Please select interview level, category, and programming language');
       return;
     }
 
@@ -163,7 +193,7 @@ export default function InterviewSetupPage() {
         level: selectedLevel,
         category: selectedCategory,
         duration: selectedDuration,
-        language: config.language,
+        language: selectedLanguage, // Use the selected language instead of config.language
         hasCodeEditor: (selectedCategoryData?.hasCodeEditor || false).toString(),
         userId: user._id,
         userName: user.name,
@@ -265,7 +295,10 @@ export default function InterviewSetupPage() {
                 return (
                   <button
                     key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
+                    onClick={() => {
+                      setSelectedCategory(category.id);
+                      setSelectedLanguage(''); // Reset language when category changes
+                    }}
                     disabled={!canStartFreeInterview}
                     className={`p-6 rounded-lg border-2 transition-all text-left ${
                       selectedCategory === category.id
@@ -290,6 +323,33 @@ export default function InterviewSetupPage() {
               })}
             </div>
           </div>
+
+          {/* Programming Language Selection - Shows only when category is selected */}
+          {selectedCategory && (
+            <div className="glass-card p-8">
+              <h2 className="text-2xl font-semibold mb-6">Select Programming Language</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {interviewCategories
+                  .find(cat => cat.id === selectedCategory)
+                  ?.languages.map((language) => (
+                    <button
+                      key={language.id}
+                      onClick={() => setSelectedLanguage(language.id)}
+                      disabled={!canStartFreeInterview}
+                      className={`p-4 rounded-lg border-2 transition-all text-left ${
+                        selectedLanguage === language.id
+                          ? 'border-[#00FFB2] bg-[#00FFB2]/10'
+                          : 'border-[#333] hover:border-[#00FFB2]/50'
+                      } ${!canStartFreeInterview ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <h3 className="font-semibold mb-2">{language.name}</h3>
+                      <p className="text-sm text-gray-400">{language.description}</p>
+                    </button>
+                  ))
+                }
+              </div>
+            </div>
+          )}
 
           {/* Duration Selection */}
           <div className="glass-card p-8">
@@ -326,7 +386,7 @@ export default function InterviewSetupPage() {
           <div className="text-center">
             <button
               onClick={handleStartInterview}
-              disabled={!selectedLevel || !selectedCategory || !canStartFreeInterview || loading}
+              disabled={!selectedLevel || !selectedCategory || !selectedLanguage || !canStartFreeInterview || loading}
               className="btn-primary px-8 py-4 text-lg flex items-center justify-center mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Play className="h-5 w-5 mr-2" />
@@ -334,9 +394,9 @@ export default function InterviewSetupPage() {
                !canStartFreeInterview ? 'Upgrade Required' : 
                'Start AI Interview'}
             </button>
-            {(!selectedLevel || !selectedCategory) && canStartFreeInterview && (
+            {(!selectedLevel || !selectedCategory || !selectedLanguage) && canStartFreeInterview && (
               <p className="text-red-400 text-sm mt-2">
-                Please select both interview level and category to continue
+                Please select interview level, category, and programming language to continue
               </p>
             )}
             {!canStartFreeInterview && (
