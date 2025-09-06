@@ -10,6 +10,7 @@ import {
   Database,
   Cloud,
   Briefcase,
+  FileText,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
@@ -224,7 +225,7 @@ export default function InterviewSetupPage() {
         ],
       },
       {
-        id: "mobile-developer",
+        id: InterviewCategory.MOBILE,
         name: "Mobile Developer",
         description: "iOS, Android, React Native",
         icon: Code,
@@ -246,10 +247,46 @@ export default function InterviewSetupPage() {
           { id: "java", name: "Java", description: "Android development" },
         ],
       },
+      {
+        id: InterviewCategory.SOCIAL_MEDIA_MARKETING,
+        name: "Social Media Marketing",
+        description:
+          "Social media strategy, community management, influencer marketing",
+        icon: Users,
+        color: "text-blue-400",
+        hasCodeEditor: false,
+        languages: [
+          {
+            id: "facebook-marketing",
+            name: "Facebook Marketing",
+            description: "Facebook advertising and marketing",
+          },
+          {
+            id: "instagram-marketing",
+            name: "Instagram Marketing",
+            description: "Instagram content and advertising",
+          },
+          {
+            id: "linkedin-marketing",
+            name: "LinkedIn Marketing",
+            description: "LinkedIn B2B marketing",
+          },
+          {
+            id: "twitter-marketing",
+            name: "Twitter Marketing",
+            description: "Twitter engagement and advertising",
+          },
+          {
+            id: "tiktok-marketing",
+            name: "TikTok Marketing",
+            description: "TikTok content and advertising",
+          },
+        ],
+      },
     ],
     marketing: [
       {
-        id: "digital-marketing",
+        id: InterviewCategory.DIGITAL_MARKETING,
         name: "Digital Marketing",
         description: "SEO, SEM, Social Media, Analytics",
         icon: Users,
@@ -280,7 +317,7 @@ export default function InterviewSetupPage() {
         ],
       },
       {
-        id: "content-marketing",
+        id: InterviewCategory.CONTENT_MARKETING,
         name: "Content Marketing",
         description: "Content strategy, copywriting, blogging",
         icon: Briefcase,
@@ -317,7 +354,7 @@ export default function InterviewSetupPage() {
     ],
     analyst: [
       {
-        id: "data-analyst",
+        id: InterviewCategory.DATA_ANALYST,
         name: "Data Analyst",
         description: "SQL, Python, Excel, Visualization",
         icon: Brain,
@@ -344,7 +381,7 @@ export default function InterviewSetupPage() {
         ],
       },
       {
-        id: "business-analyst",
+        id: InterviewCategory.BUSINESS_ANALYST,
         name: "Business Analyst",
         description: "Requirements analysis, process improvement",
         icon: Briefcase,
@@ -378,10 +415,45 @@ export default function InterviewSetupPage() {
           },
         ],
       },
+      {
+        id: InterviewCategory.FINANCIAL_ANALYST,
+        name: "Financial Analyst",
+        description: "Financial modeling, investment analysis, risk assessment",
+        icon: Brain,
+        color: "text-green-400",
+        hasCodeEditor: false,
+        languages: [
+          {
+            id: "financial-modeling",
+            name: "Financial Modeling",
+            description: "Building financial models and forecasts",
+          },
+          {
+            id: "valuation",
+            name: "Valuation",
+            description: "Company and asset valuation techniques",
+          },
+          {
+            id: "risk-analysis",
+            name: "Risk Analysis",
+            description: "Financial risk assessment and management",
+          },
+          {
+            id: "investment-analysis",
+            name: "Investment Analysis",
+            description: "Investment research and analysis",
+          },
+          {
+            id: "financial-reporting",
+            name: "Financial Reporting",
+            description: "Financial statements and reporting",
+          },
+        ],
+      },
     ],
     hr: [
       {
-        id: "hr-generalist",
+        id: InterviewCategory.HR_GENERALIST,
         name: "HR Generalist",
         description: "Recruitment, employee relations, policies",
         icon: Users,
@@ -415,10 +487,70 @@ export default function InterviewSetupPage() {
           },
         ],
       },
+      {
+        id: InterviewCategory.HR_RECRUITER,
+        name: "HR Recruiter",
+        description: "Talent acquisition, sourcing, candidate screening",
+        icon: Users,
+        color: "text-purple-400",
+        hasCodeEditor: false,
+        languages: [
+          {
+            id: "talent-sourcing",
+            name: "Talent Sourcing",
+            description: "Finding and attracting candidates",
+          },
+          {
+            id: "interviewing",
+            name: "Interviewing",
+            description: "Conducting effective interviews",
+          },
+          {
+            id: "candidate-assessment",
+            name: "Candidate Assessment",
+            description: "Evaluating candidate fit and skills",
+          },
+          {
+            id: "recruitment-strategy",
+            name: "Recruitment Strategy",
+            description: "Developing recruitment plans",
+          },
+        ],
+      },
+      {
+        id: InterviewCategory.HR_BUSINESS_PARTNER,
+        name: "HR Business Partner",
+        description: "Strategic HR support, organizational development",
+        icon: Users,
+        color: "text-indigo-400",
+        hasCodeEditor: false,
+        languages: [
+          {
+            id: "strategic-hr",
+            name: "Strategic HR",
+            description: "Aligning HR with business strategy",
+          },
+          {
+            id: "organizational-development",
+            name: "Organizational Development",
+            description: "Improving organizational effectiveness",
+          },
+          {
+            id: "change-management",
+            name: "Change Management",
+            description: "Managing organizational change",
+          },
+          {
+            id: "performance-management",
+            name: "Performance Management",
+            description: "Managing employee performance",
+          },
+        ],
+      },
     ],
     content: [
       {
-        id: "content-writer",
+        id: InterviewCategory.CONTENT_WRITER,
         name: "Content Writer",
         description: "Writing, editing, content strategy",
         icon: Briefcase,
@@ -452,10 +584,70 @@ export default function InterviewSetupPage() {
           },
         ],
       },
+      {
+        id: InterviewCategory.COPYWRITER,
+        name: "Copywriter",
+        description: "Marketing copy, advertising, persuasive writing",
+        icon: FileText,
+        color: "text-orange-400",
+        hasCodeEditor: false,
+        languages: [
+          {
+            id: "advertising-copy",
+            name: "Advertising Copy",
+            description: "Creating compelling ad copy",
+          },
+          {
+            id: "email-marketing",
+            name: "Email Marketing",
+            description: "Email campaigns and newsletters",
+          },
+          {
+            id: "web-copy",
+            name: "Web Copy",
+            description: "Website and landing page copy",
+          },
+          {
+            id: "social-copy",
+            name: "Social Media Copy",
+            description: "Social media content and captions",
+          },
+        ],
+      },
+      {
+        id: InterviewCategory.TECHNICAL_WRITER,
+        name: "Technical Writer",
+        description: "Documentation, API docs, user guides",
+        icon: FileText,
+        color: "text-gray-400",
+        hasCodeEditor: false,
+        languages: [
+          {
+            id: "api-documentation",
+            name: "API Documentation",
+            description: "Writing API documentation",
+          },
+          {
+            id: "user-guides",
+            name: "User Guides",
+            description: "Creating user manuals and guides",
+          },
+          {
+            id: "technical-specs",
+            name: "Technical Specifications",
+            description: "Writing technical specifications",
+          },
+          {
+            id: "knowledge-base",
+            name: "Knowledge Base",
+            description: "Creating knowledge base articles",
+          },
+        ],
+      },
     ],
     "design-cloud": [
       {
-        id: "ui-ux-designer",
+        id: InterviewCategory.UI_UX_DESIGNER,
         name: "UI/UX Designer",
         description: "User interface and experience design",
         icon: Briefcase,
@@ -486,7 +678,7 @@ export default function InterviewSetupPage() {
         ],
       },
       {
-        id: "cloud-engineer",
+        id: InterviewCategory.DEVOPS_ENGINEER,
         name: "Cloud Engineer",
         description: "Cloud infrastructure and DevOps",
         icon: Cloud,
@@ -512,6 +704,41 @@ export default function InterviewSetupPage() {
           },
         ],
       },
+      {
+        id: InterviewCategory.CLOUD_ARCHITECT,
+        name: "Cloud Architect",
+        description: "Cloud architecture design, multi-cloud strategies",
+        icon: Cloud,
+        color: "text-sky-400",
+        hasCodeEditor: true,
+        languages: [
+          {
+            id: "aws-architecture",
+            name: "AWS Architecture",
+            description: "Amazon Web Services architecture",
+          },
+          {
+            id: "azure-architecture",
+            name: "Azure Architecture",
+            description: "Microsoft Azure architecture",
+          },
+          {
+            id: "gcp-architecture",
+            name: "GCP Architecture",
+            description: "Google Cloud Platform architecture",
+          },
+          {
+            id: "multi-cloud",
+            name: "Multi-Cloud",
+            description: "Multi-cloud strategies and design",
+          },
+          {
+            id: "serverless",
+            name: "Serverless",
+            description: "Serverless architecture patterns",
+          },
+        ],
+      },
     ],
   };
 
@@ -524,11 +751,12 @@ export default function InterviewSetupPage() {
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId);
     setSelectedLanguage(""); // Reset language when category changes
-    
+
     // Auto-select the first available language for the category
-    const availableCategories = categoryMapping[
-      selectedPrimaryCategory as keyof typeof categoryMapping
-    ] || [];
+    const availableCategories =
+      categoryMapping[
+        selectedPrimaryCategory as keyof typeof categoryMapping
+      ] || [];
     const category = availableCategories.find((cat) => cat.id === categoryId);
     if (category && category.languages && category.languages.length > 0) {
       setSelectedLanguage(category.languages[0].id);

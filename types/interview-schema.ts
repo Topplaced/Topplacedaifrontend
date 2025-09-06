@@ -108,7 +108,7 @@ export interface Interview {
   userName: string;
   userEmail: string;
   level: 'beginner' | 'intermediate' | 'advanced';
-  category: 'frontend' | 'backend' | 'fullstack' | 'mobile';
+  category: InterviewCategory;
   duration: number;
   language: string;
   hasCodeEditor: boolean;
@@ -133,7 +133,7 @@ export interface CreateInterviewPayload {
   userName: string;
   userEmail: string;
   level: 'beginner' | 'intermediate' | 'advanced';
-  category: 'frontend' | 'backend' | 'fullstack' | 'mobile';
+  category: InterviewCategory;
   duration: number;
   language: string;
   hasCodeEditor: boolean;
@@ -204,10 +204,36 @@ export enum InterviewLevel {
 }
 
 export enum InterviewCategory {
+  // Development categories
   FRONTEND = 'frontend',
   BACKEND = 'backend',
   FULLSTACK = 'fullstack',
-  MOBILE = 'mobile'
+  MOBILE = 'mobile',
+  
+  // Marketing categories
+  DIGITAL_MARKETING = 'digital-marketing',
+  CONTENT_MARKETING = 'content-marketing',
+  SOCIAL_MEDIA_MARKETING = 'social-media-marketing',
+  
+  // Analyst categories
+  DATA_ANALYST = 'data-analyst',
+  BUSINESS_ANALYST = 'business-analyst',
+  FINANCIAL_ANALYST = 'financial-analyst',
+  
+  // HR categories
+  HR_GENERALIST = 'hr-generalist',
+  HR_RECRUITER = 'hr-recruiter',
+  HR_BUSINESS_PARTNER = 'hr-business-partner',
+  
+  // Content categories
+  CONTENT_WRITER = 'content-writer',
+  COPYWRITER = 'copywriter',
+  TECHNICAL_WRITER = 'technical-writer',
+  
+  // Design & Cloud categories
+  UI_UX_DESIGNER = 'ui-ux-designer',
+  CLOUD_ARCHITECT = 'cloud-architect',
+  DEVOPS_ENGINEER = 'devops-engineer'
 }
 
 export enum InterviewStatus {
