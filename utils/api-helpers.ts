@@ -163,6 +163,7 @@ function getDefaultLanguage(category: string): string {
     case 'frontend': return 'javascript';
     case 'backend': return 'python';
     case 'fullstack': return 'javascript';
+    case 'mobile': return 'react-native';
     case 'mobile-developer': return 'react-native';
     
     // Marketing categories

@@ -1157,7 +1157,13 @@ function VoiceInterviewContent() {
 
     setInterviewStarted(false);
     setIsFullscreen(false);
-    router.push("/learner/interview/results");
+    
+    // Redirect to results page with sessionId
+    if (sessionId) {
+      router.push(`/learner/interview/results?id=${sessionId}`);
+    } else {
+      router.push("/learner/interview/results");
+    }
   };
 
   // Additional API functions from testInterview.html

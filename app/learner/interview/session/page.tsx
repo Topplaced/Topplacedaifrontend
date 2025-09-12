@@ -572,17 +572,23 @@ function InterviewSessionContent() {
     
     setInterviewStarted(false);
     setIsFullscreen(false);
-    router.push('/learner/interview/results');
+    
+    // Store results for the results page and redirect with sessionId
+    const sessionId = completionPayload.sessionId;
+    localStorage.setItem('lastInterviewSessionId', sessionId);
+    router.push(`/learner/interview/results?id=${sessionId}`);
   };
 
   const getLanguageOptions = () => {
     switch (category) {
       case 'frontend':
-        return ['javascript', 'typescript', 'html', 'css'];
+        return ['javascript', 'typescript', 'html', 'css', 'react', 'vue', 'angular', 'sass', 'nextjs'];
       case 'backend':
-        return ['javascript', 'python', 'java', 'go', 'csharp'];
+        return ['javascript', 'python', 'java', 'go', 'csharp', 'php', 'ruby', 'rust', 'cpp', 'c', 'scala', 'kotlin'];
       case 'fullstack':
-        return ['javascript', 'typescript', 'python', 'java'];
+        return ['javascript', 'typescript', 'python', 'java', 'php', 'ruby', 'go', 'rust', 'csharp'];
+      case 'mobile':
+        return ['react-native', 'flutter', 'swift', 'kotlin', 'java', 'dart', 'objective-c', 'xamarin', 'ionic', 'cordova'];
       case 'sql':
         return ['sql'];
       case 'data-analyst':
@@ -590,7 +596,7 @@ function InterviewSessionContent() {
       case 'aws':
         return ['yaml', 'json', 'bash'];
       default:
-        return ['javascript', 'python', 'java'];
+        return ['javascript', 'python', 'java', 'typescript', 'go', 'rust', 'cpp'];
     }
   };
 
