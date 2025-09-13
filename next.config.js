@@ -12,7 +12,6 @@ const nextConfig = {
         ? "https://api.topplaced.com"
         : "http://localhost:5000",
   },
-  output: "export", // ✅ enables static export
 };
 
 module.exports = nextConfig;
