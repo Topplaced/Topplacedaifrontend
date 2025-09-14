@@ -142,7 +142,15 @@ function mapLevelToBackend(frontendLevel: string): 'entry' | 'mid' | 'senior' | 
 
 // Helper function to build interview configuration
 export function buildInterviewConfig(level: string, category: string, duration: string) {
-  const hasCodeEditor = !['hr', 'product-manager'].includes(category);
+  // Define categories that don't need code editor
+  const nonCodeCategories = [
+    'hr', 'product-manager', 'hr-generalist', 'hr-recruiter', 'hr-business-partner',
+    'content-writer', 'copywriter', 'technical-writer',
+    'digital-marketing', 'content-marketing', 'social-media-marketing',
+    'business-analyst', 'financial-analyst', 'ui-ux-designer'
+  ];
+  
+  const hasCodeEditor = !nonCodeCategories.includes(category.toLowerCase());
   
   return {
     level: mapLevelToBackend(level), // Map the level here
@@ -158,7 +166,8 @@ export function buildInterviewConfig(level: string, category: string, duration: 
 
 // Helper function to get default programming language or tool
 function getDefaultLanguage(category: string): string {
-  switch (category) {
+  const lowerCategory = category.toLowerCase();
+  switch (lowerCategory) {
     // Development categories
     case 'frontend': return 'javascript';
     case 'backend': return 'python';
@@ -167,29 +176,43 @@ function getDefaultLanguage(category: string): string {
     case 'mobile-developer': return 'react-native';
     
     // Marketing categories
-    case 'digital-marketing': return 'google-ads';
-    case 'content-marketing': return 'copywriting';
-    case 'social-media-marketing': return 'social-media-strategy';
+    case 'digital-marketing':
+    case 'digital_marketing': return 'google-ads';
+    case 'content-marketing':
+    case 'content_marketing': return 'copywriting';
+    case 'social-media-marketing':
+    case 'social_media_marketing': return 'social-media-strategy';
     
     // Analyst categories
-    case 'data-analyst': return 'python';
-    case 'business-analyst': return 'requirements-analysis';
-    case 'financial-analyst': return 'financial-modeling';
+    case 'data-analyst':
+    case 'data_analyst': return 'python';
+    case 'business-analyst':
+    case 'business_analyst': return 'requirements-analysis';
+    case 'financial-analyst':
+    case 'financial_analyst': return 'financial-modeling';
     
     // HR categories
-    case 'hr-generalist': return 'recruitment';
-    case 'hr-recruiter': return 'recruitment';
-    case 'hr-business-partner': return 'strategic-hr';
+    case 'hr-generalist':
+    case 'hr_generalist': return 'recruitment';
+    case 'hr-recruiter':
+    case 'hr_recruiter': return 'recruitment';
+    case 'hr-business-partner':
+    case 'hr_business_partner': return 'strategic-hr';
     
     // Content categories
-    case 'content-writer': return 'content-writing';
+    case 'content-writer':
+    case 'content_writer': return 'content-writing';
     case 'copywriter': return 'copywriting';
-    case 'technical-writer': return 'technical-documentation';
+    case 'technical-writer':
+    case 'technical_writer': return 'technical-documentation';
     
     // Design & Cloud categories
-    case 'ui-ux-designer': return 'figma';
-    case 'cloud-architect': return 'aws';
-    case 'devops-engineer': return 'docker';
+    case 'ui-ux-designer':
+    case 'ui_ux_designer': return 'figma';
+    case 'cloud-architect':
+    case 'cloud_architect': return 'aws';
+    case 'devops-engineer':
+    case 'devops_engineer': return 'bash';
     
     // Legacy categories
     case 'sql': return 'sql';
