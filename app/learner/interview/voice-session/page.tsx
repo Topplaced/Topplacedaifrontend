@@ -71,16 +71,19 @@ function VoiceInterviewContent() {
   // Interview configuration from URL parameters
   const level = searchParams.get("level") || "mid";
   const category = searchParams.get("category") || "fullstack";
+  const field = searchParams.get("field") || "";
   const duration = searchParams.get("duration") || "30";
-  const hasCodeEditor = searchParams.get("hasCodeEditor") === "true" || true;
   const userId = searchParams.get("userId") || user?._id || "";
   const userName = searchParams.get("userName") || user?.name || "";
   const userEmail = searchParams.get("userEmail") || user?.email || "";
   const isFreeInterview = searchParams.get("isFreeInterview") === "true";
+  const selectedLanguage = searchParams.get("language"); // Get selected language from URL
 
-  // Get the correct language for the category
+  // Get the correct configuration for the category
   const config = buildInterviewConfig(level, category, duration);
-  const defaultLanguage = config.language;
+  const hasCodeEditorParam = searchParams.get("hasCodeEditor");
+  const hasCodeEditor = hasCodeEditorParam !== null ? hasCodeEditorParam === "true" : config.hasCodeEditor;
+  const defaultLanguage = selectedLanguage || config.language; // Use selected language first, fallback to config
 
   // State management
   const [isRecording, setIsRecording] = useState(false);
@@ -90,7 +93,7 @@ function VoiceInterviewContent() {
   const [timeRemaining, setTimeRemaining] = useState(parseInt(duration) * 60);
   const [messages, setMessages] = useState<Message[]>([]);
   const [code, setCode] = useState("");
-  const [language, setLanguage] = useState(defaultLanguage); // Use the mapped language
+  const [language, setLanguage] = useState(defaultLanguage); // Use the selected language from URL or fallback to mapped language
   const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [interviewStarted, setInterviewStarted] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
@@ -136,45 +139,45 @@ function VoiceInterviewContent() {
   const buildInterviewPayload = () => {
     return {
       user: {
-        id: userId || "user123",
-        name: userName || "John Doe",
-        email: userEmail || "john@example.com",
+        id: userId || user?._id || "user123",
+        name: userName || user?.name || "User",
+        email: userEmail || user?.email || "user@example.com",
         role: user?.role || "user",
-        experience: user?.experience || "3 years in full-stack development",
+        experience: user?.experience || "Professional experience in technology",
         skills: user?.tech_stack
           ? user.tech_stack.split(",")
           : ["JavaScript", "React", "Node.js", "Python", "SQL"],
-        goals: user?.goals || "Land a senior developer role",
+        goals: user?.goals || "Advance career in technology",
         education: user?.education
-          ? JSON.parse(user.education)
+          ? typeof user.education === "string"
+            ? JSON.parse(user.education)
+            : user.education
           : [
               {
-                degree: "B.Tech in Computer Science",
-                institution: "Indian Institute of Technology, Delhi",
-                year: 2019,
+                degree: "Bachelor's Degree",
+                institution: "University",
+                year: new Date().getFullYear() - 2,
               },
             ],
-        workExperience: [
-          {
-            title: "Full-Stack Developer",
-            company: "TechNova Solutions",
-            duration: "Jan 2021 - Present",
-            description:
-              "Led development of scalable web applications using React and Node.js. Integrated RESTful APIs and optimized performance across multiple products.",
-          },
-          {
-            title: "Frontend Developer Intern",
-            company: "CodeCraft Inc.",
-            duration: "Jun 2020 - Dec 2020",
-            description:
-              "Worked on enhancing user interfaces with React and Material UI. Assisted in building reusable component libraries and responsive layouts.",
-          },
-        ],
+        workExperience: user?.experience
+          ? typeof user.experience === "string"
+            ? JSON.parse(user.experience)
+            : user.experience
+          : [
+              {
+                title: "Software Developer",
+                company: "Technology Company",
+                duration: "Recent Experience",
+                description:
+                  "Professional software development experience with modern technologies and best practices.",
+              },
+            ],
         profileCompletion: user?.profile_completion || 85,
       },
       configuration: {
         level: mapLevelToBackend(level), // Map frontend level to backend level
         category: category,
+        field: field,
         duration: parseInt(duration),
         hasCodeEditor: hasCodeEditor,
         language: language,
@@ -374,8 +377,6 @@ function VoiceInterviewContent() {
 
     initializeMedia();
   }, []);
-
-
 
   // Timer countdown
   useEffect(() => {
@@ -690,10 +691,10 @@ function VoiceInterviewContent() {
   // Initialize component and auto-start timer
   useEffect(() => {
     if (hasInitialized.current) return;
-    
+
     console.log("🔍 Component initialized - auto-starting timer");
     hasInitialized.current = true;
-    
+
     // Auto-start the interview timer after component initialization
     const autoStartTimer = setTimeout(() => {
       // Check if manual start hasn't already been triggered
@@ -703,7 +704,7 @@ function VoiceInterviewContent() {
         console.log("⏭️ Skipping auto-start - manual start already triggered");
       }
     }, 1000); // Small delay to ensure everything is loaded
-    
+
     // Cleanup timer on unmount
     return () => {
       clearTimeout(autoStartTimer);
@@ -820,19 +821,19 @@ function VoiceInterviewContent() {
 
   const handleManualStart = async () => {
     console.log("🎯 Manual start triggered from instructions popup");
-    
+
     // Prevent duplicate calls if already starting or started
     if (isStartingRef.current || isStartingInterview || interviewStarted) {
       console.log("⏭️ Skipping manual start - already in progress or started");
       return;
     }
-    
+
     // Clear any existing countdown to prevent auto-start
     if (countdownInterval) {
       clearInterval(countdownInterval);
       setCountdownInterval(null);
     }
-    
+
     isStartingRef.current = true;
     setShowInstructionsPopup(false);
     setShowStartingPopup(true);
@@ -1157,7 +1158,7 @@ function VoiceInterviewContent() {
 
     setInterviewStarted(false);
     setIsFullscreen(false);
-    
+
     // Redirect to results page with sessionId
     if (sessionId) {
       router.push(`/learner/interview/results?id=${sessionId}`);
@@ -1951,12 +1952,12 @@ function VoiceInterviewContent() {
           </div>
         </div>
 
-        <div className="flex h-[calc(100vh-120px)]">
+        <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)]">
           {/* Left Panel - Video and Chat */}
-          <div className="w-1/2 flex flex-col border-r border-[#00FFB2]/20">
+          <div className="w-full lg:w-1/2 flex flex-col border-r-0 lg:border-r border-[#00FFB2]/20">
             {/* Video Section */}
-            <div className="h-1/2 bg-[#0A0A0A] p-4">
-              <div className="grid grid-cols-2 gap-4 h-full">
+            <div className="h-64 lg:h-1/2 bg-[#0A0A0A] p-2 lg:p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:gap-4 h-full">
                 {/* User Video */}
                 <div className="bg-[#111] rounded-lg overflow-hidden relative">
                   <video
@@ -1992,7 +1993,7 @@ function VoiceInterviewContent() {
             </div>
 
             {/* Chat Section */}
-            <div className="h-1/2 flex flex-col bg-[#0A0A0A]">
+            <div className="flex-1 lg:h-1/2 flex flex-col bg-[#0A0A0A] min-h-[300px]">
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map((message) => (
                   <div
@@ -2006,7 +2007,7 @@ function VoiceInterviewContent() {
                     }`}
                   >
                     <div
-                      className={`max-w-[80%] p-3 rounded-lg ${
+                      className={`max-w-[90%] sm:max-w-[80%] p-2 lg:p-3 rounded-lg text-sm lg:text-base ${
                         message.type === "user"
                           ? "bg-[#00FFB2] text-black"
                           : message.type === "system"
@@ -2162,7 +2163,7 @@ function VoiceInterviewContent() {
               </div>
             </div>
           ) : hasCodeEditor && !showCodeEditor ? (
-            <div className="w-1/2 flex items-center justify-center bg-[#0A0A0A] border-l border-[#00FFB2]/20">
+            <div className="w-full lg:w-1/2 flex items-center justify-center bg-[#0A0A0A] border-l-0 lg:border-l border-[#00FFB2]/20 min-h-[400px] lg:min-h-0">
               <div className="text-center">
                 <Code size={48} className="text-gray-500 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">
@@ -2182,7 +2183,7 @@ function VoiceInterviewContent() {
               </div>
             </div>
           ) : !hasCodeEditor ? (
-            <div className="w-1/2 flex items-center justify-center bg-[#0A0A0A]">
+            <div className="w-full lg:w-1/2 flex items-center justify-center bg-[#0A0A0A] min-h-[400px] lg:min-h-0">
               <div className="text-center">
                 <Bot size={48} className="text-gray-500 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Voice Interview</h3>

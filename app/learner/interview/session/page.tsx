@@ -52,7 +52,8 @@ function InterviewSessionContent() {
   const level = searchParams.get("level");
   const category = searchParams.get("category");
   const duration = searchParams.get("duration");
-  const hasCodeEditor = searchParams.get("hasCodeEditor") === "true";
+  const hasCodeEditorParam = searchParams.get("hasCodeEditor");
+  const selectedLanguage = searchParams.get("language"); // Get selected language from URL
 
   // Get the correct language for the category
   const config = buildInterviewConfig(
@@ -60,7 +61,8 @@ function InterviewSessionContent() {
     category || "fullstack",
     duration || "45"
   );
-  const defaultLanguage = config.language;
+  const hasCodeEditor = hasCodeEditorParam !== null ? hasCodeEditorParam === "true" : config.hasCodeEditor;
+  const defaultLanguage = selectedLanguage || config.language; // Use selected language first, fallback to config
 
   // State management
   const [isRecording, setIsRecording] = useState(false);
@@ -81,7 +83,7 @@ function InterviewSessionContent() {
   >([]);
   const [userInput, setUserInput] = useState("");
   const [code, setCode] = useState("");
-  const [language, setLanguage] = useState(defaultLanguage); // Use the mapped language
+  const [language, setLanguage] = useState(defaultLanguage); // Use the selected language from URL or fallback to mapped language
   const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [interviewStarted, setInterviewStarted] = useState(false);
   const [showWarning, setShowWarning] = useState(false);

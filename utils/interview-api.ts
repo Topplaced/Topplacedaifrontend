@@ -119,6 +119,7 @@ export async function startInterview(
     configuration: {
       level: mapLevelToBackend(payload.level), // Map the level here
       category: payload.category,
+      field: payload.field,
       duration: payload.duration,
       language: payload.language,
       hasCodeEditor: payload.hasCodeEditor,
