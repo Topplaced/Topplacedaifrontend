@@ -2,6 +2,7 @@ import "./globals.css";
 import { ReduxProvider } from "@/store/provider";
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
+import Script from "next/script";
 
 export const metadata: Metadata = {
   title: "Top placed AI | AI-Powered Career Development Platform",
@@ -21,6 +22,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="bg-black text-white antialiased">
+        <Script
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="lazyOnload"
+        />
         <div className="min-h-screen">
           <Toaster richColors position="top-center" />
           <ReduxProvider>{children}</ReduxProvider>

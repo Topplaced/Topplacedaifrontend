@@ -21,7 +21,11 @@ import {
   Cloud,
   Briefcase,
   ChevronDown,
-  Star
+  Star,
+  Gift,
+  CreditCard,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
@@ -47,6 +51,8 @@ interface InterviewRecord {
   tabSwitchCount: number;
   codeSubmissions?: number;
   status: 'completed' | 'terminated' | 'incomplete';
+  isFreeInterview?: boolean;
+  role?: string;
 }
 
 export default function InterviewHistoryPage() {
@@ -58,10 +64,42 @@ export default function InterviewHistoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterLevel, setFilterLevel] = useState('all');
+  const [filterType, setFilterType] = useState<'all' | 'free' | 'paid'>('all');
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [usageStats, setUsageStats] = useState({
+    freeInterviewsUsed: 0,
+    freeInterviewsLimit: 2,
+    totalInterviews: 0,
+    averageScore: 0
+  });
 
-  // Mock data - replace with actual API call
+  // Fetch interview history from API - moved to after useEffect
+
+  const fetchUsageStats = async () => {
+    try {
+      const response = await fetch(`${API_URL}/users/${user?._id}/interview-usage`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUsageStats({
+          freeInterviewsUsed: data.freeInterviewsUsed || 0,
+          freeInterviewsLimit: data.freeInterviewsLimit || 2,
+          totalInterviews: data.totalInterviews || 0,
+          averageScore: data.averageScore || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching usage stats:', error);
+    }
+  };
+
+  // Mock data - fallback when API is not available
   const mockInterviews: InterviewRecord[] = [
     {
       id: '1',
@@ -79,7 +117,9 @@ export default function InterviewHistoryPage() {
       timeSpent: 2700,
       tabSwitchCount: 0,
       codeSubmissions: 3,
-      status: 'completed'
+      status: 'completed',
+      isFreeInterview: true,
+      role: 'Full Stack Developer'
     },
     {
       id: '2',
@@ -97,7 +137,28 @@ export default function InterviewHistoryPage() {
       timeSpent: 3600,
       tabSwitchCount: 1,
       codeSubmissions: 2,
-      status: 'completed'
+      status: 'completed',
+      isFreeInterview: true,
+      role: 'Frontend Developer'
+    },
+    {
+      id: '3',
+      category: 'backend',
+      level: 'mid',
+      duration: 30,
+      overallScore: 78,
+      scores: {
+        technical: 82,
+        communication: 75,
+        problemSolving: 80
+      },
+      completedAt: '2024-01-15T16:45:00Z',
+      timeSpent: 1800,
+      tabSwitchCount: 0,
+      codeSubmissions: 1,
+      status: 'completed',
+      isFreeInterview: false,
+      role: 'Backend Developer'
     },
     {
       id: '3',
@@ -154,8 +215,11 @@ export default function InterviewHistoryPage() {
 
   useEffect(() => {
     setIsVisible(true);
-    fetchInterviewHistory();
-  }, []);
+    if (user && token) {
+      fetchInterviewHistory();
+      fetchUsageStats();
+    }
+  }, [user, token]);
 
   const fetchInterviewHistory = async () => {
     try {
@@ -207,7 +271,9 @@ export default function InterviewHistoryPage() {
           tabSwitchCount: interview.tabSwitchCount || 0,
           codeSubmissions: interview.codeSubmissions || (interview.hasCodeEditor ? Math.floor(Math.random() * 5) + 1 : undefined),
           status: interview.status === 'completed' ? 'completed' : 
-                  interview.status === 'terminated' ? 'terminated' : 'incomplete'
+                  interview.status === 'terminated' ? 'terminated' : 'incomplete',
+          isFreeInterview: interview.isFreeInterview || false,
+          role: interview.role || interview.category
         };
       });
       
@@ -285,10 +351,14 @@ export default function InterviewHistoryPage() {
   const filteredAndSortedInterviews = interviews
     .filter(interview => {
       const matchesSearch = interview.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           interview.level.toLowerCase().includes(searchTerm.toLowerCase());
+                           interview.level.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (interview.role && interview.role.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesCategory = filterCategory === 'all' || interview.category === filterCategory;
       const matchesLevel = filterLevel === 'all' || interview.level === filterLevel;
-      return matchesSearch && matchesCategory && matchesLevel;
+      const matchesType = filterType === 'all' || 
+                         (filterType === 'free' && interview.isFreeInterview) ||
+                         (filterType === 'paid' && !interview.isFreeInterview);
+      return matchesSearch && matchesCategory && matchesLevel && matchesType;
     })
     .sort((a, b) => {
       let aValue, bValue;
@@ -368,6 +438,53 @@ export default function InterviewHistoryPage() {
             </p>
           </div>
 
+          {/* Usage Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="glass-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <Gift size={24} className="text-[#00FFB2]" />
+                  <h3 className="text-lg font-semibold">Free Interviews</h3>
+                </div>
+                <div className={`px-3 py-1 rounded-full text-sm ${
+                  usageStats.freeInterviewsUsed >= usageStats.freeInterviewsLimit 
+                    ? 'bg-red-500/20 text-red-400' 
+                    : 'bg-green-500/20 text-green-400'
+                }`}>
+                  {usageStats.freeInterviewsUsed >= usageStats.freeInterviewsLimit ? 'Limit Reached' : 'Available'}
+                </div>
+              </div>
+              <div className="text-2xl font-bold mb-2">
+                {usageStats.freeInterviewsUsed} / {usageStats.freeInterviewsLimit}
+              </div>
+              <div className="w-full bg-gray-700 rounded-full h-2 mb-3">
+                <div 
+                  className="bg-[#00FFB2] h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${(usageStats.freeInterviewsUsed / usageStats.freeInterviewsLimit) * 100}%` }}
+                ></div>
+              </div>
+              <p className="text-sm text-gray-400">
+                {usageStats.freeInterviewsUsed >= usageStats.freeInterviewsLimit 
+                  ? 'You have used all your free interviews. Purchase credits to continue.' 
+                  : `${usageStats.freeInterviewsLimit - usageStats.freeInterviewsUsed} free interviews remaining`
+                }
+              </p>
+            </div>
+
+            <div className="glass-card p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <CreditCard size={24} className="text-[#00FFB2]" />
+                <h3 className="text-lg font-semibold">Interview Credits</h3>
+              </div>
+              <div className="text-2xl font-bold mb-2">
+                {interviews.filter(i => !i.isFreeInterview).length}
+              </div>
+              <p className="text-sm text-gray-400">
+                Total paid interviews completed
+              </p>
+            </div>
+          </div>
+
           {/* Stats Overview */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="glass-card p-6 text-center">
@@ -394,7 +511,7 @@ export default function InterviewHistoryPage() {
 
           {/* Filters and Search */}
           <div className="glass-card p-6">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
               <div className="relative">
                 <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
@@ -430,6 +547,16 @@ export default function InterviewHistoryPage() {
                 <option value="beginner">Beginner Level</option>
                 <option value="intermediate">Intermediate Level</option>
                 <option value="advanced">Advanced Level</option>
+              </select>
+
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as 'all' | 'free' | 'paid')}
+                className="bg-[#1A1A1A] border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-[#00FFB2]"
+              >
+                <option value="all">All Types</option>
+                <option value="free">Free Interviews</option>
+                <option value="paid">Paid Interviews</option>
               </select>
 
               <select
@@ -484,15 +611,34 @@ export default function InterviewHistoryPage() {
                           <IconComponent size={24} className={categoryColor} />
                         </div>
                         <div>
-                          <h3 className="text-lg font-semibold capitalize">
-                            {interview.category.replace('-', ' ')} Interview
-                          </h3>
+                          <div className="flex items-center space-x-3 mb-1">
+                            <h3 className="text-lg font-semibold capitalize">
+                              {interview.category.replace('-', ' ')} Interview
+                            </h3>
+                            <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${
+                              interview.isFreeInterview 
+                                ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                                : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                            }`}>
+                              {interview.isFreeInterview ? (
+                                <><Gift size={12} /><span>Free</span></>
+                              ) : (
+                                <><CreditCard size={12} /><span>Paid</span></>
+                              )}
+                            </div>
+                          </div>
                           <div className="flex items-center space-x-4 text-sm text-gray-400">
                             <span className="capitalize">{interview.level} Level</span>
                             <span>•</span>
                             <span>{interview.duration} minutes</span>
                             <span>•</span>
                             <span>{formatDate(interview.completedAt)}</span>
+                            {interview.role && (
+                              <>
+                                <span>•</span>
+                                <span className="capitalize">{interview.role}</span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>

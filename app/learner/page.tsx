@@ -30,6 +30,7 @@ export default function LearnerDashboard() {
 
   const dispatch = useDispatch();
   const router = useRouter();
+  const { user } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
     setIsVisible(true);
@@ -110,7 +111,7 @@ export default function LearnerDashboard() {
                   <h1 className="text-3xl md:text-4xl font-bold mb-2">
                     Welcome back,{" "}
                     <span className="gradient-text">
-                      {Users?.name || "John"}
+                      {user?.name || "John"}
                     </span>
                     ! 👋
                   </h1>
@@ -295,8 +296,40 @@ export default function LearnerDashboard() {
                 </Link>
               </div>
 
-              {/* Upcoming Sessions */}
               <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold">Recent Achievements</h3>
+                  <Award size={24} className="text-[#00FFB2]" />
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center p-4 bg-[#1A1A1A] rounded-lg">
+                    <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center mr-4">
+                      <Trophy size={20} className="text-yellow-500" />
+                    </div>
+                    <div>
+                      <div className="font-semibold">Interview Streak</div>
+                      <div className="text-sm text-gray-400">
+                        Completed 5 interviews in a row
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center p-4 bg-[#1A1A1A] rounded-lg">
+                    <div className="w-12 h-12 bg-[#00FFB2]/20 rounded-full flex items-center justify-center mr-4">
+                      <Zap size={20} className="text-[#00FFB2]" />
+                    </div>
+                    <div>
+                      <div className="font-semibold">Quick Learner</div>
+                      <div className="text-sm text-gray-400">
+                        Improved score by 15% in one week
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Upcoming Sessions */}
+              {/* <div className="glass-card p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold">Upcoming Sessions</h3>
                   <Calendar size={24} className="text-[#00FFB2]" />
@@ -346,11 +379,11 @@ export default function LearnerDashboard() {
                 >
                   Manage Sessions
                 </Link>
-              </div>
+              </div> */}
             </div>
 
             {/* Recommended Mentors */}
-            <div className="glass-card p-8">
+            {/* <div className="glass-card p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="text-2xl font-semibold mb-2">
@@ -430,12 +463,12 @@ export default function LearnerDashboard() {
                   </div>
                 ))}
               </div>
-            </div>
+            </div> */}
 
             {/* Achievement & Gamification */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
               {/* Achievements */}
-              <div className="glass-card p-6">
+              {/* <div className="glass-card p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold">Recent Achievements</h3>
                   <Award size={24} className="text-[#00FFB2]" />
@@ -466,10 +499,10 @@ export default function LearnerDashboard() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               {/* Plan Upgrade */}
-              <div className="glass-card p-6 border-2 border-[#00FFB2]/30">
+              {/* <div className="glass-card p-6 border-2 border-[#00FFB2]/30">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-semibold">Upgrade Your Plan</h3>
                   <Star size={24} className="text-[#00FFB2]" />
@@ -501,7 +534,7 @@ export default function LearnerDashboard() {
                 >
                   Upgrade to Pro
                 </Link>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
