@@ -16,11 +16,14 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 export default function SettingsPage() {
   const [isVisible, setIsVisible] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState("neon-green");
   const [userType, setUserType] = useState<"learner" | "mentor">("learner");
+  const user = useSelector((state: RootState) => state.auth.user);
 
   useEffect(() => {
     setIsVisible(true);
@@ -286,12 +289,12 @@ export default function SettingsPage() {
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium mb-2">Display Name</label>
-                    <input type="text" defaultValue={userType === 'learner' ? 'John Doe' : 'Sarah Chen'}
+                    <input type="text" defaultValue={user?.name || (userType === 'learner' ? 'Learner' : 'Mentor')}
                       className="w-full bg-[#1A1A1A] border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-[var(--primary-accent)]" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Email</label>
-                    <input type="email" defaultValue={userType === 'learner' ? 'john@example.com' : 'sarah@example.com'}
+                    <input type="email" defaultValue={user?.email || (userType === 'learner' ? 'learner@example.com' : 'mentor@example.com')}
                       className="w-full bg-[#1A1A1A] border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-[var(--primary-accent)]" />
                   </div>
                   <button className="btn-primary px-6 py-2 rounded">Save Changes</button>

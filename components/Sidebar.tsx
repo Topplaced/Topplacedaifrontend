@@ -164,7 +164,7 @@ export default function Sidebar({ userType }: SidebarProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate">
-                  {userType === "learner" ? "John Doe" : "Sarah Chen"}
+                  {user?.name || (userType === "learner" ? "Learner" : "Mentor")}
                 </div>
                 <div className="text-xs text-gray-400 capitalize">
                   {userType}

@@ -74,6 +74,7 @@ export interface ConversationMessage {
 export interface InterviewConfiguration {
   level: string;
   category: string;
+  field?: string;
   duration: number;
   language: string;
   hasCodeEditor: boolean;
@@ -134,6 +135,7 @@ export interface CreateInterviewPayload {
   userEmail: string;
   level: 'beginner' | 'intermediate' | 'advanced';
   category: 'frontend' | 'backend' | 'fullstack' | 'mobile';
+  field?: string;
   duration: number;
   language: string;
   hasCodeEditor: boolean;

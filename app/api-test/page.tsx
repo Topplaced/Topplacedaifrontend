@@ -74,9 +74,9 @@ export default function APITestClient() {
   const initializeInterview = () => {
     const payload = {
       user: {
-        id: "688a49e1421a4269f543b115",
-        name: "Priyansh Panwar",
-        email: "priyansh@gmail.com",
+        id: "test-user-id",
+        name: "Test User",
+        email: "testuser@example.com",
         role: "user",
         experience: "3 years in full-stack development",
         skills: ["JavaScript", "React", "Node.js", "Python", "SQL"],
@@ -191,9 +191,9 @@ printFibonacci(10);`
     const payload = {
       sessionId: sessionId,
       user: {
-        id: "688a49e1421a4269f543b115",
-        name: "Priyansh Panwar",
-        email: "priyansh@gmail.com",
+        id: "test-user-id",
+        name: "Test User",
+        email: "testuser@example.com",
         role: "user",
       },
       configuration: {

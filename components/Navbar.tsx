@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu, X, User, LogOut, Settings } from "lucide-react";
+import { Menu, X, User, LogOut, Settings, Trophy } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../store/store"; // Adjust the import path as necessary
 import { logout } from "@/store/slices/authSlice";
@@ -45,6 +45,15 @@ export default function Navbar() {
             >
               Pricing
             </Link>
+            {user && (
+              <Link
+                href="/achievements"
+                className="text-gray-300 hover:text-[#00FFB2] transition-colors flex items-center space-x-1"
+              >
+                <Trophy size={16} />
+                <span>Achievements</span>
+              </Link>
+            )}
           </div>
 
           {/* User Menu / Auth */}
@@ -120,6 +129,15 @@ export default function Navbar() {
               >
                 Pricing
               </Link>
+              {user && (
+                <Link
+                  href="/achievements"
+                  className="text-gray-300 hover:text-[#00FFB2] transition-colors flex items-center space-x-2"
+                >
+                  <Trophy size={16} />
+                  <span>Achievements</span>
+                </Link>
+              )}
               <div className="pt-4 border-t border-[#00FFB2]/20">
                 <Link
                   href="/auth/login"

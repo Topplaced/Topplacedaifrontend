@@ -905,11 +905,48 @@ export default function InterviewSetupPage() {
         selectedDuration
       );
 
+      // Map frontend field values to backend enum values
+      const fieldMapping: { [key: string]: string } = {
+        'development': 'DEVELOPMENT',
+        'marketing': 'MARKETING', 
+        'analyst': 'ANALYST',
+        'hr': 'HR',
+        'content': 'CONTENT',
+        'design-cloud': 'DESIGN_CLOUD'
+      };
+
+      // Map frontend category values to backend enum values
+      const categoryMapping: { [key: string]: string } = {
+        'frontend': 'FRONTEND_DEVELOPER',
+        'backend': 'BACKEND_DEVELOPER',
+        'fullstack': 'FULL_STACK_DEVELOPER',
+        'mobile': 'MOBILE_DEVELOPER',
+        'DIGITAL_MARKETING': 'DIGITAL_MARKETING',
+        'CONTENT_MARKETING': 'CONTENT_MARKETING',
+        'SOCIAL_MEDIA_MARKETING': 'SOCIAL_MEDIA_MARKETING',
+        'DATA_ANALYST': 'DATA_ANALYST',
+        'BUSINESS_ANALYST': 'BUSINESS_ANALYST',
+        'FINANCIAL_ANALYST': 'FINANCIAL_ANALYST',
+        'HR_GENERALIST': 'HR_GENERALIST',
+        'HR_RECRUITER': 'HR_RECRUITER',
+        'HR_BUSINESS_PARTNER': 'HR_BUSINESS_PARTNER',
+        'CONTENT_WRITER': 'CONTENT_WRITER',
+        'COPYWRITER': 'COPYWRITER',
+        'TECHNICAL_WRITER': 'TECHNICAL_WRITER',
+        'UI_UX_DESIGNER': 'UI_UX_DESIGNER',
+        'CLOUD_ARCHITECT': 'CLOUD_ARCHITECT',
+        'DEVOPS_ENGINEER': 'DEVOPS_ENGINEER'
+      };
+
+      const backendField = fieldMapping[selectedPrimaryCategory] || 'DEVELOPMENT';
+      const backendCategory = categoryMapping[selectedCategory] || 'FULL_STACK_DEVELOPER';
+
       // Navigate directly to the interview session page with all necessary parameters
       // The actual interview start will be triggered manually from the instructions popup
       const params = new URLSearchParams({
         level: selectedLevel,
-        category: selectedCategory,
+        category: backendCategory,
+        field: backendField,
         duration: selectedDuration,
         language: selectedLanguage, // Use the selected language instead of config.language
         hasCodeEditor: (
