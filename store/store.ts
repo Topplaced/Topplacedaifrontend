@@ -1,8 +1,27 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { authReducer } from './slices/authSlice';
 import { persistStore, persistReducer } from 'redux-persist';
-import storage from 'redux-persist/lib/storage'; // localStorage
 import { combineReducers } from 'redux';
+
+// Create a noop storage for SSR compatibility
+const createNoopStorage = () => {
+  return {
+    getItem(_key: string) {
+      return Promise.resolve(null);
+    },
+    setItem(_key: string, value: any) {
+      return Promise.resolve(value);
+    },
+    removeItem(_key: string) {
+      return Promise.resolve();
+    },
+  };
+};
+
+// Use localStorage only in browser environment
+const storage = typeof window !== 'undefined' 
+  ? require('redux-persist/lib/storage').default 
+  : createNoopStorage();
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -12,6 +31,8 @@ const persistConfig = {
   key: 'root',
   storage,
   whitelist: ['auth'],
+  serialize: false,
+  deserialize: false,
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
