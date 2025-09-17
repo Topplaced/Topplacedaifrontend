@@ -36,9 +36,8 @@ export default function LoginPage() {
 
   const handleLinkedInLogin = () => {
     setIsLoading(true);
-    setTimeout(() => {
-      window.location.href = "/learner";
-    }, 2000);
+    // Redirect to backend LinkedIn OAuth endpoint
+    window.location.href = `${API_URL}/api/auth/linkedin`;
   };
 
   const handleSubmit = async (e: any) => {
@@ -47,7 +46,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/auth/login`, {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -74,6 +73,13 @@ export default function LoginPage() {
         } else {
           router.push("/learner");
         }
+      } else if (res.status === 403 && data.message?.includes("email not verified")) {
+        // Handle email verification required
+        setMessage("Please verify your email before logging in.");
+        toast.error("Please verify your email before logging in.");
+        
+        // Redirect to email verification page
+        router.push(`/auth/verify-email?email=${encodeURIComponent(email)}`);
       } else {
         setMessage(data.message || "Invalid credentials.");
         toast.error("Invalid email or password.");
