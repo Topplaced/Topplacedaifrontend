@@ -42,7 +42,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [verificationChoice, setVerificationChoice] = useState<"" | "verify-now" | "verify-later">("");
+  const [verificationChoice, setVerificationChoice] = useState<"" | "verify-now" | "verify-later">("verify-now");
 
   useEffect(() => {
     if (token && user) router.replace(user.role === "mentor" ? "/mentor" : "/learner");
@@ -99,7 +99,7 @@ export default function RegisterPage() {
           toast.success("Account created! You can verify later from profile.");
           if (data.access_token) {
             localStorage.setItem("token", data.access_token);
-            dispatch(loginSuccess({ token: data.access_token, user: data.user }));
+            dispatch(loginSuccess(data)); // Pass the entire response object
             router.push(data.user?.role === "mentor" ? "/mentor" : "/learner");
           } else {
             router.push("/auth/login");

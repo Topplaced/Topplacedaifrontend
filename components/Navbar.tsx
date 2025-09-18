@@ -57,8 +57,8 @@ export default function Navbar() {
           </div>
 
           {/* User Menu / Auth */}
-          {user ? (
-            <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-4">
+            {user ? (
               <div className="relative">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -89,14 +89,12 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
-            </div>
-          ) : (
-            <div className="hidden md:flex items-center space-x-4">
+            ) : (
               <Link href="/auth/login" className="btn-primary">
                 Sign In
               </Link>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Mobile Menu Button */}
           <button
@@ -139,12 +137,14 @@ export default function Navbar() {
                 </Link>
               )}
               <div className="pt-4 border-t border-[#00FFB2]/20">
-                <Link
-                  href="/auth/login"
-                  className="btn-primary inline-block text-center"
-                >
-                  Sign In
-                </Link>
+                {user ? null : (
+                  <Link
+                    href="/auth/login"
+                    className="btn-primary inline-block text-center"
+                  >
+                    Sign In
+                  </Link>
+                )}
               </div>
             </div>
           </div>

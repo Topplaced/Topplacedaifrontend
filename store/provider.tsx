@@ -18,7 +18,14 @@ export function ReduxProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <Provider store={store}>
-      <PersistGate loading={null} persistor={persistor}>
+      <PersistGate 
+        loading={
+          <div className="min-h-screen bg-black flex items-center justify-center">
+            <div className="text-white">Loading...</div>
+          </div>
+        } 
+        persistor={persistor}
+      >
         {children}
       </PersistGate>
     </Provider>

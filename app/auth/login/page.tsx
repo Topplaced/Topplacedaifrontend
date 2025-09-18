@@ -57,18 +57,17 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok && data.access_token && data.user) {
-        const token = data.access_token;
-        const user = data.user;
-
         // ✅ Same as RegisterPage logic
-        localStorage.setItem("token", token);
-        dispatch(loginSuccess({ token, user }));
+        console.log("🔍 Login API Response:", data);
+        console.log("🔍 Data being dispatched to loginSuccess:", data);
+        localStorage.setItem("token", data.access_token);
+        dispatch(loginSuccess(data)); // Pass the entire response object
 
         setMessage("Login successful! Redirecting...");
         toast.success("Login successful!");
 
         // ✅ Redirect based on role
-        if (user.role === "mentor") {
+        if (data.user.role === "mentor") {
           router.push("/mentor");
         } else {
           router.push("/learner");

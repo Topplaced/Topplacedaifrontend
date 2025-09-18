@@ -6,14 +6,17 @@ import { Mail, ArrowLeft, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import OTPInput from "@/components/OTPInput";
+import { useDispatch } from "react-redux";
+import { loginSuccess } from "@/store/slices/authSlice";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function VerifyEmailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const dispatch = useDispatch();
   const [email, setEmail] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
+  const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [message, setMessage] = useState("");
@@ -50,11 +53,15 @@ export default function VerifyEmailPage() {
       const data = await res.json();
 
       if (res.ok && data.access_token && data.user) {
-        // Store token and redirect
+        // Store token and dispatch to Redux for persistence
+        console.log("🔍 Email verification successful, data received:", data);
+        
+        // Store token in localStorage
         localStorage.setItem("token", data.access_token);
-        
+        dispatch(loginSuccess(data)); // Pass the entire response object
+
         toast.success("Email verified successfully!");
-        
+
         // Redirect based on user role
         if (data.user.role === "mentor") {
           router.push("/mentor");
@@ -131,7 +138,7 @@ export default function VerifyEmailPage() {
             </div>
             <h1 className="text-2xl font-bold mb-2">Verify Your Email</h1>
             <p className="text-gray-400 text-sm">
-              We've sent a 6-digit verification code to
+              We&apos;ve sent a 6-digit verification code to
             </p>
             <p className="text-[#00FFB2] font-medium">{email}</p>
           </div>
@@ -171,23 +178,43 @@ export default function VerifyEmailPage() {
               <OTPInput
                 length={6}
                 onComplete={handleVerifyEmail}
-                value={verificationCode}
-                onChange={setVerificationCode}
+                value={otp}
+                onChange={setOtp}
                 disabled={isLoading}
-                error={!!message && !message.includes('sent')}
+                error={!!message && !message.includes("sent")}
               />
             </div>
 
             {message && (
-              <p className={`text-sm text-center mt-4 ${message.includes('sent') ? 'text-green-400' : 'text-red-400'}`}>
+              <p
+                className={`text-sm text-center mt-4 ${
+                  message.includes("sent") ? "text-green-400" : "text-red-400"
+                }`}
+              >
                 {message}
               </p>
             )}
+
+            <button
+              type="button"
+              onClick={() => handleVerifyEmail(otp)}
+              disabled={isLoading || otp.length !== 6}
+              className="w-full bg-gradient-to-r from-[#00FFB2] to-[#00CC8E] text-black font-semibold py-3 px-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <RefreshCw size={20} className="mr-2 animate-spin" />
+                  Verifying...
+                </div>
+              ) : (
+                "Verify Email"
+              )}
+            </button>
           </form>
 
           <div className="text-center mt-6">
             <p className="text-gray-400 text-sm mb-3">
-              Didn't receive the code?
+              Didn&apos;t receive the code?
             </p>
             <button
               onClick={handleResendCode}
@@ -207,9 +234,12 @@ export default function VerifyEmailPage() {
         </div>
 
         <div className="text-center mt-6 text-gray-500 text-sm">
-          <p>Check your spam folder if you don't see the email</p>
+          <p>Check your spam folder if you don&apos;t see the email</p>
         </div>
       </div>
     </div>
   );
+}
+function setIsResending(arg0: boolean) {
+  throw new Error("Function not implemented.");
 }
