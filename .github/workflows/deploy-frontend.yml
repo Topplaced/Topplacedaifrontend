@@ -26,5 +26,5 @@ jobs:
             git pull git@github.com:Topplaced/Topplacedaifrontend.git deploy-practice-frontend
             npm install --omit=dev
             npm run build
-            pm2 restart frontend || pm2 start npm --name frontend -- run start -- -p 3000
+            pm2 restart frontend || pm2 start npm --name topplaced-frontend -- run start -- -p 3000
             pm2 save
