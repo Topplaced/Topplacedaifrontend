@@ -50,20 +50,10 @@ export default function ScorecardPage() {
     role: 'Software Engineer',
     interviewDate: new Date().toISOString(),
     skillsAnalysis: [
-      { skill: 'Data Structures & Algorithms', score: 92, trend: 'up', feedback: 'Excellent problem-solving approach' },
-      { skill: 'System Design', score: 75, trend: 'stable', feedback: 'Good understanding, focus on scalability' },
-      { skill: 'JavaScript Proficiency', score: 88, trend: 'up', feedback: 'Strong fundamentals and clean code' },
-      { skill: 'Communication', score: 78, trend: 'down', feedback: 'Work on explaining complex concepts clearly' }
-    ],
-    keyInsights: [
-      { title: 'Strong Technical Foundation', description: 'Excellent performance in data structures and algorithms. Your problem-solving approach is methodical and efficient.', type: 'strength' },
-      { title: 'Communication Needs Improvement', description: 'Consider practicing explaining your thought process more clearly. Work on articulating complex concepts in simpler terms.', type: 'improvement' },
-      { title: 'System Design Understanding', description: 'Good grasp of scalability concepts. Focus on trade-offs and real-world implementation details.', type: 'neutral' }
-    ],
-    nextSteps: [
-      { title: 'Practice System Design', description: 'Focus on scalability and trade-offs in distributed systems', priority: 'high' },
-      { title: 'Improve Communication', description: 'Work on explaining complex concepts clearly and concisely', priority: 'medium' },
-      { title: 'Schedule Mock Interview', description: 'Book a session with our expert mentors for targeted practice', priority: 'low' }
+      { label: 'Data Structures & Algorithms', score: 92, trend: 'up' },
+      { label: 'System Design', score: 75, trend: 'stable' },
+      { label: 'JavaScript Proficiency', score: 88, trend: 'up' },
+      { label: 'Communication', score: 78, trend: 'down' }
     ],
     strengths: 'Excellent problem-solving approach and clean code implementation. Strong understanding of JavaScript fundamentals.',
     improvements: 'Work on explaining your thought process more clearly. Practice system design concepts for large-scale applications.',

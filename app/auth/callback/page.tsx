@@ -18,7 +18,7 @@ export default function AuthCallbackPage() {
     if (token && userParam) {
       try {
         const user = JSON.parse(decodeURIComponent(userParam));
-        
+
         // Store token and dispatch login success
         localStorage.setItem("token", token);
         dispatch(loginSuccess({ token, user }));
@@ -52,12 +52,18 @@ export default function AuthCallbackPage() {
           Completing LinkedIn Authentication...
         </h1>
         <p className="text-gray-400">Please wait while we sign you in.</p>
-        
+
         <div className="mt-6">
           <div className="inline-flex items-center space-x-1">
             <div className="w-2 h-2 bg-[#00FFB2] rounded-full animate-bounce"></div>
-            <div className="w-2 h-2 bg-[#00FFB2] rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
-            <div className="w-2 h-2 bg-[#00FFB2] rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+            <div
+              className="w-2 h-2 bg-[#00FFB2] rounded-full animate-bounce"
+              style={{ animationDelay: "0.1s" }}
+            ></div>
+            <div
+              className="w-2 h-2 bg-[#00FFB2] rounded-full animate-bounce"
+              style={{ animationDelay: "0.2s" }}
+            ></div>
           </div>
         </div>
       </div>

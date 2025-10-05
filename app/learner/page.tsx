@@ -31,6 +31,7 @@ export default function LearnerDashboard() {
   const dispatch = useDispatch();
   const router = useRouter();
   const { user } = useSelector((state: RootState) => state.auth);
+  console.log
 
   useEffect(() => {
     setIsVisible(true);
@@ -111,7 +112,8 @@ export default function LearnerDashboard() {
                   <h1 className="text-3xl md:text-4xl font-bold mb-2">
                     Welcome back,{" "}
                     <span className="gradient-text">
-                      {user?.name || "John"}
+                      {user?.name || "Learner"}
+                      
                     </span>
                     ! 👋
                   </h1>

@@ -52,9 +52,9 @@ export default function VerifyEmailPage() {
       if (res.ok && data.access_token && data.user) {
         // Store token and redirect
         localStorage.setItem("token", data.access_token);
-        
+
         toast.success("Email verified successfully!");
-        
+
         // Redirect based on user role
         if (data.user.role === "mentor") {
           router.push("/mentor");
@@ -131,7 +131,7 @@ export default function VerifyEmailPage() {
             </div>
             <h1 className="text-2xl font-bold mb-2">Verify Your Email</h1>
             <p className="text-gray-400 text-sm">
-              We've sent a 6-digit verification code to
+              We&apos;ve sent a 6-digit verification code to
             </p>
             <p className="text-[#00FFB2] font-medium">{email}</p>
           </div>
@@ -174,12 +174,16 @@ export default function VerifyEmailPage() {
                 value={verificationCode}
                 onChange={setVerificationCode}
                 disabled={isLoading}
-                error={!!message && !message.includes('sent')}
+                error={!!message && !message.includes("sent")}
               />
             </div>
 
             {message && (
-              <p className={`text-sm text-center mt-4 ${message.includes('sent') ? 'text-green-400' : 'text-red-400'}`}>
+              <p
+                className={`text-sm text-center mt-4 ${
+                  message.includes("sent") ? "text-green-400" : "text-red-400"
+                }`}
+              >
                 {message}
               </p>
             )}
@@ -187,7 +191,7 @@ export default function VerifyEmailPage() {
 
           <div className="text-center mt-6">
             <p className="text-gray-400 text-sm mb-3">
-              Didn't receive the code?
+              Didn&apos;t receive the code?
             </p>
             <button
               onClick={handleResendCode}
@@ -207,7 +211,7 @@ export default function VerifyEmailPage() {
         </div>
 
         <div className="text-center mt-6 text-gray-500 text-sm">
-          <p>Check your spam folder if you don't see the email</p>
+          <p>Check your spam folder if you don&apos;t see the email</p>
         </div>
       </div>
     </div>
