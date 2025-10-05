@@ -69,6 +69,8 @@ export default function LoginPage() {
         // ✅ Redirect based on role
         if (data.user.role === "mentor") {
           router.push("/mentor");
+        } else if (data.user.role === "admin") {
+          router.push("/admin");
         } else {
           router.push("/learner");
         }

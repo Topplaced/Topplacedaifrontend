@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   callOpenAI, 
   speechToText, 
@@ -16,12 +16,16 @@ export default function ExternalAPIDemo() {
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState('');
-  const [interviewSession] = useState(() => new InterviewSession());
+  const [interviewSession, setInterviewSession] = useState<InterviewSession | null>(null);
   const [conversationHistory, setConversationHistory] = useState<any[]>([]);
   const [userMessage, setUserMessage] = useState('');
   const [code, setCode] = useState('console.log("Hello, World!");');
   const [codeOutput, setCodeOutput] = useState('');
 
+  useEffect(() => {
+    // Instantiate InterviewSession only on the client to avoid accessing localStorage during SSR
+    setInterviewSession(new InterviewSession());
+  }, []);
   // Test OpenAI API
   const testOpenAI = async () => {
     setLoading(true);
@@ -77,7 +81,7 @@ export default function ExternalAPIDemo() {
 
   // Test Interview Session
   const sendInterviewMessage = async () => {
-    if (!userMessage.trim()) return;
+    if (!userMessage.trim() || !interviewSession) return;
     
     setLoading(true);
     try {

@@ -6,7 +6,7 @@ const initialState = {
     _id: string;
     name?: string;
     email: string;
-    role: "user" | "mentor";
+    role: "user" | "mentor" | "admin";
     phone?: string;
     experience?: string;
     resume_url?: string;

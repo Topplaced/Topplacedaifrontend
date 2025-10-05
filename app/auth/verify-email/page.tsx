@@ -65,6 +65,8 @@ export default function VerifyEmailPage() {
         // Redirect based on user role
         if (data.user.role === "mentor") {
           router.push("/mentor");
+        } else if (data.user.role === "admin") {
+          router.push("/admin");
         } else {
           router.push("/learner");
         }
@@ -239,7 +241,4 @@ export default function VerifyEmailPage() {
       </div>
     </div>
   );
-}
-function setIsResending(arg0: boolean) {
-  throw new Error("Function not implemented.");
 }

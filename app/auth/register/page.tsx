@@ -45,7 +45,11 @@ export default function RegisterPage() {
   const [verificationChoice, setVerificationChoice] = useState<"" | "verify-now" | "verify-later">("verify-now");
 
   useEffect(() => {
-    if (token && user) router.replace(user.role === "mentor" ? "/mentor" : "/learner");
+    if (token && user) {
+      if (user.role === "mentor") router.replace("/mentor");
+      else if (user.role === "admin") router.replace("/admin");
+      else router.replace("/learner");
+    }
   }, [token, user, router]);
 
   const handleLinkedInLogin = () => {
