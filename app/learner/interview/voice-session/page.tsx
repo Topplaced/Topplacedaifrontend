@@ -530,9 +530,10 @@ function VoiceInterviewContent() {
         let messageContent = "";
         let audioContent = "";
 
-        if (data.aiResponse) {
-          messageContent = data.aiResponse;
-          audioContent = data.aiResponse;
+        if (data.aiResponse || data.shortResponse) {
+          const displayText = data.shortResponse ?? data.aiResponse;
+          messageContent = displayText;
+          audioContent = displayText;
 
           // Check for detailed feedback in the response
           if (data.feedback && data.feedback.score !== undefined) {
@@ -1208,7 +1209,7 @@ function VoiceInterviewContent() {
             (conv: any, index: number) => ({
               id: `history_${index}_${conv.timestamp}`,
               type: conv.role === "user" ? "user" : "ai",
-              content: conv.message,
+              content: conv.shortResponse ?? conv.aiResponse ?? conv.message,
               timestamp: new Date(conv.timestamp),
             })
           );

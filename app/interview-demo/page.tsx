@@ -20,6 +20,7 @@ interface ConversationResponse {
   sessionId: string;
   messageId: string;
   aiResponse: string;
+  shortResponse?: string;
   currentQuestion?: {
     id: string;
     question: string;
@@ -137,7 +138,7 @@ export default function InterviewDemo() {
         const aiMessage: Message = {
           id: data.messageId,
           type: 'ai',
-          content: data.aiResponse,
+          content: data.shortResponse ?? data.aiResponse,
           timestamp: new Date(data.timestamp)
         };
         
