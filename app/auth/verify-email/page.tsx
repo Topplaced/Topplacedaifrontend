@@ -6,12 +6,15 @@ import { Mail, ArrowLeft, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import OTPInput from "@/components/OTPInput";
+import { useDispatch } from "react-redux";
+import { loginSuccess } from "@/store/slices/authSlice";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function VerifyEmailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const dispatch = useDispatch();
   const [email, setEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -50,14 +53,17 @@ export default function VerifyEmailPage() {
       const data = await res.json();
 
       if (res.ok && data.access_token && data.user) {
-        // Store token and redirect
+        // Store token and update Redux, then redirect
         localStorage.setItem("token", data.access_token);
+        dispatch(loginSuccess(data));
 
         toast.success("Email verified successfully!");
 
         // Redirect based on user role
         if (data.user.role === "mentor") {
           router.push("/mentor");
+        } else if (data.user.role === "admin") {
+          router.push("/admin");
         } else {
           router.push("/learner");
         }
