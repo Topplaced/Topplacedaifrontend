@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Mail, ArrowLeft, RefreshCw } from "lucide-react";
+import { Mail, ArrowLeft, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import OTPInput from "@/components/OTPInput";
@@ -15,73 +15,77 @@ export default function VerifyEmailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useDispatch();
+
   const [email, setEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [message, setMessage] = useState("");
+  const [timeLeft, setTimeLeft] = useState(300); // 5-minute resend cooldown
 
   useEffect(() => {
     const emailParam = searchParams.get("email");
-    if (emailParam) {
-      setEmail(decodeURIComponent(emailParam));
-    }
+    if (emailParam) setEmail(decodeURIComponent(emailParam));
   }, [searchParams]);
 
-  const handleVerifyEmail = async (otp: string) => {
-    setMessage("");
-    setIsLoading(true);
+  // ✅ Countdown timer for resend
+  useEffect(() => {
+    if (timeLeft > 0) {
+      const timer = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [timeLeft]);
 
-    if (!email || !otp) {
-      setMessage("Please enter both email and verification code.");
-      setIsLoading(false);
+  const formatTime = (s: number) =>
+    `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+
+  // ✅ Handle verification logic
+  const handleVerifyEmail = async (otp?: string) => {
+    const code = otp || verificationCode.trim();
+
+    if (!email || code.length !== 6) {
+      toast.error("Please enter a valid 6-digit code.");
       return;
     }
+
+    setIsLoading(true);
+    setMessage("");
 
     try {
       const res = await fetch(`${API_URL}/api/auth/verify-email`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email,
-          code: otp,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
       });
 
       const data = await res.json();
 
       if (res.ok && data.access_token && data.user) {
-        // Store token and update Redux, then redirect
         localStorage.setItem("token", data.access_token);
         dispatch(loginSuccess(data));
-
         toast.success("Email verified successfully!");
 
-        // Redirect based on user role
-        if (data.user.role === "mentor") {
-          router.push("/mentor");
-        } else if (data.user.role === "admin") {
-          router.push("/admin");
-        } else {
-          router.push("/learner");
-        }
+        // Redirect by role
+        if (data.user.role === "mentor") router.push("/mentor");
+        else if (data.user.role === "admin") router.push("/admin");
+        else router.push("/learner");
       } else {
         setMessage(data.message || "Invalid verification code.");
         toast.error(data.message || "Invalid verification code.");
       }
-    } catch (error) {
-      setMessage("Server error. Please try again.");
+    } catch (err) {
+      console.error(err);
       toast.error("Server error. Please try again.");
+      setMessage("Server error. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ✅ Resend logic with cooldown reset
   const handleResendCode = async () => {
     if (!email) {
-      toast.error("Please enter your email address.");
+      toast.error("Please enter your email.");
       return;
     }
 
@@ -91,22 +95,21 @@ export default function VerifyEmailPage() {
     try {
       const res = await fetch(`${API_URL}/api/auth/resend-verification`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        toast.success("Verification code sent to your email!");
+        toast.success("New code sent to your email!");
         setMessage("New verification code sent to your email.");
+        setTimeLeft(300); // restart cooldown
       } else {
         toast.error(data.message || "Failed to resend code.");
         setMessage(data.message || "Failed to resend code.");
       }
-    } catch (error) {
+    } catch (err) {
       toast.error("Server error. Please try again.");
       setMessage("Server error. Please try again.");
     } finally {
@@ -116,6 +119,7 @@ export default function VerifyEmailPage() {
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
+      {/* Glow background */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[#00FFB2]/10 rounded-full blur-3xl animate-pulse-slow"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00CC8E]/5 rounded-full blur-3xl animate-pulse-slow"></div>
@@ -137,12 +141,12 @@ export default function VerifyEmailPage() {
             </div>
             <h1 className="text-2xl font-bold mb-2">Verify Your Email</h1>
             <p className="text-gray-400 text-sm">
-              We&apos;ve sent a 6-digit verification code to
+              We’ve sent a 6-digit verification code to
             </p>
             <p className="text-[#00FFB2] font-medium">{email}</p>
           </div>
 
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
             <div>
               <label
                 htmlFor="email"
@@ -168,19 +172,17 @@ export default function VerifyEmailPage() {
             </div>
 
             <div>
-              <label
-                htmlFor="code"
-                className="block text-sm font-medium text-gray-300 mb-4"
-              >
+              <label className="block text-sm font-medium text-gray-300 mb-4">
                 Verification Code
               </label>
               <OTPInput
                 length={6}
-                onComplete={handleVerifyEmail}
                 value={verificationCode}
                 onChange={setVerificationCode}
+                onComplete={handleVerifyEmail}
                 disabled={isLoading}
                 error={!!message && !message.includes("sent")}
+                autoFocus // ✅ first input auto-focused
               />
             </div>
 
@@ -195,13 +197,37 @@ export default function VerifyEmailPage() {
             )}
           </form>
 
+          {/* Verify button */}
+          <button
+            onClick={() => handleVerifyEmail()}
+            disabled={isLoading || verificationCode.length !== 6}
+            className="mt-6 w-full py-3 rounded-lg bg-[#00FFB2] text-black font-semibold hover:bg-[#00e39e] transition-colors disabled:opacity-50 flex items-center justify-center"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Verifying...
+              </>
+            ) : (
+              "Verify"
+            )}
+          </button>
+
+          {/* Resend section */}
           <div className="text-center mt-6">
-            <p className="text-gray-400 text-sm mb-3">
-              Didn&apos;t receive the code?
-            </p>
+            {timeLeft > 0 ? (
+              <p className="text-gray-400 text-sm mb-3">
+                Resend available in{" "}
+                <span className="text-[#00FFB2]">{formatTime(timeLeft)}</span>
+              </p>
+            ) : (
+              <p className="text-gray-400 text-sm mb-3">
+                Didn’t receive the code?
+              </p>
+            )}
             <button
               onClick={handleResendCode}
-              disabled={isResending}
+              disabled={isResending || timeLeft > 0}
               className="text-[#00FFB2] hover:underline font-medium flex items-center justify-center mx-auto disabled:opacity-50"
             >
               {isResending ? (
@@ -217,7 +243,7 @@ export default function VerifyEmailPage() {
         </div>
 
         <div className="text-center mt-6 text-gray-500 text-sm">
-          <p>Check your spam folder if you don&apos;t see the email</p>
+          <p>Check your spam folder if you don’t see the email.</p>
         </div>
       </div>
     </div>
