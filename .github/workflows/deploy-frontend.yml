@@ -3,7 +3,7 @@ name: Deploy Frontend
 on:
   push:
     branches:
-      - main
+      - frontend-staging
   workflow_dispatch:
 
 jobs:
@@ -21,9 +21,9 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /var/www/topplaced/frontend
+            cd /var/www/topplaced/frontend-staging
             git reset --hard
-            git pull git@github.com:Topplaced/Topplacedaifrontend.git main
+            git pull git@github.com:Topplaced/Topplacedaifrontend.git frontend-staging
             npm install --omit=dev
             NEXT_IGNORE_TYPECHECK=1 npm run build
             pm2 delete topplaced-frontend || true
