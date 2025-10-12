@@ -1,0 +1,30 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - deploy-practice-frontend
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /var/www/Topplacedaifrontend
+            git reset --hard
+            git pull git@github.com:Topplaced/Topplacedaifrontend.git deploy-practice-frontend
+            npm install --omit=dev
+            NEXT_IGNORE_TYPECHECK=1 npm run build
+            pm2 restart topplaced-frontend || pm2 start npm --name topplaced-frontend -- run start -- -p 3000
+            pm2 save

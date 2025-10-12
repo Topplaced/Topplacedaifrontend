@@ -42,14 +42,10 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [verificationChoice, setVerificationChoice] = useState<"" | "verify-now" | "verify-later">("verify-now");
+  // Removed verification choice; email verification handled by backend if needed
 
   useEffect(() => {
-    if (token && user) {
-      if (user.role === "mentor") router.replace("/mentor");
-      else if (user.role === "admin") router.replace("/admin");
-      else router.replace("/learner");
-    }
+    if (token && user) router.replace(user.role === "mentor" ? "/mentor" : "/learner");
   }, [token, user, router]);
 
   const handleLinkedInLogin = () => {
@@ -72,14 +68,6 @@ export default function RegisterPage() {
       setLoading(false);
       return;
     }
-    if (!verificationChoice) {
-      const msg = "Please choose a verification option.";
-      setMessage(msg);
-      toast.error(msg);
-      setLoading(false);
-      return;
-    }
-
     try {
       const res = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
@@ -90,25 +78,32 @@ export default function RegisterPage() {
           password: form.password,
           role: form.role,
           experience: form.role === "mentor" ? form.experience : undefined,
-          sendVerificationEmail: verificationChoice === "verify-now",
         }),
       });
       const data = await res.json();
 
-      if (res.ok && data?.message) {
-        if (verificationChoice === "verify-now") {
-          toast.success("Account created! Please verify your email.");
-          router.push(`/auth/verify-email?email=${encodeURIComponent(form.email)}`);
+      if (res.ok && data.access_token && data.user) {
+        // Auto-login and redirect like LoginPage
+        localStorage.setItem("token", data.access_token);
+        dispatch(loginSuccess(data));
+        toast.success("Registration successful! Redirecting...");
+
+        if (data.user.role === "mentor") {
+          router.push("/mentor");
+        } else if (data.user.role === "admin") {
+          router.push("/admin");
         } else {
-          toast.success("Account created! You can verify later from profile.");
-          if (data.access_token) {
-            localStorage.setItem("token", data.access_token);
-            dispatch(loginSuccess(data)); // Pass the entire response object
-            router.push(data.user?.role === "mentor" ? "/mentor" : "/learner");
-          } else {
-            router.push("/auth/login");
-          }
+          router.push("/learner");
         }
+      } else if (res.status === 403 && data.message?.includes("email not verified")) {
+        // Require verification if backend enforces it
+        setMessage("Please verify your email before logging in.");
+        toast.error("Please verify your email before logging in.");
+        router.push(`/auth/verify-email?email=${encodeURIComponent(form.email)}`);
+      } else if (res.ok && (!data.access_token || !data.user)) {
+        // Backend indicates registration succeeded but verification is required
+        toast.success("Registration successful! Please verify your email.");
+        router.push(`/auth/verify-email?email=${encodeURIComponent(form.email)}`);
       } else {
         const msg = data?.message || "Registration failed.";
         setMessage(msg);
@@ -328,62 +323,7 @@ export default function RegisterPage() {
 
               {/* Verification (compact) */}
               <div className="grid gap-3 md:grid-cols-2">
-                <label className="cursor-pointer">
-                  <input
-                    type="radio"
-                    name="verification"
-                    value="verify-now"
-                    checked={verificationChoice === "verify-now"}
-                    onChange={(e) => setVerificationChoice(e.target.value as any)}
-                    className="peer sr-only"
-                  />
-                  <div className="rounded-lg border border-zinc-700 bg-zinc-900/70 p-3 transition peer-checked:border-emerald-400/60 peer-checked:bg-emerald-400/5">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-gray-300 peer-checked:bg-gradient-to-br peer-checked:from-emerald-400 peer-checked:to-emerald-300 peer-checked:text-black">
-                        <Mail size={16} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-semibold text-zinc-100 peer-checked:text-emerald-300">Verify Now</h4>
-                          <div className="h-4 w-4 rounded-full border border-zinc-600 peer-checked:border-emerald-300 peer-checked:bg-emerald-300" />
-                        </div>
-                        <p className="mt-1 text-[11px] leading-4 text-gray-400">
-                          Send verification email immediately.{" "}
-                          <span className="inline-flex items-center gap-1 text-gray-500">
-                            <Clock size={12} /> Recommended
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </label>
-
-                <label className="cursor-pointer">
-                  <input
-                    type="radio"
-                    name="verification"
-                    value="verify-later"
-                    checked={verificationChoice === "verify-later"}
-                    onChange={(e) => setVerificationChoice(e.target.value as any)}
-                    className="peer sr-only"
-                  />
-                  <div className="rounded-lg border border-zinc-700 bg-zinc-900/70 p-3 transition peer-checked:border-emerald-400/60 peer-checked:bg-emerald-400/5">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-gray-300 peer-checked:bg-gradient-to-br peer-checked:from-emerald-400 peer-checked:to-emerald-300 peer-checked:text-black">
-                        <Settings size={16} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-semibold text-zinc-100 peer-checked:text-emerald-300">Verify Later</h4>
-                          <div className="h-4 w-4 rounded-full border border-zinc-600 peer-checked:border-emerald-300 peer-checked:bg-emerald-300" />
-                        </div>
-                        <p className="mt-1 text-[11px] leading-4 text-gray-400">
-                          Skip for now and verify anytime from profile settings.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </label>
+                {/* Entire verification UI removed */}
               </div>
 
               {/* Error */}

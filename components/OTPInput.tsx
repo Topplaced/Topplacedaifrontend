@@ -9,6 +9,7 @@ interface OTPInputProps {
   onChange?: (otp: string) => void;
   disabled?: boolean;
   error?: boolean;
+  autoFocus?: boolean;
 }
 
 export default function OTPInput({

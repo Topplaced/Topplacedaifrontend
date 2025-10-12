@@ -530,12 +530,16 @@ function VoiceInterviewContent() {
         let messageContent = "";
         let audioContent = "";
 
-        if (data.aiResponse) {
-          messageContent = data.aiResponse;
-          audioContent = data.aiResponse;
+        if (data.aiResponse || data.shortResponse) {
+          const displayText = data.shortResponse ?? data.aiResponse;
+          // Always speak only the display text (shortResponse if available)
+          audioContent = displayText;
 
-          // Check for detailed feedback in the response
-          if (data.feedback && data.feedback.score !== undefined) {
+          // For UI, show minimal content for free users, full details for paid users
+          messageContent = displayText;
+
+          // Add detailed feedback only for paid interviews
+          if (!isFreeInterview && data.feedback && data.feedback.score !== undefined) {
             const feedbackDetails = `\n\n📊 **Score: ${data.feedback.score}/100**`;
             messageContent += feedbackDetails;
 
@@ -579,10 +583,10 @@ function VoiceInterviewContent() {
 
           if (messageContent) {
             messageContent += `\n\n${questionText}`;
-            audioContent = questionText; // Play only the question for audio
+            // Do not override audioContent; keep speaking only the display text
           } else {
             messageContent = questionText;
-            audioContent = questionText;
+            // Do not set audioContent to question text; keep speaking only the display text
           }
         }
 
@@ -1208,7 +1212,7 @@ function VoiceInterviewContent() {
             (conv: any, index: number) => ({
               id: `history_${index}_${conv.timestamp}`,
               type: conv.role === "user" ? "user" : "ai",
-              content: conv.message,
+              content: conv.shortResponse ?? conv.aiResponse ?? conv.message,
               timestamp: new Date(conv.timestamp),
             })
           );

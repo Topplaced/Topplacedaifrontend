@@ -18,7 +18,7 @@ export const useAuthPersistence = () => {
         
         if (storedToken) {
           // Validate token by fetching user profile
-          const response = await fetch(`${API_URL}/auth/profile`, {
+          const response = await fetch(`${API_URL}/api/auth/profile`, {
             headers: {
               'Authorization': `Bearer ${storedToken}`,
               'Content-Type': 'application/json'
