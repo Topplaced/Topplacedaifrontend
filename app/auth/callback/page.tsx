@@ -21,7 +21,7 @@ export default function AuthCallbackPage() {
 
         // Store token and dispatch login success
         localStorage.setItem("token", token);
-        dispatch(loginSuccess({ token, user }));
+        dispatch(loginSuccess({ access_token: token, user }));
 
         toast.success("LinkedIn login successful!");
 
