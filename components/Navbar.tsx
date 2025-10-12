@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Menu, X, User, LogOut, Settings, Trophy } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
@@ -10,8 +10,14 @@ import { logout } from "@/store/slices/authSlice";
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const user = useSelector((state: RootState) => state.auth.user);
   const dispatch = useDispatch();
+
+  // Prevent hydration mismatch by rendering user-dependent UI only after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-[#00FFB2]/20">
@@ -45,7 +51,7 @@ export default function Navbar() {
             >
               Pricing
             </Link>
-            {user && (
+            {mounted && user && (
               <Link
                 href="/achievements"
                 className="text-gray-300 hover:text-[#00FFB2] transition-colors flex items-center space-x-1"
@@ -58,7 +64,7 @@ export default function Navbar() {
 
           {/* User Menu / Auth */}
           <div className="hidden md:flex items-center space-x-4">
-            {user ? (
+            {mounted && user ? (
               <div className="relative">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -90,9 +96,11 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <Link href="/auth/login" className="btn-primary">
-                Sign In
-              </Link>
+              mounted && (
+                <Link href="/auth/login" className="btn-primary">
+                  Sign In
+                </Link>
+              )
             )}
           </div>
 
@@ -127,7 +135,7 @@ export default function Navbar() {
               >
                 Pricing
               </Link>
-              {user && (
+              {mounted && user && (
                 <Link
                   href="/achievements"
                   className="text-gray-300 hover:text-[#00FFB2] transition-colors flex items-center space-x-2"
@@ -137,14 +145,14 @@ export default function Navbar() {
                 </Link>
               )}
               <div className="pt-4 border-t border-[#00FFB2]/20">
-                {user ? null : (
+                {mounted && !user ? (
                   <Link
                     href="/auth/login"
                     className="btn-primary inline-block text-center"
                   >
                     Sign In
                   </Link>
-                )}
+                ) : null}
               </div>
             </div>
           </div>
