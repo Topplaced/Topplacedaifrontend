@@ -26,6 +26,6 @@ jobs:
             git pull git@github.com:Topplaced/Topplacedaifrontend.git frontend-staging
             npm install --omit=dev
             NEXT_IGNORE_TYPECHECK=1 npm run build
-            pm2 delete topplaced-frontend || true
-            pm2 start npm --name topplaced-frontend -- start -- -p 3001
+            pm2 delete topplaced-frontend-staging || true
+            pm2 start npm --name topplaced-frontend-staging -- start -- -p 3001
             pm2 save
