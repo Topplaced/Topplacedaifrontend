@@ -27,6 +27,7 @@ import {
   getUserInterviewUsage, 
   getUserAchievements 
 } from "../../utils/api-helpers";
+import { Interview } from "../../types/interview-schema";
 
 export default function LearnerDashboard() {
   const [isVisible, setIsVisible] = useState(false);
@@ -34,7 +35,7 @@ export default function LearnerDashboard() {
   const [avgScore, setAvgScore] = useState(0);
   const [mentorsCount, setMentorsCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState({
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
     stats: null,
     interviewHistory: null,
     achievements: null,
@@ -658,3 +659,11 @@ export default function LearnerDashboard() {
     </ProtectedRoute>
   );
 }
+
+// Define dashboard data type to ensure proper typing
+type DashboardData = {
+  stats: any | null;
+  interviewHistory: { interviews: Interview[]; totalInterviews?: number } | null;
+  achievements: any[] | null;
+  usage: any | null;
+};

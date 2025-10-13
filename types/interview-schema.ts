@@ -15,6 +15,7 @@ export interface InterviewScores {
   communication: number;
   problemSolving: number;
   codeQuality: number;
+  improvement?: string;
 }
 
 export interface InterviewProgress {
