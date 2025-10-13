@@ -492,7 +492,7 @@ function InterviewResultsContent() {
           <div className="glass-card p-6">
             <h2 className="text-xl font-semibold mb-6">Next Steps</h2>
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="p-6 bg-[#111] rounded-lg">
+              {/* <div className="p-6 bg-[#111] rounded-lg">
                 <h3 className="font-semibold mb-3">Find a Mentor</h3>
                 <p className="text-sm text-gray-400 mb-4">
                   Connect with an expert to improve your weak areas
@@ -503,7 +503,7 @@ function InterviewResultsContent() {
                 >
                   Browse Mentors
                 </button>
-              </div>
+              </div> */}
 
               <div className="p-6 bg-[#111] rounded-lg">
                 <h3 className="font-semibold mb-3">Practice More</h3>
