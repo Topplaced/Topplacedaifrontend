@@ -96,7 +96,7 @@ function mapLevelToBackend(frontendLevel: string): 'beginner' | 'intermediate' |
     'senior': 'advanced',
     'lead': 'advanced'
   };
-  return levelMap[frontendLevel] || 'intermediate';
+  return levelMap[frontendLevel] || 'beginner';
 }
 
 export async function startInterview(
@@ -117,7 +117,7 @@ export async function startInterview(
       profileCompletion: 100,
     },
     configuration: {
-      level: mapLevelToBackend(payload.level), // Map the level here
+      level: payload.level, // Use provided frontend level directly
       category: payload.category,
       field: payload.field,
       duration: payload.duration,

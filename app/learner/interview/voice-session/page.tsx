@@ -25,6 +25,7 @@ import {
   Minimize2,
   Wifi,
   WifiOff,
+  Loader2,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import CodeEditor from "@/components/CodeEditor";
@@ -55,6 +56,8 @@ function VoiceInterviewContent() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const isSendingRef = useRef(false);
+  const manualStopRef = useRef(false);
   const { user, token } = useSelector((state: RootState) => state.auth);
 
   // Add level mapping function
@@ -69,7 +72,7 @@ function VoiceInterviewContent() {
   };
 
   // Interview configuration from URL parameters
-  const level = searchParams.get("level") || "mid";
+  const level = searchParams.get("level") || "beginner";
   const category = searchParams.get("category") || "fullstack";
   const field = searchParams.get("field") || "";
   const duration = searchParams.get("duration") || "30";
@@ -135,6 +138,118 @@ function VoiceInterviewContent() {
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
   const [currentQuestionId, setCurrentQuestionId] = useState<string>("");
 
+  // Persistent session storage key (per user/category/level)
+  const sessionStorageKey = `voiceInterview:${userId || userEmail || "guest"}:${category}:${level}`;
+  const [resumeNotice, setResumeNotice] = useState<string | null>(null);
+
+  // Save essential interview state to localStorage (throttled)
+  const saveInterviewState = useCallback(() => {
+    try {
+      const payload = {
+        sessionId,
+        interviewStarted,
+        timeRemaining,
+        messages: messages.map((m) => ({
+          id: m.id,
+          type: m.type,
+          content: m.content,
+          timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp,
+        })),
+        code,
+        language,
+        currentQuestionNumber,
+        currentQuestionId,
+        questionsAnswered,
+        totalQuestions,
+        showCodeEditor,
+      };
+      localStorage.setItem(sessionStorageKey, JSON.stringify(payload));
+    } catch (err) {
+      console.error("❌ Failed to save interview state:", err);
+    }
+  }, [
+    sessionId,
+    interviewStarted,
+    timeRemaining,
+    messages,
+    code,
+    language,
+    currentQuestionNumber,
+    currentQuestionId,
+    questionsAnswered,
+    totalQuestions,
+    showCodeEditor,
+    sessionStorageKey,
+  ]);
+
+  // Restore state from localStorage on load
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(sessionStorageKey);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved && typeof saved === "object") {
+          setSessionId(saved.sessionId || "");
+          setInterviewStarted(!!saved.interviewStarted);
+          setTimeRemaining(
+            typeof saved.timeRemaining === "number"
+              ? saved.timeRemaining
+              : parseInt(duration) * 60
+          );
+          if (Array.isArray(saved.messages)) {
+            setMessages(
+              saved.messages.map((m: any) => ({
+                id: m.id,
+                type: m.type,
+                content: m.content,
+                timestamp: m.timestamp ? new Date(m.timestamp) : new Date(),
+              }))
+            );
+          }
+          if (typeof saved.code === "string") setCode(saved.code);
+          if (typeof saved.language === "string") setLanguage(saved.language);
+          if (typeof saved.currentQuestionNumber === "number")
+            setCurrentQuestionNumber(saved.currentQuestionNumber);
+          if (typeof saved.currentQuestionId === "string")
+            setCurrentQuestionId(saved.currentQuestionId);
+          if (typeof saved.questionsAnswered === "number")
+            setQuestionsAnswered(saved.questionsAnswered);
+          if (typeof saved.totalQuestions === "number")
+            setTotalQuestions(saved.totalQuestions);
+          if (typeof saved.showCodeEditor === "boolean")
+            setShowCodeEditor(saved.showCodeEditor);
+
+          setResumeNotice(
+            "Session restored. If mic/camera need permissions, toggle them."
+          );
+        }
+      }
+    } catch (err) {
+      console.error("❌ Failed to restore interview state:", err);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Periodically save state while interview is running
+  useEffect(() => {
+    if (!interviewStarted) return;
+    const interval = setInterval(() => {
+      saveInterviewState();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [interviewStarted, saveInterviewState]);
+
+  // Save on tab close/refresh
+  useEffect(() => {
+    const handler = () => {
+      try {
+        saveInterviewState();
+      } catch {}
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [saveInterviewState]);
+
   // Build interview payload from URL parameters and user data
   const buildInterviewPayload = () => {
     return {
@@ -175,7 +290,7 @@ function VoiceInterviewContent() {
         profileCompletion: user?.profile_completion || 85,
       },
       configuration: {
-        level: mapLevelToBackend(level), // Map frontend level to backend level
+        level: level, // Use the exact level selected by the user
         category: category,
         field: field,
         duration: parseInt(duration),
@@ -200,32 +315,18 @@ function VoiceInterviewContent() {
         (window as any).SpeechRecognition;
       const recognitionInstance = new SpeechRecognition();
 
-      recognitionInstance.continuous = false;
+      recognitionInstance.continuous = true; // keep listening until manual stop
       recognitionInstance.interimResults = false;
       recognitionInstance.lang = "en-US";
 
       recognitionInstance.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        console.log("🎤 Speech recognition result:", transcript);
-        setTranscript(transcript);
-
-        // Add user message
-        const userMessage: Message = {
-          id: `user_${Date.now()}`,
-          type: "user",
-          content: transcript,
-          timestamp: new Date(),
-        };
-
-        setMessages((prev) => [...prev, userMessage]);
-
-        // Send answer via REST API
-        if (sessionId) {
-          console.log("📤 Sending answer via REST API:", transcript);
-          sendAnswerToAPI(transcript);
-        }
-
-        setQuestionsAnswered((prev) => prev + 1);
+        const transcriptText = event.results[0][0].transcript;
+        console.log("🎤 Speech recognition result:", transcriptText);
+        // Accumulate transcript while listening; bubble is added on send
+        setTranscript((prev) => {
+          const base = prev === "Listening..." ? "" : (prev || "");
+          return `${base} ${transcriptText}`.trim();
+        });
       };
 
       recognitionInstance.onerror = (event: any) => {
@@ -236,7 +337,19 @@ function VoiceInterviewContent() {
 
       recognitionInstance.onend = () => {
         console.log("🛑 Speech recognition ended");
-        setIsListening(false);
+        // If user didn't manually stop, immediately restart to keep listening
+        if (!manualStopRef.current) {
+          try {
+            recognitionInstance.start();
+            console.log("🔁 Restarted recognition to continue listening");
+          } catch (error) {
+            console.error("❌ Failed to restart recognition:", error);
+          }
+        } else {
+          // Manual stop: finalize listening state
+          setIsListening(false);
+          manualStopRef.current = false; // reset flag
+        }
       };
 
       setRecognition(recognitionInstance);
@@ -632,6 +745,7 @@ function VoiceInterviewContent() {
   const [startError, setStartError] = useState<string | null>(null);
   const [showInstructionsPopup, setShowInstructionsPopup] = useState(false);
   const [showStartingPopup, setShowStartingPopup] = useState(true);
+  const [isEndingInterview, setIsEndingInterview] = useState(false);
   const [popupTimer, setPopupTimer] = useState(5);
   const [countdownInterval, setCountdownInterval] =
     useState<NodeJS.Timeout | null>(null);
@@ -855,6 +969,7 @@ function VoiceInterviewContent() {
     }
 
     console.log("🎤 Starting speech recognition...");
+    manualStopRef.current = false;
     setIsListening(true);
     setTranscript("Listening...");
 
@@ -876,10 +991,47 @@ function VoiceInterviewContent() {
   const stopListening = () => {
     console.log("🛑 Stopping speech recognition...");
     if (recognition) {
+      manualStopRef.current = true;
       recognition.stop();
     }
     setIsListening(false);
-    setTranscript("");
+    // Keep transcript so user can manually send
+  };
+
+  const handleSendTranscript = async () => {
+    const cleaned = (transcript || "").trim();
+    if (!cleaned || cleaned === "Listening...") return;
+    if (isSendingRef.current) return;
+    isSendingRef.current = true;
+
+    // Show user's message bubble in chat before sending
+    const userMessage: Message = {
+      id: `user_${Date.now()}`,
+      type: "user",
+      content: cleaned,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
+
+    console.log("📤 Sending transcript:", cleaned);
+    try {
+      await sendAnswerToAPI(cleaned);
+    } finally {
+      setTranscript("");
+      isSendingRef.current = false;
+    }
+  };
+
+  // Stop recording and immediately send the captured transcript
+  const stopAndSend = async () => {
+    // Stop recognition to finalize transcript
+    if (isListening) {
+      stopListening();
+    }
+    // Give a brief moment for onresult/onend to flush
+    setTimeout(async () => {
+      await handleSendTranscript();
+    }, 300);
   };
 
   const runCode = async () => {
@@ -1011,6 +1163,7 @@ function VoiceInterviewContent() {
 
   const handleEndInterview = async () => {
     console.log("🏁 Ending interview...");
+    setIsEndingInterview(true);
 
     try {
       const endPayload = {
@@ -1078,6 +1231,12 @@ function VoiceInterviewContent() {
       if (response.ok) {
         const interviewData = await response.json();
         console.log("✅ Interview ended successfully:", interviewData);
+        // Clear saved session state so refresh doesn't resume a completed session
+        try {
+          localStorage.removeItem(sessionStorageKey);
+        } catch (err) {
+          console.warn("⚠️ Failed to clear saved interview state:", err);
+        }
 
         // Format the results according to the specified structure
         const results = {
@@ -1771,36 +1930,8 @@ function VoiceInterviewContent() {
                 </span>
               </div>
               <div className="text-sm text-gray-400">
-                Voice Interview • {category?.toUpperCase()} •{" "}
-                {level?.toUpperCase()}
+                Voice Interview • {category?.toUpperCase()} • {level?.toUpperCase()}
               </div>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <span className="px-2 py-1 bg-blue-900/50 border border-blue-700/50 rounded-full text-xs text-blue-200">
-                    Answered:{" "}
-                    <span className="font-semibold">{questionsAnswered}</span>
-                  </span>
-                  <span className="px-2 py-1 bg-purple-900/50 border border-purple-700/50 rounded-full text-xs text-purple-200">
-                    Total:{" "}
-                    <span className="font-semibold">{totalQuestions}</span>
-                  </span>
-                  <span className="px-2 py-1 bg-green-900/50 border border-green-700/50 rounded-full text-xs text-green-200">
-                    Completion:{" "}
-                    <span className="font-semibold">{interviewProgress}%</span>
-                  </span>
-                </div>
-                <div className="w-32 bg-[#1A1A1A] rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${interviewProgress}%` }}
-                  />
-                </div>
-              </div>
-              {sessionId && (
-                <div className="text-xs text-gray-500">
-                  Session: {sessionId.slice(-8)}
-                </div>
-              )}
             </div>
             <div className="flex items-center space-x-2">
               <button
@@ -1810,70 +1941,9 @@ function VoiceInterviewContent() {
                     ? "bg-[#00FFB2]/20 text-[#00FFB2]"
                     : "bg-red-500/20 text-red-400"
                 }`}
+                title={isMicOn ? "Mute" : "Unmute"}
               >
                 {isMicOn ? <Mic size={20} /> : <MicOff size={20} />}
-              </button>
-
-              <button
-                onClick={toggleCamera}
-                className={`p-2 rounded-full ${
-                  isCameraOn
-                    ? "bg-[#00FFB2]/20 text-[#00FFB2]"
-                    : "bg-red-500/20 text-red-400"
-                }`}
-              >
-                {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
-              </button>
-
-              <button
-                onClick={downloadTranscript}
-                className="p-2 rounded-full bg-[#00FFB2]/20 text-[#00FFB2] hover:bg-[#00FFB2]/30"
-                title="Download Transcript"
-              >
-                <Download size={20} />
-              </button>
-
-              <button
-                onClick={getNextQuestion}
-                className="p-2 rounded-full bg-purple-600/20 text-purple-400 hover:bg-purple-600/30"
-                title="Get Next Question"
-                disabled={!sessionId}
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
-
-              {/* Conversation History Button */}
-              <button
-                onClick={getConversationHistory}
-                className="p-2 rounded-full bg-green-600/20 text-green-400 hover:bg-green-600/30"
-                title="Load Conversation History"
-                disabled={!sessionId}
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
               </button>
 
               {/* Interview Results Button */}
@@ -1947,266 +2017,162 @@ function VoiceInterviewContent() {
 
               <button
                 onClick={handleEndInterview}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                disabled={isEndingInterview}
+                className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                  isEndingInterview
+                    ? "bg-red-500/70 text-white cursor-not-allowed"
+                    : "bg-red-500 hover:bg-red-600 text-white"
+                }`}
               >
-                <Phone size={16} />
-                <span>End Interview</span>
+                {isEndingInterview ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Phone size={16} />
+                )}
+                <span>{isEndingInterview ? "Ending..." : "End Interview"}</span>
               </button>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)]">
-          {/* Left Panel - Video and Chat */}
-          <div className="w-full lg:w-1/2 flex flex-col border-r-0 lg:border-r border-[#00FFB2]/20">
-            {/* Video Section */}
-            <div className="h-64 lg:h-1/2 bg-[#0A0A0A] p-2 lg:p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:gap-4 h-full">
-                {/* User Video */}
-                <div className="bg-[#111] rounded-lg overflow-hidden relative">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-sm">
-                    You
-                  </div>
-                  {isListening && (
-                    <div className="absolute top-2 right-2 bg-red-500 px-2 py-1 rounded text-xs animate-pulse">
-                      🎤 Recording...
-                    </div>
-                  )}
-                </div>
-
-                {/* AI Avatar */}
-                <div className="bg-[#111] rounded-lg overflow-hidden relative">
-                  <AIAvatar isActive={isAISpeaking} />
-                  <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-sm">
-                    AI Interviewer
-                  </div>
-                  {isAudioPlaying && (
-                    <div className="absolute top-2 right-2 bg-[#00FFB2] px-2 py-1 rounded text-xs text-black">
-                      🔊 Speaking...
-                    </div>
-                  )}
-                </div>
+        {/* Main Interview Layout */}
+        <div
+          className={`grid grid-cols-1 ${
+            hasCodeEditor && showCodeEditor
+              ? "lg:grid-cols-[20%_50%_30%]"
+              : "lg:grid-cols-[20%_80%]"
+          } h-[calc(100vh-120px)]`}
+        >
+          {/* Left Column – Video Section */}
+          <div className="bg-[#0A0A0A] border-r border-[#00FFB2]/20 flex flex-col items-center justify-start gap-4 p-3">
+            {/* User Video */}
+            <div className="bg-[#111] rounded-lg overflow-hidden w-full aspect-video relative">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 text-xs rounded">
+                You
               </div>
             </div>
 
-            {/* Chat Section */}
-            <div className="flex-1 lg:h-1/2 flex flex-col bg-[#0A0A0A] min-h-[300px]">
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      message.type === "user"
-                        ? "justify-end"
-                        : message.type === "system"
-                        ? "justify-center"
-                        : "justify-start"
-                    }`}
-                  >
-                    <div
-                      className={`max-w-[90%] sm:max-w-[80%] p-2 lg:p-3 rounded-lg text-sm lg:text-base ${
-                        message.type === "user"
-                          ? "bg-[#00FFB2] text-black"
-                          : message.type === "system"
-                          ? "bg-yellow-500/20 text-yellow-400 text-center"
-                          : "bg-[#1A1A1A] text-white"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center space-x-2">
-                          {message.type === "user" ? (
-                            <User size={16} />
-                          ) : message.type === "system" ? (
-                            <Bot size={16} className="text-yellow-400" />
-                          ) : (
-                            <Bot size={16} className="text-[#00FFB2]" />
-                          )}
-                          <span className="text-xs opacity-70">
-                            {message.timestamp.toLocaleTimeString()}
-                          </span>
-                        </div>
-                        {message.type === "ai" && (
-                          <button
-                            onClick={() => replayAIMessage(message)}
-                            className="text-[#00FFB2] hover:text-[#00CC8E] ml-2"
-                            title="Replay Audio"
-                          >
-                            <Volume2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                      <div className="whitespace-pre-wrap">
-                        {message.content}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Voice Input Section */}
-              <div className="p-4 border-t border-[#00FFB2]/20">
-                <div className="flex flex-col space-y-3">
-                  {transcript && (
-                    <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#00FFB2]/20">
-                      <div className="text-sm text-gray-400 mb-1">
-                        Transcript:
-                      </div>
-                      <div className="text-white">{transcript}</div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-center space-x-4">
-                    <button
-                      onClick={isListening ? stopListening : startListening}
-                      disabled={!interviewStarted || isAISpeaking}
-                      className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        isListening
-                          ? "bg-red-500 hover:bg-red-600 animate-pulse"
-                          : "bg-[#00FFB2] hover:bg-[#00CC8E]"
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      {isListening ? (
-                        <Square size={24} className="text-white" />
-                      ) : (
-                        <Mic size={24} className="text-black" />
-                      )}
-                    </button>
-
-                    <div className="text-center">
-                      <div className="text-sm text-gray-400">
-                        {!interviewStarted
-                          ? "Start interview to begin"
-                          : isAISpeaking
-                          ? "AI is speaking..."
-                          : isListening
-                          ? "Recording... Click to stop"
-                          : "Click to speak"}
-                      </div>
-                      {!isMicOn && (
-                        <div className="text-xs text-red-400 mt-1">
-                          Microphone is disabled
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+            {/* AI Video */}
+            <div className="bg-[#111] rounded-lg overflow-hidden w-full aspect-video relative">
+              <AIAvatar isActive={isAISpeaking} />
+              <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 text-xs rounded">
+                AI Interviewer
               </div>
             </div>
           </div>
 
-          {/* Right Panel - Code Editor (if applicable) */}
-          {hasCodeEditor && showCodeEditor ? (
-            <div className="w-1/2 flex flex-col">
-              <div className="bg-[#0A0A0A] border-b border-[#00FFB2]/20 p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <Code size={20} className="text-[#00FFB2]" />
-                    <span className="font-semibold">Code Editor</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => setShowCodeEditor(false)}
-                      className="p-1 rounded bg-[#1A1A1A] hover:bg-[#333] text-gray-400 hover:text-white"
-                      title="Close Code Editor"
-                    >
-                      <Minimize2 size={16} />
-                    </button>
-                    <select
-                      value={language}
-                      onChange={(e) => setLanguage(e.target.value)}
-                      className="bg-[#1A1A1A] border border-gray-600 rounded px-3 py-1 text-sm"
-                    >
-                      {getLanguageOptions().map((lang) => (
-                        <option key={lang} value={lang}>
-                          {lang.toUpperCase()}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={runCode}
-                      className="btn-primary px-4 py-1 text-sm flex items-center space-x-1"
-                    >
-                      <Terminal size={14} />
-                      <span>Run</span>
-                    </button>
-                    {codeExecutionSuccess && (
-                      <button
-                        onClick={submitCode}
-                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 text-sm rounded flex items-center space-x-1"
-                      >
-                        <Send size={14} />
-                        <span>Submit Solution</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex-1">
-                <CodeEditor
-                  value={code}
-                  onChange={(newCode) => {
-                    setCode(newCode);
-                    // Reset execution success when code is modified
-                    if (codeExecutionSuccess) {
-                      setCodeExecutionSuccess(false);
-                      setLastExecutionResult(null);
-                    }
-                  }}
-                  language={language}
-                  theme="dark"
-                />
-              </div>
-            </div>
-          ) : hasCodeEditor && !showCodeEditor ? (
-            <div className="w-full lg:w-1/2 flex items-center justify-center bg-[#0A0A0A] border-l-0 lg:border-l border-[#00FFB2]/20 min-h-[400px] lg:min-h-0">
-              <div className="text-center">
-                <Code size={48} className="text-gray-500 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">
-                  Code Editor Available
-                </h3>
-                <p className="text-gray-400 mb-4">
-                  Click the code editor button in the header to open the coding
-                  environment.
-                </p>
-                <button
-                  onClick={() => setShowCodeEditor(true)}
-                  className="btn-primary flex items-center mx-auto"
+          {/* Middle Column – Chat Section */}
+          <div className="flex flex-col bg-[#0A0A0A] border-r border-[#00FFB2]/20">
+            {/* Chat Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${
+                    message.type === "user"
+                      ? "justify-end"
+                      : message.type === "system"
+                      ? "justify-center"
+                      : "justify-start"
+                  }`}
                 >
-                  <Code size={16} className="mr-2" />
-                  Open Code Editor
-                </button>
-              </div>
-            </div>
-          ) : !hasCodeEditor ? (
-            <div className="w-full lg:w-1/2 flex items-center justify-center bg-[#0A0A0A] min-h-[400px] lg:min-h-0">
-              <div className="text-center">
-                <Bot size={48} className="text-gray-500 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Voice Interview</h3>
-                <p className="text-gray-400 mb-4">
-                  This interview focuses on verbal communication and behavioral
-                  questions.
-                </p>
-                <div className="bg-[#1A1A1A] p-4 rounded-lg">
-                  <h4 className="font-semibold mb-2">Interview Tips:</h4>
-                  <ul className="text-sm text-gray-400 space-y-1">
-                    <li>• Speak clearly and at a moderate pace</li>
-                    <li>• Provide specific examples when possible</li>
-                    <li>• Take a moment to think before answering</li>
-                    <li>• Ask for clarification if needed</li>
-                  </ul>
+                  <div
+                    className={`max-w-[85%] p-3 rounded-lg text-sm ${
+                      message.type === "user"
+                        ? "bg-[#00FFB2] text-black"
+                        : message.type === "system"
+                        ? "bg-yellow-500/20 text-yellow-400 text-center"
+                        : "bg-[#1A1A1A] text-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center space-x-2">
+                        {message.type === "user" ? (
+                          <User size={16} />
+                        ) : message.type === "system" ? (
+                          <Bot size={16} className="text-yellow-400" />
+                        ) : (
+                          <Bot size={16} className="text-[#00FFB2]" />
+                        )}
+                        <span className="text-xs opacity-70">
+                          {message.timestamp.toLocaleTimeString()}
+                        </span>
+                      </div>
+                      {message.type === "ai" && (
+                        <button
+                          onClick={() => replayAIMessage(message)}
+                          className="text-[#00FFB2] hover:text-[#00CC8E] ml-2"
+                          title="Replay Audio"
+                        >
+                          <Volume2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="whitespace-pre-wrap">{message.content}</div>
+                  </div>
                 </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Click to Speak Button */}
+            <div className="border-t border-[#00FFB2]/20">
+              <div className="p-4 flex items-center justify-center">
+            <button
+              onClick={() => {
+                if (isListening) {
+                  stopAndSend();
+                } else {
+                  startListening();
+                }
+              }}
+              disabled={!interviewStarted || isAISpeaking}
+              className={`px-6 py-3 rounded-lg font-semibold flex items-center space-x-2 transition-colors ${
+                isListening
+                  ? "bg-red-500 hover:bg-red-600 text-white"
+                  : "bg-[#00FFB2] hover:bg-[#00CC8E] text-black"
+              } disabled:opacity-50`}
+            >
+              {isListening ? (
+                <Square size={18} />
+              ) : (
+                <Mic size={18} />
+              )}
+              <span>{isListening ? "Stop & Send" : "Click to Speak"}</span>
+            </button>
               </div>
             </div>
-          ) : null}
+          </div>
+
+          {/* Right Column – Code Editor (conditional) */}
+          {hasCodeEditor && showCodeEditor && (
+            <div className="bg-[#0A0A0A] flex flex-col">
+              <div className="flex items-center justify-between border-b border-[#00FFB2]/20 p-2">
+                <span className="text-[#00FFB2] text-sm font-semibold">Code Editor</span>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="bg-[#1A1A1A] border border-gray-600 rounded px-2 py-1 text-xs"
+                >
+                  {getLanguageOptions().map((lang) => (
+                    <option key={lang} value={lang}>
+                      {lang.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <CodeEditor value={code} onChange={setCode} language={language} theme="dark" />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Debug Panel like testInterview.html */}

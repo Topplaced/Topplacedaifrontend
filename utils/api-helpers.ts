@@ -137,7 +137,7 @@ function mapLevelToBackend(frontendLevel: string): 'entry' | 'mid' | 'senior' | 
     'advanced': 'senior',
     'expert': 'lead'
   };
-  return levelMap[frontendLevel] || 'mid';
+  return levelMap[frontendLevel] || 'entry';
 }
 
 // Helper function to build interview configuration
