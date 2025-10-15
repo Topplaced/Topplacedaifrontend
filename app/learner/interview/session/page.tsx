@@ -86,6 +86,7 @@ function InterviewSessionContent() {
   const [language, setLanguage] = useState(defaultLanguage); // Use the selected language from URL or fallback to mapped language
   const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [interviewStarted, setInterviewStarted] = useState(false);
+  const [sessionId, setSessionId] = useState<string>("");
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
@@ -342,7 +343,7 @@ function InterviewSessionContent() {
   const startInterview = async () => {
     // Initialize interview with comprehensive payload
     try {
-      const sessionId = `session_${Date.now()}_${user?._id}`;
+      const localSessionId = `session_${Date.now()}_${user?._id}`;
 
       const initPayload: StartInterviewPayload = {
         user: buildUserProfile(user),
@@ -352,7 +353,7 @@ function InterviewSessionContent() {
           duration || "30"
         ),
         context: {
-          sessionId,
+          sessionId: localSessionId,
           startTime: new Date().toISOString(),
           userAgent: navigator.userAgent,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -373,6 +374,12 @@ function InterviewSessionContent() {
 
       const response = await initializeInterview(initPayload);
       console.log("Interview initialized:", response);
+      if (response?.sessionId) {
+        setSessionId(response.sessionId);
+      } else {
+        // Fallback to locally generated session id
+        setSessionId(localSessionId);
+      }
     } catch (error) {
       console.error("Error recording interview start:", error);
     }
@@ -401,6 +408,21 @@ function InterviewSessionContent() {
   const sendMessage = async () => {
     if (!userInput.trim()) return;
 
+    if (!sessionId) {
+      // Ensure the interview was started and a sessionId is available
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          type: "ai" as const,
+          content:
+            "❌ No active session. Click 'Start Interview' before sending messages.",
+          timestamp: new Date(),
+        },
+      ]);
+      return;
+    }
+
     const userMessage = {
       id: Date.now().toString(),
       type: "user" as const,
@@ -415,7 +437,7 @@ function InterviewSessionContent() {
     try {
       // Send comprehensive AI conversation payload
       const conversationPayload: ChatConversationPayload = {
-        sessionId: `session_${Date.now()}_${user?._id}`,
+        sessionId,
         user: {
           id: user?._id || "",
           name: user?.name || "",
@@ -554,7 +576,7 @@ function InterviewSessionContent() {
     // Send comprehensive completion payload
     try {
       const completionPayload = {
-        sessionId: `session_${Date.now()}_${user?._id}`,
+        sessionId: sessionId || `session_${Date.now()}_${user?._id}`,
         user: buildUserProfile(user),
         configuration: buildInterviewConfig(
           level || "mid",
@@ -656,9 +678,9 @@ function InterviewSessionContent() {
     setIsFullscreen(false);
 
     // Store results for the results page and redirect with sessionId
-    const sessionId = `session_${Date.now()}_${user?._id}`;
-    localStorage.setItem("lastInterviewSessionId", sessionId);
-    router.push(`/learner/interview/results?id=${sessionId}`);
+    const finalSessionId = sessionId || `session_${Date.now()}_${user?._id}`;
+    localStorage.setItem("lastInterviewSessionId", finalSessionId);
+    router.push(`/learner/interview/results?id=${finalSessionId}`);
   };
 
   const getLanguageOptions = () => {
