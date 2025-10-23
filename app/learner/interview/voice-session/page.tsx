@@ -82,7 +82,10 @@ function VoiceInterviewContent() {
   // Get the correct configuration for the category
   const config = buildInterviewConfig(level, category, duration);
   const hasCodeEditorParam = searchParams.get("hasCodeEditor");
-  const hasCodeEditor = hasCodeEditorParam !== null ? hasCodeEditorParam === "true" : config.hasCodeEditor;
+  const hasCodeEditor =
+    hasCodeEditorParam !== null
+      ? hasCodeEditorParam === "true"
+      : config.hasCodeEditor;
   const defaultLanguage = selectedLanguage || config.language; // Use selected language first, fallback to config
 
   // State management
@@ -200,53 +203,64 @@ function VoiceInterviewContent() {
         (window as any).SpeechRecognition;
       const recognitionInstance = new SpeechRecognition();
 
-      recognitionInstance.continuous = false;
-      recognitionInstance.interimResults = false;
+      recognitionInstance.continuous = true;
+      recognitionInstance.interimResults = true;
       recognitionInstance.lang = "en-US";
 
+      let accumulatedTranscript = "";
+
       recognitionInstance.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        console.log("🎤 Speech recognition result:", transcript);
-        setTranscript(transcript);
+        let interimTranscript = "";
 
-        // Add user message
-        const userMessage: Message = {
-          id: `user_${Date.now()}`,
-          type: "user",
-          content: transcript,
-          timestamp: new Date(),
-        };
-
-        setMessages((prev) => [...prev, userMessage]);
-
-        // Send answer via REST API
-        if (sessionId) {
-          console.log("📤 Sending answer via REST API:", transcript);
-          sendAnswerToAPI(transcript);
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            accumulatedTranscript += transcript.trim() + " ";
+          } else {
+            interimTranscript += transcript;
+          }
         }
 
-        setQuestionsAnswered((prev) => prev + 1);
+        const fullText = (accumulatedTranscript + interimTranscript).trim();
+        setTranscript(fullText);
       };
 
       recognitionInstance.onerror = (event: any) => {
         console.error("❌ Speech recognition error:", event.error);
-        setTranscript("Error recognizing speech. Please try again.");
-        setIsListening(false);
+        if (isListening) {
+          console.log("🔁 Restarting recognition after error...");
+          try {
+            recognitionInstance.stop();
+            recognitionInstance.start();
+          } catch (err) {
+            console.warn("⚠️ Restart failed:", err);
+          }
+        } else {
+          setIsListening(false);
+        }
       };
 
       recognitionInstance.onend = () => {
-        console.log("🛑 Speech recognition ended");
-        setIsListening(false);
+        console.log("🛑 Recognition ended");
+        // Restart automatically only if listening is still active
+        if (isListening) {
+          try {
+            console.log("🔁 Restarting recognition after silence...");
+            recognitionInstance.start();
+          } catch (err) {
+            console.warn("⚠️ Restart failed:", err);
+          }
+        }
       };
 
       setRecognition(recognitionInstance);
     }
 
-    // Initialize Speech Synthesis
+    // --- Initialize Speech Synthesis ---
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       setSpeechSynthesis(window.speechSynthesis);
     }
-  }, [sessionId, currentQuestionId]);
+  }, [sessionId, currentQuestionId, isListening]);
 
   // Text-to-Speech Audio Play
   const playAIAudio = async (audioUrl: string, text: string) => {
@@ -539,7 +553,11 @@ function VoiceInterviewContent() {
           messageContent = displayText;
 
           // Add detailed feedback only for paid interviews
-          if (!isFreeInterview && data.feedback && data.feedback.score !== undefined) {
+          if (
+            !isFreeInterview &&
+            data.feedback &&
+            data.feedback.score !== undefined
+          ) {
             const feedbackDetails = `\n\n📊 **Score: ${data.feedback.score}/100**`;
             messageContent += feedbackDetails;
 
@@ -879,7 +897,25 @@ function VoiceInterviewContent() {
       recognition.stop();
     }
     setIsListening(false);
-    setTranscript("");
+
+    const finalText = transcript.trim();
+    if (finalText.length > 0) {
+      const userMessage: Message = {
+        id: `user_${Date.now()}`,
+        type: "user",
+        content: finalText,
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, userMessage]);
+
+      if (sessionId) {
+        console.log("📤 Sending final response via REST API:", finalText);
+        sendAnswerToAPI(finalText);
+      }
+
+      setQuestionsAnswered((prev) => prev + 1);
+    }
   };
 
   const runCode = async () => {
@@ -2054,7 +2090,9 @@ function VoiceInterviewContent() {
               <div className="flex flex-col space-y-3">
                 {transcript && (
                   <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#00FFB2]/20">
-                    <div className="text-sm text-gray-400 mb-1">Transcript:</div>
+                    <div className="text-sm text-gray-400 mb-1">
+                      Transcript:
+                    </div>
                     <div className="text-white">{transcript}</div>
                   </div>
                 )}
@@ -2087,7 +2125,9 @@ function VoiceInterviewContent() {
                         : "Click to speak"}
                     </div>
                     {!isMicOn && (
-                      <div className="text-xs text-red-400 mt-1">Microphone is disabled</div>
+                      <div className="text-xs text-red-400 mt-1">
+                        Microphone is disabled
+                      </div>
                     )}
                   </div>
                 </div>
