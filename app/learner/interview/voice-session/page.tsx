@@ -242,6 +242,8 @@ function VoiceInterviewContent() {
 
       recognitionInstance.onend = () => {
         console.log("🛑 Recognition ended");
+        // Reset accumulated transcript when recognition ends
+        accumulatedTranscript = "";
         // Restart automatically only if listening is still active
         if (isListening) {
           try {
@@ -251,6 +253,12 @@ function VoiceInterviewContent() {
             console.warn("⚠️ Restart failed:", err);
           }
         }
+      };
+
+      // Add onstart handler to reset accumulated transcript
+      recognitionInstance.onstart = () => {
+        console.log("🎤 Recognition started");
+        accumulatedTranscript = "";
       };
 
       setRecognition(recognitionInstance);
@@ -899,7 +907,7 @@ function VoiceInterviewContent() {
     setIsListening(false);
 
     const finalText = transcript.trim();
-    if (finalText.length > 0) {
+    if (finalText.length > 0 && finalText !== "Listening...") {
       const userMessage: Message = {
         id: `user_${Date.now()}`,
         type: "user",
@@ -916,6 +924,9 @@ function VoiceInterviewContent() {
 
       setQuestionsAnswered((prev) => prev + 1);
     }
+
+    // Reset transcript for next answer
+    setTranscript("");
   };
 
   const runCode = async () => {
