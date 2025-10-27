@@ -137,6 +137,7 @@ function VoiceInterviewContent() {
   const [totalQuestions, setTotalQuestions] = useState(6);
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
   const [currentQuestionId, setCurrentQuestionId] = useState<string>("");
+  const [interviewCompleted, setInterviewCompleted] = useState(false);
 
   // Build interview payload from URL parameters and user data
   const buildInterviewPayload = () => {
@@ -207,6 +208,17 @@ function VoiceInterviewContent() {
       recognitionInstance.interimResults = true;
       recognitionInstance.lang = "en-US";
 
+      // Configure for extended speaking sessions
+      recognitionInstance.maxAlternatives = 1;
+
+      // Add properties to handle longer sessions (if supported by browser)
+      if ("speechTimeoutLength" in recognitionInstance) {
+        recognitionInstance.speechTimeoutLength = 60000; // 60 seconds (increased for longer responses)
+      }
+      if ("noSpeechTimeout" in recognitionInstance) {
+        recognitionInstance.noSpeechTimeout = 30000; // 30 seconds of silence (increased for longer responses)
+      }
+
       let accumulatedTranscript = "";
 
       recognitionInstance.onresult = (event: any) => {
@@ -227,14 +239,28 @@ function VoiceInterviewContent() {
 
       recognitionInstance.onerror = (event: any) => {
         console.error("❌ Speech recognition error:", event.error);
-        if (isListening) {
+
+        // Handle different error types appropriately
+        if (event.error === "no-speech" || event.error === "audio-capture") {
+          // These are common and expected - don't restart immediately
+          console.log(
+            "⏸️ No speech detected or audio capture issue - waiting..."
+          );
+          setIsListening(false);
+          return;
+        }
+
+        if (isListening && event.error !== "aborted") {
           console.log("🔁 Restarting recognition after error...");
-          try {
-            recognitionInstance.stop();
-            recognitionInstance.start();
-          } catch (err) {
-            console.warn("⚠️ Restart failed:", err);
-          }
+          setTimeout(() => {
+            if (isListening) {
+              try {
+                recognitionInstance.start();
+              } catch (err) {
+                console.warn("⚠️ Restart failed:", err);
+              }
+            }
+          }, 1000); // Longer delay for error recovery
         } else {
           setIsListening(false);
         }
@@ -245,13 +271,19 @@ function VoiceInterviewContent() {
         // Reset accumulated transcript when recognition ends
         accumulatedTranscript = "";
         // Restart automatically only if listening is still active
+        // Add a longer delay to prevent rapid restarts and allow for longer pauses
         if (isListening) {
-          try {
-            console.log("🔁 Restarting recognition after silence...");
-            recognitionInstance.start();
-          } catch (err) {
-            console.warn("⚠️ Restart failed:", err);
-          }
+          setTimeout(() => {
+            if (isListening) {
+              // Double-check listening state after delay
+              try {
+                console.log("🔁 Restarting recognition after pause...");
+                recognitionInstance.start();
+              } catch (err) {
+                console.warn("⚠️ Restart failed:", err);
+              }
+            }
+          }, 2000); // 2 seconds delay to allow for natural pauses (increased from 500ms)
         }
       };
 
@@ -596,23 +628,37 @@ function VoiceInterviewContent() {
         }
 
         if (data.currentQuestion) {
+          // ✅ Normal case: backend sends next question object
           setCurrentQuestionId(data.currentQuestion.id);
           setCurrentQuestionNumber(data.currentQuestion.questionNumber);
           if (data.currentQuestion.totalQuestions) {
             setTotalQuestions(data.currentQuestion.totalQuestions);
           }
 
-          // Start timing for next question
           setResponseStartTime(Date.now());
 
           const questionText = `Next Question (${data.currentQuestion.questionNumber}/${data.currentQuestion.totalQuestions}): ${data.currentQuestion.question}`;
 
           if (messageContent) {
             messageContent += `\n\n${questionText}`;
-            // Do not override audioContent; keep speaking only the display text
           } else {
             messageContent = questionText;
-            // Do not set audioContent to question text; keep speaking only the display text
+          }
+        } else {
+          // 🧩 Fallback: backend didn’t send currentQuestion (still return next text)
+          console.warn(
+            "⚠️ No currentQuestion in response — generating fallback question ID"
+          );
+          const nextQ = currentQuestionNumber + 1;
+          const fallbackQuestionId = `q${nextQ}`;
+          setCurrentQuestionId(fallbackQuestionId);
+          setCurrentQuestionNumber(nextQ);
+          setResponseStartTime(Date.now());
+
+          if (data.shortResponse) {
+            // Use AI response as the next question text
+            const questionText = `Next Question (${nextQ}/${totalQuestions}): ${data.shortResponse}`;
+            messageContent += `\n\n${questionText}`;
           }
         }
 
@@ -634,6 +680,46 @@ function VoiceInterviewContent() {
             data.progress.questionsAnswered || questionsAnswered,
             data.progress.totalQuestions || totalQuestions
           );
+
+          // Check if interview is completed - only based on actual progress count
+          const answered = data.progress.questionsAnswered || questionsAnswered;
+          const total = data.progress.totalQuestions || totalQuestions;
+          console.log("📊 Progress check:", {
+            answered,
+            total,
+            currentCompleted: interviewCompleted,
+            hasCurrentQuestion: !!data.currentQuestion,
+            progressData: data.progress,
+          });
+
+          // Only complete if we've actually answered all questions AND there's no next question
+          if (answered >= total && total > 0 && !data.currentQuestion) {
+            console.log(
+              "✅ Interview completed based on progress and no more questions!"
+            );
+            setInterviewCompleted(true);
+          } else {
+            console.log(
+              "🔄 Interview continues - not all conditions met for completion"
+            );
+          }
+        }
+
+        // Only check AI response for completion if we don't have a current question
+        // This prevents premature completion during the interview
+        if (
+          !data.currentQuestion &&
+          data.aiResponse &&
+          (data.aiResponse.toLowerCase().includes("interview is complete") ||
+            data.aiResponse
+              .toLowerCase()
+              .includes("that concludes the interview") ||
+            data.aiResponse.toLowerCase().includes("no more questions"))
+        ) {
+          console.log(
+            "✅ Interview completed based on AI response and no current question!"
+          );
+          setInterviewCompleted(true);
         }
       } else {
         throw new Error(`HTTP ${response.status}`);
@@ -907,6 +993,9 @@ function VoiceInterviewContent() {
     setIsListening(false);
 
     const finalText = transcript.trim();
+    console.log("📝 Final transcript length:", finalText.length, "characters");
+    console.log("📝 Final transcript content:", finalText);
+
     if (finalText.length > 0 && finalText !== "Listening...") {
       const userMessage: Message = {
         id: `user_${Date.now()}`,
@@ -917,12 +1006,38 @@ function VoiceInterviewContent() {
 
       setMessages((prev) => [...prev, userMessage]);
 
+      // Debug logging for second answer issue
+      console.log("🔍 Debug - stopListening state check:", {
+        sessionId: sessionId,
+        interviewCompleted: interviewCompleted,
+        questionsAnswered: questionsAnswered,
+        totalQuestions: totalQuestions,
+        finalText: finalText,
+      });
+
       if (sessionId) {
         console.log("📤 Sending final response via REST API:", finalText);
         sendAnswerToAPI(finalText);
+      } else {
+        console.error("❌ No sessionId available - cannot send answer!");
       }
 
-      setQuestionsAnswered((prev) => prev + 1);
+      // Only increment questions answered if interview is not completed
+      if (!interviewCompleted) {
+        console.log(
+          "📊 Incrementing questionsAnswered from",
+          questionsAnswered,
+          "to",
+          questionsAnswered + 1
+        );
+        setQuestionsAnswered((prev) => prev + 1);
+      } else {
+        console.warn(
+          "⚠️ Interview already completed - not incrementing questionsAnswered"
+        );
+      }
+    } else {
+      console.warn("⚠️ No valid transcript to send:", finalText);
     }
 
     // Reset transcript for next answer
@@ -1992,13 +2107,23 @@ function VoiceInterviewContent() {
                 </button>
               )}
 
-              <button
-                onClick={handleEndInterview}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-              >
-                <Phone size={16} />
-                <span>End Interview</span>
-              </button>
+              {interviewCompleted ? (
+                <button
+                  onClick={handleEndInterview}
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                >
+                  <Phone size={16} />
+                  <span>Submit Interview</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleEndInterview}
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                >
+                  <Phone size={16} />
+                  <span>End Interview</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -2111,10 +2236,14 @@ function VoiceInterviewContent() {
                 <div className="flex items-center justify-center space-x-4">
                   <button
                     onClick={isListening ? stopListening : startListening}
-                    disabled={!interviewStarted || isAISpeaking}
+                    disabled={
+                      !interviewStarted || isAISpeaking || interviewCompleted
+                    }
                     className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
                       isListening
                         ? "bg-red-500 hover:bg-red-600 animate-pulse"
+                        : interviewCompleted
+                        ? "bg-gray-500"
                         : "bg-[#00FFB2] hover:bg-[#00CC8E]"
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
@@ -2129,6 +2258,8 @@ function VoiceInterviewContent() {
                     <div className="text-sm text-gray-400">
                       {!interviewStarted
                         ? "Start interview to begin"
+                        : interviewCompleted
+                        ? "Interview completed - Click Submit Interview above"
                         : isAISpeaking
                         ? "AI is speaking..."
                         : isListening
