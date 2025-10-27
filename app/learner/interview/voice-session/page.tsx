@@ -198,109 +198,87 @@ function VoiceInterviewContent() {
 
   // Initialize Google Speech Recognition
   useEffect(() => {
-    if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
-      const SpeechRecognition =
-        (window as any).webkitSpeechRecognition ||
-        (window as any).SpeechRecognition;
-      const recognitionInstance = new SpeechRecognition();
+    if (typeof window === "undefined") return;
 
-      recognitionInstance.continuous = true;
-      recognitionInstance.interimResults = true;
-      recognitionInstance.lang = "en-US";
+    // ✅ Use browser-supported SpeechRecognition
+    const SpeechRecognition =
+      (window as any).webkitSpeechRecognition ||
+      (window as any).SpeechRecognition;
 
-      // Configure for extended speaking sessions
-      recognitionInstance.maxAlternatives = 1;
-
-      // Add properties to handle longer sessions (if supported by browser)
-      if ("speechTimeoutLength" in recognitionInstance) {
-        recognitionInstance.speechTimeoutLength = 60000; // 60 seconds (increased for longer responses)
-      }
-      if ("noSpeechTimeout" in recognitionInstance) {
-        recognitionInstance.noSpeechTimeout = 30000; // 30 seconds of silence (increased for longer responses)
-      }
-
-      let accumulatedTranscript = "";
-
-      recognitionInstance.onresult = (event: any) => {
-        let interimTranscript = "";
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            accumulatedTranscript += transcript.trim() + " ";
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-
-        const fullText = (accumulatedTranscript + interimTranscript).trim();
-        setTranscript(fullText);
-      };
-
-      recognitionInstance.onerror = (event: any) => {
-        console.error("❌ Speech recognition error:", event.error);
-
-        // Handle different error types appropriately
-        if (event.error === "no-speech" || event.error === "audio-capture") {
-          // These are common and expected - don't restart immediately
-          console.log(
-            "⏸️ No speech detected or audio capture issue - waiting..."
-          );
-          setIsListening(false);
-          return;
-        }
-
-        if (isListening && event.error !== "aborted") {
-          console.log("🔁 Restarting recognition after error...");
-          setTimeout(() => {
-            if (isListening) {
-              try {
-                recognitionInstance.start();
-              } catch (err) {
-                console.warn("⚠️ Restart failed:", err);
-              }
-            }
-          }, 1000); // Longer delay for error recovery
-        } else {
-          setIsListening(false);
-        }
-      };
-
-      recognitionInstance.onend = () => {
-        console.log("🛑 Recognition ended");
-        // Reset accumulated transcript when recognition ends
-        accumulatedTranscript = "";
-        // Restart automatically only if listening is still active
-        // Add a longer delay to prevent rapid restarts and allow for longer pauses
-        if (isListening) {
-          setTimeout(() => {
-            if (isListening) {
-              // Double-check listening state after delay
-              try {
-                console.log("🔁 Restarting recognition after pause...");
-                recognitionInstance.start();
-              } catch (err) {
-                console.warn("⚠️ Restart failed:", err);
-              }
-            }
-          }, 2000); // 2 seconds delay to allow for natural pauses (increased from 500ms)
-        }
-      };
-
-      // Add onstart handler to reset accumulated transcript
-      recognitionInstance.onstart = () => {
-        console.log("🎤 Recognition started");
-        accumulatedTranscript = "";
-      };
-
-      setRecognition(recognitionInstance);
+    if (!SpeechRecognition) {
+      console.warn("Speech recognition not supported in this browser.");
+      return;
     }
+
+    const recognitionInstance = new SpeechRecognition();
+    recognitionInstance.continuous = true; // Enable continuous recognition for better live captions
+    recognitionInstance.interimResults = true; // Enable interim results for live captions
+    recognitionInstance.lang = "en-US";
+    recognitionInstance.maxAlternatives = 1;
+
+    let finalTranscript = "";
+
+    recognitionInstance.onstart = () => {
+      console.log("🎤 Recognition started");
+      finalTranscript = "";
+      setTranscript("Listening...");
+    };
+
+    recognitionInstance.onresult = (event: any) => {
+      let interimTranscript = "";
+      finalTranscript = "";
+
+      // Process all results to build both interim and final transcripts
+      for (let i = 0; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + " ";
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      // Show live captions: final transcript + interim (in progress)
+      const displayText = finalTranscript + interimTranscript;
+      if (displayText.trim()) {
+        setTranscript(displayText.trim());
+        console.log("🎤 Live caption:", displayText.trim());
+      }
+    };
+
+    recognitionInstance.onerror = (event: any) => {
+      console.error("❌ Speech recognition error:", event.error);
+
+      if (event.error === "no-speech" || event.error === "audio-capture") {
+        console.log("⏸️ No speech detected or mic issue");
+        setTranscript("No speech detected. Please try speaking again.");
+      } else {
+        setTranscript("Error recognizing speech. Please try again.");
+      }
+
+      setIsListening(false);
+    };
+
+    recognitionInstance.onend = () => {
+      console.log("🛑 Speech recognition ended");
+
+      // Don't auto-restart - let user control when to stop
+      setIsListening(false);
+    };
+
+    setRecognition(recognitionInstance);
 
     // --- Initialize Speech Synthesis ---
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    if ("speechSynthesis" in window) {
       setSpeechSynthesis(window.speechSynthesis);
     }
-  }, [sessionId, currentQuestionId, isListening]);
+
+    return () => {
+      try {
+        recognitionInstance.stop();
+      } catch {}
+    };
+  }, [sessionId, currentQuestionId]);
 
   // Text-to-Speech Audio Play
   const playAIAudio = async (audioUrl: string, text: string) => {
@@ -992,11 +970,18 @@ function VoiceInterviewContent() {
     }
     setIsListening(false);
 
+    // Get the current transcript (which includes live captions)
     const finalText = transcript.trim();
     console.log("📝 Final transcript length:", finalText.length, "characters");
     console.log("📝 Final transcript content:", finalText);
 
-    if (finalText.length > 0 && finalText !== "Listening...") {
+    // Only process if we have valid content and it's not just the "Listening..." placeholder
+    if (
+      finalText.length > 0 &&
+      finalText !== "Listening..." &&
+      finalText !== "No speech detected. Please try speaking again." &&
+      finalText !== "Error recognizing speech. Please try again."
+    ) {
       const userMessage: Message = {
         id: `user_${Date.now()}`,
         type: "user",
@@ -1038,10 +1023,16 @@ function VoiceInterviewContent() {
       }
     } else {
       console.warn("⚠️ No valid transcript to send:", finalText);
+      // Show a message to the user that no speech was detected
+      if (finalText.length === 0 || finalText === "Listening...") {
+        setTranscript("No speech detected. Please try again.");
+      }
     }
 
-    // Reset transcript for next answer
-    setTranscript("");
+    // Reset transcript for next answer after a short delay to show any error messages
+    setTimeout(() => {
+      setTranscript("");
+    }, 2000);
   };
 
   const runCode = async () => {
