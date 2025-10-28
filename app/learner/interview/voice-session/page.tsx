@@ -616,7 +616,11 @@ function VoiceInterviewContent() {
 
           setResponseStartTime(Date.now());
 
-          questionContent = data.currentQuestion.question;
+          // Only set questionContent if we don't already have aiResponseContent
+          // This prevents duplication when shortResponse contains the question
+          if (!aiResponseContent) {
+            questionContent = data.currentQuestion.question;
+          }
 
           // Don't combine with messageContent anymore
         } else {
@@ -630,10 +634,8 @@ function VoiceInterviewContent() {
           setCurrentQuestionNumber(nextQ);
           setResponseStartTime(Date.now());
 
-          if (data.shortResponse) {
-            // Use AI response as the next question text without prefix
-            questionContent = data.shortResponse;
-          }
+          // Don't set questionContent here since shortResponse is already in aiResponseContent
+          // This prevents duplication
         }
 
         // Add AI response message if we have content
