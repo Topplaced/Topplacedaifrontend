@@ -558,8 +558,9 @@ function VoiceInterviewContent() {
           setDebugLogs((prev) => [...prev.slice(-9), debugEntry]); // Keep last 10 entries
         }
 
-        // Handle AI response and current question to avoid duplication
-        let messageContent = "";
+        // Handle AI response and current question separately to avoid duplication
+        let aiResponseContent = "";
+        let questionContent = "";
         let audioContent = "";
 
         if (data.aiResponse || data.shortResponse) {
@@ -568,7 +569,7 @@ function VoiceInterviewContent() {
           audioContent = displayText;
 
           // For UI, show minimal content for free users, full details for paid users
-          messageContent = displayText;
+          aiResponseContent = displayText;
 
           // Add detailed feedback only for paid interviews
           if (
@@ -577,7 +578,7 @@ function VoiceInterviewContent() {
             data.feedback.score !== undefined
           ) {
             const feedbackDetails = `\n\n📊 **Score: ${data.feedback.score}/100**`;
-            messageContent += feedbackDetails;
+            aiResponseContent += feedbackDetails;
 
             // Add detailed scores if available
             if (data.detailedScores) {
@@ -588,17 +589,17 @@ function VoiceInterviewContent() {
                 `• Clarity: ${data.detailedScores.clarity}/100\n` +
                 `• Technical Accuracy: ${data.detailedScores.technicalAccuracy}/100\n` +
                 `• Communication: ${data.detailedScores.communicationQuality}/100`;
-              messageContent += detailsText;
+              aiResponseContent += detailsText;
             }
 
             // Add strengths and improvements if available
             if (data.strengths && data.strengths.length > 0) {
-              messageContent += `\n\n✅ **Strengths:** ${data.strengths.join(
+              aiResponseContent += `\n\n✅ **Strengths:** ${data.strengths.join(
                 ", "
               )}`;
             }
             if (data.improvements && data.improvements.length > 0) {
-              messageContent += `\n\n🔄 **Areas for Improvement:** ${data.improvements.join(
+              aiResponseContent += `\n\n🔄 **Areas for Improvement:** ${data.improvements.join(
                 ", "
               )}`;
             }
@@ -615,13 +616,9 @@ function VoiceInterviewContent() {
 
           setResponseStartTime(Date.now());
 
-          const questionText = `Next Question (${data.currentQuestion.questionNumber}/${data.currentQuestion.totalQuestions}): ${data.currentQuestion.question}`;
+          questionContent = data.currentQuestion.question;
 
-          if (messageContent) {
-            messageContent += `\n\n${questionText}`;
-          } else {
-            messageContent = questionText;
-          }
+          // Don't combine with messageContent anymore
         } else {
           // 🧩 Fallback: backend didn’t send currentQuestion (still return next text)
           console.warn(
@@ -634,22 +631,32 @@ function VoiceInterviewContent() {
           setResponseStartTime(Date.now());
 
           if (data.shortResponse) {
-            // Use AI response as the next question text
-            const questionText = `Next Question (${nextQ}/${totalQuestions}): ${data.shortResponse}`;
-            messageContent += `\n\n${questionText}`;
+            // Use AI response as the next question text without prefix
+            questionContent = data.shortResponse;
           }
         }
 
-        // Add single combined message if we have content
-        if (messageContent) {
-          const combinedMessage: Message = {
+        // Add AI response message if we have content
+        if (aiResponseContent) {
+          const aiMessage: Message = {
             id: `ai_${Date.now()}`,
             type: "ai",
-            content: messageContent,
+            content: aiResponseContent,
             timestamp: new Date(),
           };
-          setMessages((prev) => [...prev, combinedMessage]);
+          setMessages((prev) => [...prev, aiMessage]);
           playAIAudio("", audioContent);
+        }
+
+        // Add question message separately if we have content
+        if (questionContent) {
+          const questionMessage: Message = {
+            id: `question_${Date.now()}`,
+            type: "ai",
+            content: questionContent,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, questionMessage]);
         }
 
         // Update progress
@@ -1558,9 +1565,7 @@ function VoiceInterviewContent() {
           const questionMessage: Message = {
             id: `next_question_${Date.now()}`,
             type: "ai",
-            content: `Question ${
-              data.questionNumber || currentQuestionNumber + 1
-            }: ${data.question}`,
+            content: data.question,
             timestamp: new Date(),
           };
           setMessages((prev) => [...prev, questionMessage]);
