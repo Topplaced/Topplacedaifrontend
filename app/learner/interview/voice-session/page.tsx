@@ -503,10 +503,15 @@ function VoiceInterviewContent() {
 
     try {
       const body: any = {
-        sessionId: sessionId,
+        sessionId,
         message: answer,
-        questionId: currentQuestionId,
-        responseTime: responseTime,
+        questionId: currentQuestionId, // keep numeric ID for tracking
+        question:
+          messages.find((m) => m.id === `question_${currentQuestionId}`)
+            ?.content || // try to find the actual question text from chat history
+          messages.filter((m) => m.type === "ai").slice(-1)[0]?.content ||
+          "", // fallback to last AI message
+        responseTime,
         metadata: {
           userAgent: navigator.userAgent,
           deviceType: /Mobile|Android|iPhone|iPad/.test(navigator.userAgent)
@@ -515,7 +520,7 @@ function VoiceInterviewContent() {
           messageType: isCode ? "code_submission" : "answer",
           timestamp: new Date().toISOString(),
           questionNumber: currentQuestionNumber,
-          totalQuestions: totalQuestions,
+          totalQuestions,
           sessionDuration: Date.now() - (responseStartTime || Date.now()),
         },
         advanceToNext: true,
