@@ -60,6 +60,10 @@ function VoiceInterviewContent() {
   // Add level mapping function
   const mapLevelToBackend = (frontendLevel: string): string => {
     const levelMap: { [key: string]: string } = {
+      beginner: "beginner",
+      intermediate: "intermediate", 
+      advanced: "advanced",
+      // Legacy mappings for backward compatibility
       entry: "beginner",
       mid: "intermediate",
       senior: "advanced",
@@ -108,6 +112,15 @@ function VoiceInterviewContent() {
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [interviewProgress, setInterviewProgress] = useState(0);
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
+
+  // AI Speech Queue Management
+  const [aiSpeechQueue, setAiSpeechQueue] = useState<Array<{id: string, text: string, audioUrl: string}>>([]);
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
+
+  // Loading states for buttons
+  const [isRunningCode, setIsRunningCode] = useState(false);
+  const [isSubmittingCode, setIsSubmittingCode] = useState(false);
+  const [isEndingInterview, setIsEndingInterview] = useState(false);
 
   // Response time tracking like testInterview.html
   const [responseStartTime, setResponseStartTime] = useState<number | null>(
@@ -280,37 +293,77 @@ function VoiceInterviewContent() {
     };
   }, [sessionId, currentQuestionId]);
 
-  // Text-to-Speech Audio Play
-  const playAIAudio = async (audioUrl: string, text: string) => {
+  // AI Speech Queue Management Functions
+  const addToSpeechQueue = (text: string, audioUrl: string = "") => {
+    const id = `speech_${Date.now()}_${Math.random()}`;
+    setAiSpeechQueue(prev => [...prev, { id, text, audioUrl }]);
+  };
+
+  const processNextInQueue = useCallback(async () => {
+    if (isProcessingQueue || aiSpeechQueue.length === 0) return;
+    
+    setIsProcessingQueue(true);
+    const nextItem = aiSpeechQueue[0];
+    
+    try {
+      await playAIAudioDirect(nextItem.audioUrl, nextItem.text);
+    } catch (error) {
+      console.error("Error processing speech queue item:", error);
+    } finally {
+      setAiSpeechQueue(prev => prev.slice(1)); // Remove processed item
+      setIsProcessingQueue(false);
+    }
+  }, [isProcessingQueue, aiSpeechQueue]);
+
+  // Process queue when items are added
+  useEffect(() => {
+    if (!isProcessingQueue && aiSpeechQueue.length > 0) {
+      processNextInQueue();
+    }
+  }, [aiSpeechQueue, isProcessingQueue, processNextInQueue]);
+
+  // Direct AI Audio Play (internal function)
+  const playAIAudioDirect = async (audioUrl: string, text: string) => {
     console.log("🔊 Playing AI audio:", text);
     setIsAISpeaking(true);
     setCurrentAudioUrl(audioUrl);
     setIsAudioPlaying(true);
 
-    try {
-      // Try ElevenLabs TTS API first with proper error handling
-      const response = await fetch("/api/text-to-speech", {
+    return new Promise<void>((resolve, reject) => {
+      const cleanup = () => {
+        setIsAISpeaking(false);
+        setIsAudioPlaying(false);
+        setCurrentAudioUrl(null);
+      };
+
+      const handleSuccess = () => {
+        cleanup();
+        resolve();
+      };
+
+      const handleError = (error: any) => {
+        cleanup();
+        reject(error);
+      };
+
+      // Try ElevenLabs TTS API first
+      fetch("/api/text-to-speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text,
-          voice_id: "EXAVITQu4vr4xnSDxMaL", // Sarah voice
+          voice_id: "EXAVITQu4vr4xnSDxMaL",
           model_id: "eleven_monolingual_v1",
         }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log("🔊 ElevenLabs TTS API response:", data);
-
+      })
+      .then(response => response.ok ? response.json() : Promise.reject(response))
+      .then(data => {
         if (data.useBrowserTTS && speechSynthesis) {
-          // Use browser's built-in speech synthesis
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.rate = 0.9;
           utterance.pitch = 1;
           utterance.volume = 1;
 
-          // Get a female voice if available
           const voices = speechSynthesis.getVoices();
           const femaleVoice = voices.find(
             (voice: { name: string | string[]; gender: string }) =>
@@ -324,66 +377,31 @@ function VoiceInterviewContent() {
             utterance.voice = femaleVoice;
           }
 
-          utterance.onend = () => {
-            setIsAISpeaking(false);
-            setIsAudioPlaying(false);
-            setCurrentAudioUrl(null);
-          };
-
-          utterance.onerror = (event) => {
-            console.error("Speech synthesis error:", event);
-            setIsAISpeaking(false);
-            setIsAudioPlaying(false);
-            setCurrentAudioUrl(null);
-          };
-
+          utterance.onend = handleSuccess;
+          utterance.onerror = handleError;
           speechSynthesis.speak(utterance);
         } else if (data.audioUrl && data.audioContent) {
-          // Use ElevenLabs TTS audio
           const audio = new Audio(data.audioUrl);
-          audio.onerror = (error) => {
-            console.error("Audio playback error:", error);
-            setIsAISpeaking(false);
-            setIsAudioPlaying(false);
-            setCurrentAudioUrl(null);
-          };
-          audio.onended = () => {
-            setIsAISpeaking(false);
-            setIsAudioPlaying(false);
-            setCurrentAudioUrl(null);
-          };
-          audio.play().catch((error) => {
-            console.error("Audio play failed:", error);
-            setIsAISpeaking(false);
-            setIsAudioPlaying(false);
-            setCurrentAudioUrl(null);
-          });
+          audio.onended = handleSuccess;
+          audio.onerror = handleError;
+          audio.play().catch(handleError);
         } else {
-          throw new Error(
-            "No audio content from ElevenLabs or browser TTS available"
-          );
+          throw new Error("No audio content available");
         }
-      } else {
-        const errorData = await response.json();
-        throw new Error(
-          `ElevenLabs TTS API failed: ${response.status} - ${
-            errorData.error || "Unknown error"
-          }`
-        );
-      }
-    } catch (error) {
-      console.error(
-        "❌ ElevenLabs TTS error, using simulation fallback:",
-        error
-      );
-      // Fallback to simulation
-      const duration = Math.random() * 2000 + 3000;
-      setTimeout(() => {
-        setIsAISpeaking(false);
-        setIsAudioPlaying(false);
-        setCurrentAudioUrl(null);
-      }, duration);
-    }
+      })
+      .catch(error => {
+        console.error("TTS error, using fallback:", error);
+        // Fallback simulation
+        const duration = Math.random() * 2000 + 3000;
+        setTimeout(handleSuccess, duration);
+      });
+    });
+  };
+
+  // Public AI Audio Play (adds to queue)
+  const playAIAudio = (audioUrl: string, text: string) => {
+    if (!text.trim()) return;
+    addToSpeechQueue(text, audioUrl);
   };
 
   // Initialize camera and microphone
@@ -1050,12 +1068,17 @@ function VoiceInterviewContent() {
   };
 
   const runCode = async () => {
+    if (isRunningCode) {
+      return; // Prevent multiple simultaneous executions
+    }
+
     if (!code.trim()) {
       setWarningMessage("Please write some code before running.");
       setShowWarning(true);
       return;
     }
 
+    setIsRunningCode(true);
     console.log("💻 Executing code...");
 
     const codeMessage: Message = {
@@ -1128,16 +1151,23 @@ function VoiceInterviewContent() {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsRunningCode(false);
     }
   };
 
   const submitCode = async () => {
+    if (isSubmittingCode) {
+      return; // Prevent multiple simultaneous submissions
+    }
+
     if (!codeExecutionSuccess || !lastExecutionResult) {
       setWarningMessage("Please run your code successfully before submitting.");
       setShowWarning(true);
       return;
     }
 
+    setIsSubmittingCode(true);
     console.log("📤 Submitting code solution...");
 
     try {
@@ -1173,10 +1203,17 @@ function VoiceInterviewContent() {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsSubmittingCode(false);
     }
   };
 
   const handleEndInterview = async () => {
+    if (isEndingInterview) {
+      return; // Prevent multiple simultaneous end interview calls
+    }
+
+    setIsEndingInterview(true);
     console.log("🏁 Ending interview...");
 
     try {
@@ -1310,6 +1347,8 @@ function VoiceInterviewContent() {
       }
     } catch (error) {
       console.error("❌ Error ending interview:", error);
+    } finally {
+      setIsEndingInterview(false);
     }
 
     // Cleanup media streams
@@ -2113,18 +2152,24 @@ function VoiceInterviewContent() {
               {interviewCompleted ? (
                 <button
                   onClick={handleEndInterview}
-                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                  disabled={isEndingInterview}
+                  className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                    isEndingInterview ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
                   <Phone size={16} />
-                  <span>Submit Interview</span>
+                  <span>{isEndingInterview ? 'Submitting...' : 'Submit Interview'}</span>
                 </button>
               ) : (
                 <button
                   onClick={handleEndInterview}
-                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                  disabled={isEndingInterview}
+                  className={`bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                    isEndingInterview ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
                   <Phone size={16} />
-                  <span>End Interview</span>
+                  <span>{isEndingInterview ? 'Ending...' : 'End Interview'}</span>
                 </button>
               )}
             </div>
@@ -2310,18 +2355,24 @@ function VoiceInterviewContent() {
                     </select>
                     <button
                       onClick={runCode}
-                      className="btn-primary px-4 py-1 text-sm flex items-center space-x-1"
+                      disabled={isRunningCode}
+                      className={`btn-primary px-4 py-1 text-sm flex items-center space-x-1 ${
+                        isRunningCode ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
                     >
                       <Terminal size={14} />
-                      <span>Run</span>
+                      <span>{isRunningCode ? 'Running...' : 'Run'}</span>
                     </button>
                     {codeExecutionSuccess && (
                       <button
                         onClick={submitCode}
-                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 text-sm rounded flex items-center space-x-1"
+                        disabled={isSubmittingCode}
+                        className={`bg-green-500 hover:bg-green-600 text-white px-4 py-1 text-sm rounded flex items-center space-x-1 ${
+                          isSubmittingCode ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
                       >
                         <Send size={14} />
-                        <span>Submit Solution</span>
+                        <span>{isSubmittingCode ? 'Submitting...' : 'Submit Solution'}</span>
                       </button>
                     )}
                   </div>
