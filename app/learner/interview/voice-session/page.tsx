@@ -1208,6 +1208,9 @@ function VoiceInterviewContent() {
     }
   };
 
+  // Derived state: when code ran successfully and awaits submission
+  const submitPhaseActive = hasCodeEditor && codeExecutionSuccess && !isSubmittingCode;
+
   const handleEndInterview = async () => {
     if (isEndingInterview) {
       return; // Prevent multiple simultaneous end interview calls
@@ -1782,6 +1785,12 @@ function VoiceInterviewContent() {
                       <span>Use the code editor for programming questions</span>
                     </li>
                   )}
+                  {hasCodeEditor && (
+                    <li className="flex items-start space-x-2">
+                      <span className="text-blue-400 mt-1">•</span>
+                      <span>For coding: write your code → click Run → after a successful run, submit your result. The mic is disabled until you submit.</span>
+                    </li>
+                  )}
                   <li className="flex items-start space-x-2">
                     <span className="text-blue-400 mt-1">•</span>
                     <span>
@@ -2285,7 +2294,7 @@ function VoiceInterviewContent() {
                   <button
                     onClick={isListening ? stopListening : startListening}
                     disabled={
-                      !interviewStarted || isAISpeaking || interviewCompleted
+                      !interviewStarted || isAISpeaking || interviewCompleted || submitPhaseActive || isSubmittingCode
                     }
                     className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
                       isListening
@@ -2312,11 +2321,18 @@ function VoiceInterviewContent() {
                         ? "AI is speaking..."
                         : isListening
                         ? "Recording... Click to stop"
+                        : submitPhaseActive
+                        ? "Run successful — you have to submit the result"
                         : "Click to speak"}
                     </div>
                     {!isMicOn && (
                       <div className="text-xs text-red-400 mt-1">
                         Microphone is disabled
+                      </div>
+                    )}
+                    {submitPhaseActive && (
+                      <div className="text-xs text-yellow-400 mt-1">
+                        Note: Mic is disabled until you submit your result
                       </div>
                     )}
                   </div>
