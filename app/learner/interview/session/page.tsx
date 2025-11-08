@@ -286,10 +286,15 @@ function InterviewSessionContent() {
   useEffect(() => {
     if (!interviewStarted) return;
 
+    const endedOnceRef = { current: false };
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
-          handleEndInterview();
+          if (!endedOnceRef.current) {
+            endedOnceRef.current = true;
+            clearInterval(timer);
+            handleEndInterview();
+          }
           return 0;
         }
         return prev - 1;

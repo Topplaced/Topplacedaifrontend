@@ -26,7 +26,7 @@ interface ConversationResponse {
     question: string;
     questionNumber: number;
     totalQuestions: number;
-    expectedTime: number;
+  expectedTime?: number;
     requiresCode: boolean;
     category: string;
   };

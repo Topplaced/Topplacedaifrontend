@@ -432,10 +432,16 @@ function VoiceInterviewContent() {
   useEffect(() => {
     if (!interviewStarted) return;
 
+    // Ensure we only end once when time is up
+    const endedOnceRef = { current: false };
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
-          handleEndInterview();
+          if (!endedOnceRef.current) {
+            endedOnceRef.current = true;
+            clearInterval(timer);
+            handleEndInterview();
+          }
           return 0;
         }
         return prev - 1;
