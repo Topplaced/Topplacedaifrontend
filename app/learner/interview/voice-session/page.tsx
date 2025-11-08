@@ -1,5 +1,5 @@
 "use client";
-
+//test
 import { useState, useEffect, useRef, Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
@@ -61,7 +61,7 @@ function VoiceInterviewContent() {
   const mapLevelToBackend = (frontendLevel: string): string => {
     const levelMap: { [key: string]: string } = {
       beginner: "beginner",
-      intermediate: "intermediate", 
+      intermediate: "intermediate",
       advanced: "advanced",
       // Legacy mappings for backward compatibility
       entry: "beginner",
@@ -114,7 +114,9 @@ function VoiceInterviewContent() {
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
 
   // AI Speech Queue Management
-  const [aiSpeechQueue, setAiSpeechQueue] = useState<Array<{id: string, text: string, audioUrl: string}>>([]);
+  const [aiSpeechQueue, setAiSpeechQueue] = useState<
+    Array<{ id: string; text: string; audioUrl: string }>
+  >([]);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
 
   // Loading states for buttons
@@ -296,21 +298,21 @@ function VoiceInterviewContent() {
   // AI Speech Queue Management Functions
   const addToSpeechQueue = (text: string, audioUrl: string = "") => {
     const id = `speech_${Date.now()}_${Math.random()}`;
-    setAiSpeechQueue(prev => [...prev, { id, text, audioUrl }]);
+    setAiSpeechQueue((prev) => [...prev, { id, text, audioUrl }]);
   };
 
   const processNextInQueue = useCallback(async () => {
     if (isProcessingQueue || aiSpeechQueue.length === 0) return;
-    
+
     setIsProcessingQueue(true);
     const nextItem = aiSpeechQueue[0];
-    
+
     try {
       await playAIAudioDirect(nextItem.audioUrl, nextItem.text);
     } catch (error) {
       console.error("Error processing speech queue item:", error);
     } finally {
-      setAiSpeechQueue(prev => prev.slice(1)); // Remove processed item
+      setAiSpeechQueue((prev) => prev.slice(1)); // Remove processed item
       setIsProcessingQueue(false);
     }
   }, [isProcessingQueue, aiSpeechQueue]);
@@ -356,45 +358,47 @@ function VoiceInterviewContent() {
           model_id: "eleven_monolingual_v1",
         }),
       })
-      .then(response => response.ok ? response.json() : Promise.reject(response))
-      .then(data => {
-        if (data.useBrowserTTS && speechSynthesis) {
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.rate = 0.9;
-          utterance.pitch = 1;
-          utterance.volume = 1;
+        .then((response) =>
+          response.ok ? response.json() : Promise.reject(response)
+        )
+        .then((data) => {
+          if (data.useBrowserTTS && speechSynthesis) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+            utterance.volume = 1;
 
-          const voices = speechSynthesis.getVoices();
-          const femaleVoice = voices.find(
-            (voice: { name: string | string[]; gender: string }) =>
-              voice.name.includes("Female") ||
-              voice.name.includes("Samantha") ||
-              voice.name.includes("Karen") ||
-              voice.gender === "female"
-          );
+            const voices = speechSynthesis.getVoices();
+            const femaleVoice = voices.find(
+              (voice: { name: string | string[]; gender: string }) =>
+                voice.name.includes("Female") ||
+                voice.name.includes("Samantha") ||
+                voice.name.includes("Karen") ||
+                voice.gender === "female"
+            );
 
-          if (femaleVoice) {
-            utterance.voice = femaleVoice;
+            if (femaleVoice) {
+              utterance.voice = femaleVoice;
+            }
+
+            utterance.onend = handleSuccess;
+            utterance.onerror = handleError;
+            speechSynthesis.speak(utterance);
+          } else if (data.audioUrl && data.audioContent) {
+            const audio = new Audio(data.audioUrl);
+            audio.onended = handleSuccess;
+            audio.onerror = handleError;
+            audio.play().catch(handleError);
+          } else {
+            throw new Error("No audio content available");
           }
-
-          utterance.onend = handleSuccess;
-          utterance.onerror = handleError;
-          speechSynthesis.speak(utterance);
-        } else if (data.audioUrl && data.audioContent) {
-          const audio = new Audio(data.audioUrl);
-          audio.onended = handleSuccess;
-          audio.onerror = handleError;
-          audio.play().catch(handleError);
-        } else {
-          throw new Error("No audio content available");
-        }
-      })
-      .catch(error => {
-        console.error("TTS error, using fallback:", error);
-        // Fallback simulation
-        const duration = Math.random() * 2000 + 3000;
-        setTimeout(handleSuccess, duration);
-      });
+        })
+        .catch((error) => {
+          console.error("TTS error, using fallback:", error);
+          // Fallback simulation
+          const duration = Math.random() * 2000 + 3000;
+          setTimeout(handleSuccess, duration);
+        });
     });
   };
 
@@ -1215,7 +1219,8 @@ function VoiceInterviewContent() {
   };
 
   // Derived state: when code ran successfully and awaits submission
-  const submitPhaseActive = hasCodeEditor && codeExecutionSuccess && !isSubmittingCode;
+  const submitPhaseActive =
+    hasCodeEditor && codeExecutionSuccess && !isSubmittingCode;
 
   const handleEndInterview = async () => {
     if (isEndingInterview) {
@@ -1794,7 +1799,11 @@ function VoiceInterviewContent() {
                   {hasCodeEditor && (
                     <li className="flex items-start space-x-2">
                       <span className="text-blue-400 mt-1">•</span>
-                      <span>For coding: write your code → click Run → after a successful run, submit your result. The mic is disabled until you submit.</span>
+                      <span>
+                        For coding: write your code → click Run → after a
+                        successful run, submit your result. The mic is disabled
+                        until you submit.
+                      </span>
                     </li>
                   )}
                   <li className="flex items-start space-x-2">
@@ -2169,22 +2178,26 @@ function VoiceInterviewContent() {
                   onClick={handleEndInterview}
                   disabled={isEndingInterview}
                   className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 ${
-                    isEndingInterview ? 'opacity-50 cursor-not-allowed' : ''
+                    isEndingInterview ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 >
                   <Phone size={16} />
-                  <span>{isEndingInterview ? 'Submitting...' : 'Submit Interview'}</span>
+                  <span>
+                    {isEndingInterview ? "Submitting..." : "Submit Interview"}
+                  </span>
                 </button>
               ) : (
                 <button
                   onClick={handleEndInterview}
                   disabled={isEndingInterview}
                   className={`bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 ${
-                    isEndingInterview ? 'opacity-50 cursor-not-allowed' : ''
+                    isEndingInterview ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 >
                   <Phone size={16} />
-                  <span>{isEndingInterview ? 'Ending...' : 'End Interview'}</span>
+                  <span>
+                    {isEndingInterview ? "Ending..." : "End Interview"}
+                  </span>
                 </button>
               )}
             </div>
@@ -2300,7 +2313,11 @@ function VoiceInterviewContent() {
                   <button
                     onClick={isListening ? stopListening : startListening}
                     disabled={
-                      !interviewStarted || isAISpeaking || interviewCompleted || submitPhaseActive || isSubmittingCode
+                      !interviewStarted ||
+                      isAISpeaking ||
+                      interviewCompleted ||
+                      submitPhaseActive ||
+                      isSubmittingCode
                     }
                     className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
                       isListening
@@ -2379,22 +2396,28 @@ function VoiceInterviewContent() {
                       onClick={runCode}
                       disabled={isRunningCode}
                       className={`btn-primary px-4 py-1 text-sm flex items-center space-x-1 ${
-                        isRunningCode ? 'opacity-50 cursor-not-allowed' : ''
+                        isRunningCode ? "opacity-50 cursor-not-allowed" : ""
                       }`}
                     >
                       <Terminal size={14} />
-                      <span>{isRunningCode ? 'Running...' : 'Run'}</span>
+                      <span>{isRunningCode ? "Running..." : "Run"}</span>
                     </button>
                     {codeExecutionSuccess && (
                       <button
                         onClick={submitCode}
                         disabled={isSubmittingCode}
                         className={`bg-green-500 hover:bg-green-600 text-white px-4 py-1 text-sm rounded flex items-center space-x-1 ${
-                          isSubmittingCode ? 'opacity-50 cursor-not-allowed' : ''
+                          isSubmittingCode
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
                         }`}
                       >
                         <Send size={14} />
-                        <span>{isSubmittingCode ? 'Submitting...' : 'Submit Solution'}</span>
+                        <span>
+                          {isSubmittingCode
+                            ? "Submitting..."
+                            : "Submit Solution"}
+                        </span>
                       </button>
                     )}
                   </div>
