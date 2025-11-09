@@ -9,7 +9,7 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL:
       process.env.NODE_ENV === "production"
-        ? "https://api.topplaced.com"
+        ? "https://stagingapi.topplaced.com"
         : "http://localhost:5000",
   },
 };
