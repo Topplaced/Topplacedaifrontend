@@ -1,16 +1,20 @@
 # AI Interview System - API Endpoints Documentation
 
 ## Overview
+
 This document outlines all the API endpoints and payload structures needed for the AI Interview System backend implementation.
 
 ## Base URL
+
 ```
-Production: https://api.topplaced.com/v1
+Production: https://stagingapi.topplaced.com/v1
 Development: https://localhost:8000/api/v1
 ```
 
 ## Authentication
+
 All endpoints require Bearer token authentication:
+
 ```
 Authorization: Bearer <user_jwt_token>
 ```
@@ -20,11 +24,13 @@ Authorization: Bearer <user_jwt_token>
 ## 1. START INTERVIEW
 
 ### Endpoint
+
 ```http
 POST /interview/start
 ```
 
 ### Request Payload
+
 ```json
 {
   "user": {
@@ -88,6 +94,7 @@ POST /interview/start
 ```
 
 ### Response
+
 ```json
 {
   "success": true,
@@ -118,11 +125,13 @@ POST /interview/start
 ## 2. CHAT/CONVERSATION (Real-time during interview)
 
 ### Endpoint
+
 ```http
 POST /interview/conversation
 ```
 
 ### Request Payload
+
 ```json
 {
   "sessionId": "session_2024_01_20_123456",
@@ -182,6 +191,7 @@ POST /interview/conversation
 ```
 
 ### Response
+
 ```json
 {
   "success": true,
@@ -219,11 +229,13 @@ POST /interview/conversation
 ## 3. CODE EXECUTION
 
 ### Endpoint
+
 ```http
 POST /interview/code/execute
 ```
 
 ### Request Payload
+
 ```json
 {
   "sessionId": "session_2024_01_20_123456",
@@ -271,6 +283,7 @@ POST /interview/code/execute
 ```
 
 ### Response
+
 ```json
 {
   "success": true,
@@ -338,11 +351,13 @@ POST /interview/code/execute
 ## 4. END INTERVIEW
 
 ### Endpoint
+
 ```http
 POST /interview/end
 ```
 
 ### Request Payload
+
 ```json
 {
   "sessionId": "session_2024_01_20_123456",
@@ -426,6 +441,7 @@ POST /interview/end
 ```
 
 ### Response
+
 ```json
 {
   "success": true,
@@ -453,11 +469,13 @@ POST /interview/end
 ## 5. GET INTERVIEW RESULTS
 
 ### Endpoint
+
 ```http
 GET /interview/results/{sessionId}
 ```
 
 ### Response Payload
+
 ```json
 {
   "success": true,
@@ -520,8 +538,14 @@ GET /interview/results/{sessionId}
       "aiEvaluation": {
         "score": 85,
         "feedback": "Good introduction covering relevant experience. Could have included more specific achievements.",
-        "keyPoints": ["Mentioned relevant technologies", "Clear timeline of experience"],
-        "missedOpportunities": ["Could have mentioned specific achievements", "No metrics provided"]
+        "keyPoints": [
+          "Mentioned relevant technologies",
+          "Clear timeline of experience"
+        ],
+        "missedOpportunities": [
+          "Could have mentioned specific achievements",
+          "No metrics provided"
+        ]
       },
       "responseMetrics": {
         "responseTime": 12.5,
@@ -546,7 +570,10 @@ GET /interview/results/{sessionId}
         "totalTestCases": 3
       },
       "feedback": {
-        "positive": ["Correct and concise implementation", "Good use of built-in methods"],
+        "positive": [
+          "Correct and concise implementation",
+          "Good use of built-in methods"
+        ],
         "improvements": ["Could add input validation for edge cases"],
         "suggestions": ["Add error handling for null/undefined inputs"]
       }
@@ -599,6 +626,7 @@ GET /interview/results/{sessionId}
 ## Additional Endpoints
 
 ### Speech-to-Text
+
 ```http
 POST /speech/transcribe
 Content-Type: multipart/form-data
@@ -612,6 +640,7 @@ Response:
 ```
 
 ### Text-to-Speech
+
 ```http
 POST /speech/synthesize
 {
@@ -628,6 +657,7 @@ Response:
 ```
 
 ### Interview History
+
 ```http
 GET /user/{userId}/interviews
 
@@ -651,6 +681,7 @@ Response:
 ## Error Responses
 
 All endpoints return errors in this format:
+
 ```json
 {
   "success": false,
@@ -666,11 +697,13 @@ All endpoints return errors in this format:
 ## WebSocket Events (Real-time)
 
 ### Connection
+
 ```
 wss://api.topplaced.com/interview/ws/{sessionId}
 ```
 
 ### Events
+
 ```json
 // AI Question
 {
