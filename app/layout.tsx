@@ -1,8 +1,7 @@
 import "./globals.css";
-import { ReduxProvider } from "@/store/provider";
 import type { Metadata } from "next";
-import { Toaster } from "sonner";
 import Script from "next/script";
+import ClientProviders from "@/app/client-providers";
 
 export const metadata: Metadata = {
   title: "Top placed AI | AI-Powered Career Development Platform",
@@ -27,8 +26,7 @@ export default function RootLayout({
           strategy="lazyOnload"
         />
         <div className="min-h-screen">
-          <Toaster richColors position="top-center" />
-          <ReduxProvider>{children}</ReduxProvider>
+          <ClientProviders>{children}</ClientProviders>
         </div>
       </body>
     </html>

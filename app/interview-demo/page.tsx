@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCircle, Send, Bot, User } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface Message {
   id: string;
@@ -26,7 +26,7 @@ interface ConversationResponse {
     question: string;
     questionNumber: number;
     totalQuestions: number;
-    expectedTime: number;
+  expectedTime?: number;
     requiresCode: boolean;
     category: string;
   };
