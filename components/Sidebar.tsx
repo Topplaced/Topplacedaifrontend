@@ -51,42 +51,42 @@ export default function Sidebar({ userType }: SidebarProps) {
       href: "/learner/interview/setup",
       locked: false,
     },
-    {
-      icon: Trophy,
-      label: "Scorecard",
-      href: "/learner/scorecard",
-      locked: false,
-    },
+    // {
+    //   icon: Trophy,
+    //   label: "Scorecard",
+    //   href: "/learner/scorecard",
+    //   locked: false,
+    // },
     {
       icon: BarChart3,
       label: "Interview History",
       href: "/learner/history",
       locked: false,
     },
-    {
-      icon: Users,
-      label: "Find Mentors",
-      href: "/learner/mentors",
-      locked: true,
-    },
-    {
-      icon: Calendar,
-      label: "Sessions",
-      href: "/learner/sessions",
-      locked: true,
-    },
-    {
-      icon: BookOpen,
-      label: "Resources",
-      href: "/learner/resources",
-      locked: true,
-    },
-    {
-      icon: Award,
-      label: "Achievements",
-      href: "/learner/achievements",
-      locked: false,
-    },
+    // {
+    //   icon: Users,
+    //   label: "Find Mentors",
+    //   href: "/learner/mentors",
+    //   locked: true,
+    // },
+    // {
+    //   icon: Calendar,
+    //   label: "Sessions",
+    //   href: "/learner/sessions",
+    //   locked: true,
+    // },
+    // {
+    //   icon: BookOpen,
+    //   label: "Resources",
+    //   href: "/learner/resources",
+    //   locked: true,
+    // },
+    // {
+    //   icon: Award,
+    //   label: "Achievements",
+    //   href: "/learner/achievements",
+    //   locked: false,
+    // },
     { icon: User, label: "Profile", href: "/learner/profile", locked: false },
     { icon: Settings, label: "Settings", href: "/settings", locked: false },
   ];
@@ -164,7 +164,8 @@ export default function Sidebar({ userType }: SidebarProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate">
-                  {user?.name || (userType === "learner" ? "Learner" : "Mentor")}
+                  {user?.name ||
+                    (userType === "learner" ? "Learner" : "Mentor")}
                 </div>
                 <div className="text-xs text-gray-400 capitalize">
                   {userType}

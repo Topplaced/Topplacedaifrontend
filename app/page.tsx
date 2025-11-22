@@ -268,14 +268,14 @@ export default function HomePage() {
                     For Learners
                   </Link>
                 </li>
-                <li>
+                {/* <li>
                   <Link
                     href="/mentor"
                     className="hover:text-[#00FFB2] transition-colors"
                   >
                     For Mentors
                   </Link>
-                </li>
+                </li> */}
                 <li>
                   <Link
                     href="/pricing"
