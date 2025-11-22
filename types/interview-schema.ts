@@ -6,7 +6,7 @@ export interface InterviewCurrentQuestion {
   question: string;
   questionNumber: number;
   totalQuestions: number;
-  expectedTime: number;
+  expectedTime?: number;
 }
 
 export interface InterviewScores {
@@ -15,6 +15,7 @@ export interface InterviewScores {
   communication: number;
   problemSolving: number;
   codeQuality: number;
+  improvement?: string;
 }
 
 export interface InterviewProgress {

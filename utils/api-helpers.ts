@@ -137,7 +137,7 @@ function mapLevelToBackend(frontendLevel: string): 'entry' | 'mid' | 'senior' | 
     'advanced': 'senior',
     'expert': 'lead'
   };
-  return levelMap[frontendLevel] || 'mid';
+  return levelMap[frontendLevel] || 'entry';
 }
 
 // Helper function to build interview configuration
@@ -675,4 +675,80 @@ export function handleAPIError(error: any, context: string) {
     error: error.message || 'An unexpected error occurred',
     context
   };
+}
+
+// Dashboard API Functions
+export async function getUserDashboardStats(userId: string) {
+  const response = await fetch(`${API_URL}/achievements/user/stats`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('token')}`,
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch user dashboard stats');
+  }
+  
+  return await response.json();
+}
+
+export async function getUserInterviewHistory(userId: string, limit: number = 10, offset: number = 0) {
+  const url = `${API_URL}/users/${userId}/interview-history?limit=${limit}&offset=${offset}`;
+  console.log('🔍 API URL:', url);
+  console.log('🔍 API_URL:', API_URL);
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('token')}`,
+    },
+  });
+  
+  console.log('🔍 Response status:', response.status);
+  console.log('🔍 Response ok:', response.ok);
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('❌ API Error:', errorText);
+    throw new Error(`Failed to fetch user interview history: ${response.status} ${errorText}`);
+  }
+  
+  const data = await response.json();
+  console.log('🔍 API Response data:', data);
+  return data;
+}
+
+export async function getUserInterviewUsage(userId: string) {
+  const response = await fetch(`${API_URL}/users/${userId}/interview-usage`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('token')}`,
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch user interview usage');
+  }
+  
+  return await response.json();
+}
+
+export async function getUserAchievements() {
+  const response = await fetch(`${API_URL}/achievements/user`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('token')}`,
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch user achievements');
+  }
+  
+  return await response.json();
 }

@@ -42,13 +42,6 @@ export default function SettingsPage() {
       description: "Default vibrant green theme",
     },
     {
-      id: "electric-blue",
-      name: "Electric Blue",
-      primary: "#00D4FF",
-      secondary: "#0099CC",
-      description: "Cool electric blue theme",
-    },
-    {
       id: "cyber-purple",
       name: "Cyber Purple",
       primary: "#B800FF",
@@ -178,7 +171,7 @@ export default function SettingsPage() {
               </Link>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold gradient-text">
-              Settings ⚙️
+              Theme ⚙️
             </h1>
             <p className="text-gray-400 text-lg">
               Customize your Top placed AIexperience
@@ -188,7 +181,7 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div className="lg:col-span-1">
               <div className="glass-card p-6 sticky top-24">
-                <h3 className="text-lg font-semibold mb-4">Settings</h3>
+                <h3 className="text-lg font-semibold mb-4">Theme</h3>
                 <nav className="space-y-2">
                   <a
                     href="#appearance"
@@ -196,13 +189,13 @@ export default function SettingsPage() {
                   >
                     <Palette size={16} className="mr-3" /> Appearance
                   </a>
-                  <a
+                  {/* <a
                     href="#profile"
                     className="flex items-center p-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#1A1A1A]"
                   >
                     <User size={16} className="mr-3" /> Profile
-                  </a>
-                  <a
+                  </a> */}
+                  {/* <a
                     href="#notifications"
                     className="flex items-center p-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#1A1A1A]"
                   >
@@ -219,7 +212,7 @@ export default function SettingsPage() {
                     className="flex items-center p-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#1A1A1A]"
                   >
                     <Globe size={16} className="mr-3" /> Language
-                  </a>
+                  </a> */}
                 </nav>
               </div>
             </div>

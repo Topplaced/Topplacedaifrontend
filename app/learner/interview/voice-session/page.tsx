@@ -1,5 +1,5 @@
 "use client";
-
+//test
 import { useState, useEffect, useRef, Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
@@ -60,6 +60,10 @@ function VoiceInterviewContent() {
   // Add level mapping function
   const mapLevelToBackend = (frontendLevel: string): string => {
     const levelMap: { [key: string]: string } = {
+      beginner: "beginner",
+      intermediate: "intermediate",
+      advanced: "advanced",
+      // Legacy mappings for backward compatibility
       entry: "beginner",
       mid: "intermediate",
       senior: "advanced",
@@ -82,7 +86,10 @@ function VoiceInterviewContent() {
   // Get the correct configuration for the category
   const config = buildInterviewConfig(level, category, duration);
   const hasCodeEditorParam = searchParams.get("hasCodeEditor");
-  const hasCodeEditor = hasCodeEditorParam !== null ? hasCodeEditorParam === "true" : config.hasCodeEditor;
+  const hasCodeEditor =
+    hasCodeEditorParam !== null
+      ? hasCodeEditorParam === "true"
+      : config.hasCodeEditor;
   const defaultLanguage = selectedLanguage || config.language; // Use selected language first, fallback to config
 
   // State management
@@ -105,6 +112,17 @@ function VoiceInterviewContent() {
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [interviewProgress, setInterviewProgress] = useState(0);
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
+
+  // AI Speech Queue Management
+  const [aiSpeechQueue, setAiSpeechQueue] = useState<
+    Array<{ id: string; text: string; audioUrl: string }>
+  >([]);
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
+
+  // Loading states for buttons
+  const [isRunningCode, setIsRunningCode] = useState(false);
+  const [isSubmittingCode, setIsSubmittingCode] = useState(false);
+  const [isEndingInterview, setIsEndingInterview] = useState(false);
 
   // Response time tracking like testInterview.html
   const [responseStartTime, setResponseStartTime] = useState<number | null>(
@@ -134,6 +152,7 @@ function VoiceInterviewContent() {
   const [totalQuestions, setTotalQuestions] = useState(6);
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
   const [currentQuestionId, setCurrentQuestionId] = useState<string>("");
+  const [interviewCompleted, setInterviewCompleted] = useState(false);
 
   // Build interview payload from URL parameters and user data
   const buildInterviewPayload = () => {
@@ -194,164 +213,199 @@ function VoiceInterviewContent() {
 
   // Initialize Google Speech Recognition
   useEffect(() => {
-    if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
-      const SpeechRecognition =
-        (window as any).webkitSpeechRecognition ||
-        (window as any).SpeechRecognition;
-      const recognitionInstance = new SpeechRecognition();
+    if (typeof window === "undefined") return;
 
-      recognitionInstance.continuous = false;
-      recognitionInstance.interimResults = false;
-      recognitionInstance.lang = "en-US";
+    // ✅ Use browser-supported SpeechRecognition
+    const SpeechRecognition =
+      (window as any).webkitSpeechRecognition ||
+      (window as any).SpeechRecognition;
 
-      recognitionInstance.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        console.log("🎤 Speech recognition result:", transcript);
-        setTranscript(transcript);
-
-        // Add user message
-        const userMessage: Message = {
-          id: `user_${Date.now()}`,
-          type: "user",
-          content: transcript,
-          timestamp: new Date(),
-        };
-
-        setMessages((prev) => [...prev, userMessage]);
-
-        // Send answer via REST API
-        if (sessionId) {
-          console.log("📤 Sending answer via REST API:", transcript);
-          sendAnswerToAPI(transcript);
-        }
-
-        setQuestionsAnswered((prev) => prev + 1);
-      };
-
-      recognitionInstance.onerror = (event: any) => {
-        console.error("❌ Speech recognition error:", event.error);
-        setTranscript("Error recognizing speech. Please try again.");
-        setIsListening(false);
-      };
-
-      recognitionInstance.onend = () => {
-        console.log("🛑 Speech recognition ended");
-        setIsListening(false);
-      };
-
-      setRecognition(recognitionInstance);
+    if (!SpeechRecognition) {
+      console.warn("Speech recognition not supported in this browser.");
+      return;
     }
 
-    // Initialize Speech Synthesis
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    const recognitionInstance = new SpeechRecognition();
+    recognitionInstance.continuous = true; // Enable continuous recognition for better live captions
+    recognitionInstance.interimResults = true; // Enable interim results for live captions
+    recognitionInstance.lang = "en-US";
+    recognitionInstance.maxAlternatives = 1;
+
+    let finalTranscript = "";
+
+    recognitionInstance.onstart = () => {
+      console.log("🎤 Recognition started");
+      finalTranscript = "";
+      setTranscript("Listening...");
+    };
+
+    recognitionInstance.onresult = (event: any) => {
+      let interimTranscript = "";
+      finalTranscript = "";
+
+      // Process all results to build both interim and final transcripts
+      for (let i = 0; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + " ";
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      // Show live captions: final transcript + interim (in progress)
+      const displayText = finalTranscript + interimTranscript;
+      if (displayText.trim()) {
+        setTranscript(displayText.trim());
+        console.log("🎤 Live caption:", displayText.trim());
+      }
+    };
+
+    recognitionInstance.onerror = (event: any) => {
+      console.error("❌ Speech recognition error:", event.error);
+
+      if (event.error === "no-speech" || event.error === "audio-capture") {
+        console.log("⏸️ No speech detected or mic issue");
+        setTranscript("No speech detected. Please try speaking again.");
+      } else {
+        setTranscript("Error recognizing speech. Please try again.");
+      }
+
+      setIsListening(false);
+    };
+
+    recognitionInstance.onend = () => {
+      console.log("🛑 Speech recognition ended");
+
+      // Don't auto-restart - let user control when to stop
+      setIsListening(false);
+    };
+
+    setRecognition(recognitionInstance);
+
+    // --- Initialize Speech Synthesis ---
+    if ("speechSynthesis" in window) {
       setSpeechSynthesis(window.speechSynthesis);
     }
+
+    return () => {
+      try {
+        recognitionInstance.stop();
+      } catch {}
+    };
   }, [sessionId, currentQuestionId]);
 
-  // Text-to-Speech Audio Play
-  const playAIAudio = async (audioUrl: string, text: string) => {
+  // AI Speech Queue Management Functions
+  const addToSpeechQueue = (text: string, audioUrl: string = "") => {
+    const id = `speech_${Date.now()}_${Math.random()}`;
+    setAiSpeechQueue((prev) => [...prev, { id, text, audioUrl }]);
+  };
+
+  const processNextInQueue = useCallback(async () => {
+    if (isProcessingQueue || aiSpeechQueue.length === 0) return;
+
+    setIsProcessingQueue(true);
+    const nextItem = aiSpeechQueue[0];
+
+    try {
+      await playAIAudioDirect(nextItem.audioUrl, nextItem.text);
+    } catch (error) {
+      console.error("Error processing speech queue item:", error);
+    } finally {
+      setAiSpeechQueue((prev) => prev.slice(1)); // Remove processed item
+      setIsProcessingQueue(false);
+    }
+  }, [isProcessingQueue, aiSpeechQueue]);
+
+  // Process queue when items are added
+  useEffect(() => {
+    if (!isProcessingQueue && aiSpeechQueue.length > 0) {
+      processNextInQueue();
+    }
+  }, [aiSpeechQueue, isProcessingQueue, processNextInQueue]);
+
+  // Direct AI Audio Play (internal function)
+  const playAIAudioDirect = async (audioUrl: string, text: string) => {
     console.log("🔊 Playing AI audio:", text);
     setIsAISpeaking(true);
     setCurrentAudioUrl(audioUrl);
     setIsAudioPlaying(true);
 
-    try {
-      // Try ElevenLabs TTS API first with proper error handling
-      const response = await fetch("/api/text-to-speech", {
+    return new Promise<void>((resolve, reject) => {
+      const cleanup = () => {
+        setIsAISpeaking(false);
+        setIsAudioPlaying(false);
+        setCurrentAudioUrl(null);
+      };
+
+      const handleSuccess = () => {
+        cleanup();
+        resolve();
+      };
+
+      const handleError = (error: any) => {
+        cleanup();
+        reject(error);
+      };
+
+      // Try ElevenLabs TTS API first
+      fetch("/api/text-to-speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text,
-          voice_id: "EXAVITQu4vr4xnSDxMaL", // Sarah voice
+          voice_id: "EXAVITQu4vr4xnSDxMaL",
           model_id: "eleven_monolingual_v1",
         }),
-      });
+      })
+        .then((response) =>
+          response.ok ? response.json() : Promise.reject(response)
+        )
+        .then((data) => {
+          if (data.useBrowserTTS && speechSynthesis) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+            utterance.volume = 1;
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log("🔊 ElevenLabs TTS API response:", data);
+            const voices = speechSynthesis.getVoices();
+            const femaleVoice = voices.find(
+              (voice: { name: string | string[]; gender: string }) =>
+                voice.name.includes("Female") ||
+                voice.name.includes("Samantha") ||
+                voice.name.includes("Karen") ||
+                voice.gender === "female"
+            );
 
-        if (data.useBrowserTTS && speechSynthesis) {
-          // Use browser's built-in speech synthesis
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.rate = 0.9;
-          utterance.pitch = 1;
-          utterance.volume = 1;
+            if (femaleVoice) {
+              utterance.voice = femaleVoice;
+            }
 
-          // Get a female voice if available
-          const voices = speechSynthesis.getVoices();
-          const femaleVoice = voices.find(
-            (voice: { name: string | string[]; gender: string }) =>
-              voice.name.includes("Female") ||
-              voice.name.includes("Samantha") ||
-              voice.name.includes("Karen") ||
-              voice.gender === "female"
-          );
-
-          if (femaleVoice) {
-            utterance.voice = femaleVoice;
+            utterance.onend = handleSuccess;
+            utterance.onerror = handleError;
+            speechSynthesis.speak(utterance);
+          } else if (data.audioUrl && data.audioContent) {
+            const audio = new Audio(data.audioUrl);
+            audio.onended = handleSuccess;
+            audio.onerror = handleError;
+            audio.play().catch(handleError);
+          } else {
+            throw new Error("No audio content available");
           }
+        })
+        .catch((error) => {
+          console.error("TTS error, using fallback:", error);
+          // Fallback simulation
+          const duration = Math.random() * 2000 + 3000;
+          setTimeout(handleSuccess, duration);
+        });
+    });
+  };
 
-          utterance.onend = () => {
-            setIsAISpeaking(false);
-            setIsAudioPlaying(false);
-            setCurrentAudioUrl(null);
-          };
-
-          utterance.onerror = (event) => {
-            console.error("Speech synthesis error:", event);
-            setIsAISpeaking(false);
-            setIsAudioPlaying(false);
-            setCurrentAudioUrl(null);
-          };
-
-          speechSynthesis.speak(utterance);
-        } else if (data.audioUrl && data.audioContent) {
-          // Use ElevenLabs TTS audio
-          const audio = new Audio(data.audioUrl);
-          audio.onerror = (error) => {
-            console.error("Audio playback error:", error);
-            setIsAISpeaking(false);
-            setIsAudioPlaying(false);
-            setCurrentAudioUrl(null);
-          };
-          audio.onended = () => {
-            setIsAISpeaking(false);
-            setIsAudioPlaying(false);
-            setCurrentAudioUrl(null);
-          };
-          audio.play().catch((error) => {
-            console.error("Audio play failed:", error);
-            setIsAISpeaking(false);
-            setIsAudioPlaying(false);
-            setCurrentAudioUrl(null);
-          });
-        } else {
-          throw new Error(
-            "No audio content from ElevenLabs or browser TTS available"
-          );
-        }
-      } else {
-        const errorData = await response.json();
-        throw new Error(
-          `ElevenLabs TTS API failed: ${response.status} - ${
-            errorData.error || "Unknown error"
-          }`
-        );
-      }
-    } catch (error) {
-      console.error(
-        "❌ ElevenLabs TTS error, using simulation fallback:",
-        error
-      );
-      // Fallback to simulation
-      const duration = Math.random() * 2000 + 3000;
-      setTimeout(() => {
-        setIsAISpeaking(false);
-        setIsAudioPlaying(false);
-        setCurrentAudioUrl(null);
-      }, duration);
-    }
+  // Public AI Audio Play (adds to queue)
+  const playAIAudio = (audioUrl: string, text: string) => {
+    if (!text.trim()) return;
+    addToSpeechQueue(text, audioUrl);
   };
 
   // Initialize camera and microphone
@@ -382,10 +436,16 @@ function VoiceInterviewContent() {
   useEffect(() => {
     if (!interviewStarted) return;
 
+    // Ensure we only end once when time is up
+    const endedOnceRef = { current: false };
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
-          handleEndInterview();
+          if (!endedOnceRef.current) {
+            endedOnceRef.current = true;
+            clearInterval(timer);
+            handleEndInterview();
+          }
           return 0;
         }
         return prev - 1;
@@ -471,10 +531,15 @@ function VoiceInterviewContent() {
 
     try {
       const body: any = {
-        sessionId: sessionId,
+        sessionId,
         message: answer,
-        questionId: currentQuestionId,
-        responseTime: responseTime,
+        questionId: currentQuestionId, // keep numeric ID for tracking
+        question:
+          messages.find((m) => m.id === `question_${currentQuestionId}`)
+            ?.content || // try to find the actual question text from chat history
+          messages.filter((m) => m.type === "ai").slice(-1)[0]?.content ||
+          "", // fallback to last AI message
+        responseTime,
         metadata: {
           userAgent: navigator.userAgent,
           deviceType: /Mobile|Android|iPhone|iPad/.test(navigator.userAgent)
@@ -483,7 +548,7 @@ function VoiceInterviewContent() {
           messageType: isCode ? "code_submission" : "answer",
           timestamp: new Date().toISOString(),
           questionNumber: currentQuestionNumber,
-          totalQuestions: totalQuestions,
+          totalQuestions,
           sessionDuration: Date.now() - (responseStartTime || Date.now()),
         },
         advanceToNext: true,
@@ -526,8 +591,9 @@ function VoiceInterviewContent() {
           setDebugLogs((prev) => [...prev.slice(-9), debugEntry]); // Keep last 10 entries
         }
 
-        // Handle AI response and current question to avoid duplication
-        let messageContent = "";
+        // Handle AI response and current question separately to avoid duplication
+        let aiResponseContent = "";
+        let questionContent = "";
         let audioContent = "";
 
         if (data.aiResponse || data.shortResponse) {
@@ -536,12 +602,16 @@ function VoiceInterviewContent() {
           audioContent = displayText;
 
           // For UI, show minimal content for free users, full details for paid users
-          messageContent = displayText;
+          aiResponseContent = displayText;
 
           // Add detailed feedback only for paid interviews
-          if (!isFreeInterview && data.feedback && data.feedback.score !== undefined) {
+          if (
+            !isFreeInterview &&
+            data.feedback &&
+            data.feedback.score !== undefined
+          ) {
             const feedbackDetails = `\n\n📊 **Score: ${data.feedback.score}/100**`;
-            messageContent += feedbackDetails;
+            aiResponseContent += feedbackDetails;
 
             // Add detailed scores if available
             if (data.detailedScores) {
@@ -552,17 +622,17 @@ function VoiceInterviewContent() {
                 `• Clarity: ${data.detailedScores.clarity}/100\n` +
                 `• Technical Accuracy: ${data.detailedScores.technicalAccuracy}/100\n` +
                 `• Communication: ${data.detailedScores.communicationQuality}/100`;
-              messageContent += detailsText;
+              aiResponseContent += detailsText;
             }
 
             // Add strengths and improvements if available
             if (data.strengths && data.strengths.length > 0) {
-              messageContent += `\n\n✅ **Strengths:** ${data.strengths.join(
+              aiResponseContent += `\n\n✅ **Strengths:** ${data.strengths.join(
                 ", "
               )}`;
             }
             if (data.improvements && data.improvements.length > 0) {
-              messageContent += `\n\n🔄 **Areas for Improvement:** ${data.improvements.join(
+              aiResponseContent += `\n\n🔄 **Areas for Improvement:** ${data.improvements.join(
                 ", "
               )}`;
             }
@@ -570,36 +640,58 @@ function VoiceInterviewContent() {
         }
 
         if (data.currentQuestion) {
+          // ✅ Normal case: backend sends next question object
           setCurrentQuestionId(data.currentQuestion.id);
           setCurrentQuestionNumber(data.currentQuestion.questionNumber);
           if (data.currentQuestion.totalQuestions) {
             setTotalQuestions(data.currentQuestion.totalQuestions);
           }
 
-          // Start timing for next question
           setResponseStartTime(Date.now());
 
-          const questionText = `Next Question (${data.currentQuestion.questionNumber}/${data.currentQuestion.totalQuestions}): ${data.currentQuestion.question}`;
-
-          if (messageContent) {
-            messageContent += `\n\n${questionText}`;
-            // Do not override audioContent; keep speaking only the display text
-          } else {
-            messageContent = questionText;
-            // Do not set audioContent to question text; keep speaking only the display text
+          // Only set questionContent if we don't already have aiResponseContent
+          // This prevents duplication when shortResponse contains the question
+          if (!aiResponseContent) {
+            questionContent = data.currentQuestion.question;
           }
+
+          // Don't combine with messageContent anymore
+        } else {
+          // 🧩 Fallback: backend didn’t send currentQuestion (still return next text)
+          console.warn(
+            "⚠️ No currentQuestion in response — generating fallback question ID"
+          );
+          const nextQ = currentQuestionNumber + 1;
+          const fallbackQuestionId = `q${nextQ}`;
+          setCurrentQuestionId(fallbackQuestionId);
+          setCurrentQuestionNumber(nextQ);
+          setResponseStartTime(Date.now());
+
+          // Don't set questionContent here since shortResponse is already in aiResponseContent
+          // This prevents duplication
         }
 
-        // Add single combined message if we have content
-        if (messageContent) {
-          const combinedMessage: Message = {
+        // Add AI response message if we have content
+        if (aiResponseContent) {
+          const aiMessage: Message = {
             id: `ai_${Date.now()}`,
             type: "ai",
-            content: messageContent,
+            content: aiResponseContent,
             timestamp: new Date(),
           };
-          setMessages((prev) => [...prev, combinedMessage]);
+          setMessages((prev) => [...prev, aiMessage]);
           playAIAudio("", audioContent);
+        }
+
+        // Add question message separately if we have content
+        if (questionContent) {
+          const questionMessage: Message = {
+            id: `question_${Date.now()}`,
+            type: "ai",
+            content: questionContent,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, questionMessage]);
         }
 
         // Update progress
@@ -608,6 +700,46 @@ function VoiceInterviewContent() {
             data.progress.questionsAnswered || questionsAnswered,
             data.progress.totalQuestions || totalQuestions
           );
+
+          // Check if interview is completed - only based on actual progress count
+          const answered = data.progress.questionsAnswered || questionsAnswered;
+          const total = data.progress.totalQuestions || totalQuestions;
+          console.log("📊 Progress check:", {
+            answered,
+            total,
+            currentCompleted: interviewCompleted,
+            hasCurrentQuestion: !!data.currentQuestion,
+            progressData: data.progress,
+          });
+
+          // Only complete if we've actually answered all questions AND there's no next question
+          if (answered >= total && total > 0 && !data.currentQuestion) {
+            console.log(
+              "✅ Interview completed based on progress and no more questions!"
+            );
+            setInterviewCompleted(true);
+          } else {
+            console.log(
+              "🔄 Interview continues - not all conditions met for completion"
+            );
+          }
+        }
+
+        // Only check AI response for completion if we don't have a current question
+        // This prevents premature completion during the interview
+        if (
+          !data.currentQuestion &&
+          data.aiResponse &&
+          (data.aiResponse.toLowerCase().includes("interview is complete") ||
+            data.aiResponse
+              .toLowerCase()
+              .includes("that concludes the interview") ||
+            data.aiResponse.toLowerCase().includes("no more questions"))
+        ) {
+          console.log(
+            "✅ Interview completed based on AI response and no current question!"
+          );
+          setInterviewCompleted(true);
         }
       } else {
         throw new Error(`HTTP ${response.status}`);
@@ -879,16 +1011,84 @@ function VoiceInterviewContent() {
       recognition.stop();
     }
     setIsListening(false);
-    setTranscript("");
+
+    // Get the current transcript (which includes live captions)
+    const finalText = transcript.trim();
+    console.log("📝 Final transcript length:", finalText.length, "characters");
+    console.log("📝 Final transcript content:", finalText);
+
+    // Only process if we have valid content and it's not just the "Listening..." placeholder
+    if (
+      finalText.length > 0 &&
+      finalText !== "Listening..." &&
+      finalText !== "No speech detected. Please try speaking again." &&
+      finalText !== "Error recognizing speech. Please try again."
+    ) {
+      const userMessage: Message = {
+        id: `user_${Date.now()}`,
+        type: "user",
+        content: finalText,
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, userMessage]);
+
+      // Debug logging for second answer issue
+      console.log("🔍 Debug - stopListening state check:", {
+        sessionId: sessionId,
+        interviewCompleted: interviewCompleted,
+        questionsAnswered: questionsAnswered,
+        totalQuestions: totalQuestions,
+        finalText: finalText,
+      });
+
+      if (sessionId) {
+        console.log("📤 Sending final response via REST API:", finalText);
+        sendAnswerToAPI(finalText);
+      } else {
+        console.error("❌ No sessionId available - cannot send answer!");
+      }
+
+      // Only increment questions answered if interview is not completed
+      if (!interviewCompleted) {
+        console.log(
+          "📊 Incrementing questionsAnswered from",
+          questionsAnswered,
+          "to",
+          questionsAnswered + 1
+        );
+        setQuestionsAnswered((prev) => prev + 1);
+      } else {
+        console.warn(
+          "⚠️ Interview already completed - not incrementing questionsAnswered"
+        );
+      }
+    } else {
+      console.warn("⚠️ No valid transcript to send:", finalText);
+      // Show a message to the user that no speech was detected
+      if (finalText.length === 0 || finalText === "Listening...") {
+        setTranscript("No speech detected. Please try again.");
+      }
+    }
+
+    // Reset transcript for next answer after a short delay to show any error messages
+    setTimeout(() => {
+      setTranscript("");
+    }, 2000);
   };
 
   const runCode = async () => {
+    if (isRunningCode) {
+      return; // Prevent multiple simultaneous executions
+    }
+
     if (!code.trim()) {
       setWarningMessage("Please write some code before running.");
       setShowWarning(true);
       return;
     }
 
+    setIsRunningCode(true);
     console.log("💻 Executing code...");
 
     const codeMessage: Message = {
@@ -961,16 +1161,23 @@ function VoiceInterviewContent() {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsRunningCode(false);
     }
   };
 
   const submitCode = async () => {
+    if (isSubmittingCode) {
+      return; // Prevent multiple simultaneous submissions
+    }
+
     if (!codeExecutionSuccess || !lastExecutionResult) {
       setWarningMessage("Please run your code successfully before submitting.");
       setShowWarning(true);
       return;
     }
 
+    setIsSubmittingCode(true);
     console.log("📤 Submitting code solution...");
 
     try {
@@ -1006,10 +1213,21 @@ function VoiceInterviewContent() {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsSubmittingCode(false);
     }
   };
 
+  // Derived state: when code ran successfully and awaits submission
+  const submitPhaseActive =
+    hasCodeEditor && codeExecutionSuccess && !isSubmittingCode;
+
   const handleEndInterview = async () => {
+    if (isEndingInterview) {
+      return; // Prevent multiple simultaneous end interview calls
+    }
+
+    setIsEndingInterview(true);
     console.log("🏁 Ending interview...");
 
     try {
@@ -1143,6 +1361,8 @@ function VoiceInterviewContent() {
       }
     } catch (error) {
       console.error("❌ Error ending interview:", error);
+    } finally {
+      setIsEndingInterview(false);
     }
 
     // Cleanup media streams
@@ -1405,9 +1625,7 @@ function VoiceInterviewContent() {
           const questionMessage: Message = {
             id: `next_question_${Date.now()}`,
             type: "ai",
-            content: `Question ${
-              data.questionNumber || currentQuestionNumber + 1
-            }: ${data.question}`,
+            content: data.question,
             timestamp: new Date(),
           };
           setMessages((prev) => [...prev, questionMessage]);
@@ -1576,6 +1794,16 @@ function VoiceInterviewContent() {
                     <li className="flex items-start space-x-2">
                       <span className="text-blue-400 mt-1">•</span>
                       <span>Use the code editor for programming questions</span>
+                    </li>
+                  )}
+                  {hasCodeEditor && (
+                    <li className="flex items-start space-x-2">
+                      <span className="text-blue-400 mt-1">•</span>
+                      <span>
+                        For coding: write your code → click Run → after a
+                        successful run, submit your result. The mic is disabled
+                        until you submit.
+                      </span>
                     </li>
                   )}
                   <li className="flex items-start space-x-2">
@@ -1945,25 +2173,44 @@ function VoiceInterviewContent() {
                 </button>
               )}
 
-              <button
-                onClick={handleEndInterview}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-              >
-                <Phone size={16} />
-                <span>End Interview</span>
-              </button>
+              {interviewCompleted ? (
+                <button
+                  onClick={handleEndInterview}
+                  disabled={isEndingInterview}
+                  className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                    isEndingInterview ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                >
+                  <Phone size={16} />
+                  <span>
+                    {isEndingInterview ? "Submitting..." : "Submit Interview"}
+                  </span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleEndInterview}
+                  disabled={isEndingInterview}
+                  className={`bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                    isEndingInterview ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                >
+                  <Phone size={16} />
+                  <span>
+                    {isEndingInterview ? "Ending..." : "End Interview"}
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         </div>
 
         <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)]">
-          {/* Left Panel - Video and Chat */}
-          <div className="w-full lg:w-1/2 flex flex-col border-r-0 lg:border-r border-[#00FFB2]/20">
-            {/* Video Section */}
-            <div className="h-64 lg:h-1/2 bg-[#0A0A0A] p-2 lg:p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:gap-4 h-full">
+          {/* Column 1 - Video (20%) */}
+          <div className="w-full lg:w-[20%] flex flex-col border-r-0 lg:border-r border-[#00FFB2]/20">
+            <div className="flex-1 bg-[#0A0A0A] p-2 lg:p-4 overflow-y-auto">
+              <div className="flex flex-col gap-2 lg:gap-4 h-full items-stretch">
                 {/* User Video */}
-                <div className="bg-[#111] rounded-lg overflow-hidden relative">
+                <div className="bg-[#111] rounded-lg overflow-hidden relative aspect-square">
                   <video
                     ref={videoRef}
                     autoPlay
@@ -1982,7 +2229,7 @@ function VoiceInterviewContent() {
                 </div>
 
                 {/* AI Avatar */}
-                <div className="bg-[#111] rounded-lg overflow-hidden relative">
+                <div className="bg-[#111] rounded-lg overflow-hidden relative aspect-square">
                   <AIAvatar isActive={isAISpeaking} />
                   <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-sm">
                     AI Interviewer
@@ -1995,116 +2242,131 @@ function VoiceInterviewContent() {
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Chat Section */}
-            <div className="flex-1 lg:h-1/2 flex flex-col bg-[#0A0A0A] min-h-[300px]">
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((message) => (
+          {/* Column 2 - Chat (50%) */}
+          <div className="w-full lg:w-[50%] flex flex-col border-r-0 lg:border-r border-[#00FFB2]/20 bg-[#0A0A0A]">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${
+                    message.type === "user"
+                      ? "justify-end"
+                      : message.type === "system"
+                      ? "justify-center"
+                      : "justify-start"
+                  }`}
+                >
                   <div
-                    key={message.id}
-                    className={`flex ${
+                    className={`max-w-[90%] sm:max-w-[80%] p-2 lg:p-3 rounded-lg text-sm lg:text-base ${
                       message.type === "user"
-                        ? "justify-end"
+                        ? "bg-[#00FFB2] text-black"
                         : message.type === "system"
-                        ? "justify-center"
-                        : "justify-start"
+                        ? "bg-yellow-500/20 text-yellow-400 text-center"
+                        : "bg-[#1A1A1A] text-white"
                     }`}
                   >
-                    <div
-                      className={`max-w-[90%] sm:max-w-[80%] p-2 lg:p-3 rounded-lg text-sm lg:text-base ${
-                        message.type === "user"
-                          ? "bg-[#00FFB2] text-black"
-                          : message.type === "system"
-                          ? "bg-yellow-500/20 text-yellow-400 text-center"
-                          : "bg-[#1A1A1A] text-white"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center space-x-2">
-                          {message.type === "user" ? (
-                            <User size={16} />
-                          ) : message.type === "system" ? (
-                            <Bot size={16} className="text-yellow-400" />
-                          ) : (
-                            <Bot size={16} className="text-[#00FFB2]" />
-                          )}
-                          <span className="text-xs opacity-70">
-                            {message.timestamp.toLocaleTimeString()}
-                          </span>
-                        </div>
-                        {message.type === "ai" && (
-                          <button
-                            onClick={() => replayAIMessage(message)}
-                            className="text-[#00FFB2] hover:text-[#00CC8E] ml-2"
-                            title="Replay Audio"
-                          >
-                            <Volume2 size={14} />
-                          </button>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center space-x-2">
+                        {message.type === "user" ? (
+                          <User size={16} />
+                        ) : message.type === "system" ? (
+                          <Bot size={16} className="text-yellow-400" />
+                        ) : (
+                          <Bot size={16} className="text-[#00FFB2]" />
                         )}
+                        <span className="text-xs opacity-70">
+                          {message.timestamp.toLocaleTimeString()}
+                        </span>
                       </div>
-                      <div className="whitespace-pre-wrap">
-                        {message.content}
-                      </div>
+                      {message.type === "ai" && (
+                        <button
+                          onClick={() => replayAIMessage(message)}
+                          className="text-[#00FFB2] hover:text-[#00CC8E] ml-2"
+                          title="Replay Audio"
+                        >
+                          <Volume2 size={14} />
+                        </button>
+                      )}
                     </div>
+                    <div className="whitespace-pre-wrap">{message.content}</div>
                   </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </div>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
 
-              {/* Voice Input Section */}
-              <div className="p-4 border-t border-[#00FFB2]/20">
-                <div className="flex flex-col space-y-3">
-                  {transcript && (
-                    <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#00FFB2]/20">
-                      <div className="text-sm text-gray-400 mb-1">
-                        Transcript:
-                      </div>
-                      <div className="text-white">{transcript}</div>
+            {/* Voice Input Section */}
+            <div className="p-4 border-t border-[#00FFB2]/20">
+              <div className="flex flex-col space-y-3">
+                {transcript && (
+                  <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#00FFB2]/20">
+                    <div className="text-sm text-gray-400 mb-1">
+                      Transcript:
                     </div>
-                  )}
+                    <div className="text-white">{transcript}</div>
+                  </div>
+                )}
 
-                  <div className="flex items-center justify-center space-x-4">
-                    <button
-                      onClick={isListening ? stopListening : startListening}
-                      disabled={!interviewStarted || isAISpeaking}
-                      className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        isListening
-                          ? "bg-red-500 hover:bg-red-600 animate-pulse"
-                          : "bg-[#00FFB2] hover:bg-[#00CC8E]"
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      {isListening ? (
-                        <Square size={24} className="text-white" />
-                      ) : (
-                        <Mic size={24} className="text-black" />
-                      )}
-                    </button>
+                <div className="flex items-center justify-center space-x-4">
+                  <button
+                    onClick={isListening ? stopListening : startListening}
+                    disabled={
+                      !interviewStarted ||
+                      isAISpeaking ||
+                      interviewCompleted ||
+                      submitPhaseActive ||
+                      isSubmittingCode
+                    }
+                    className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
+                      isListening
+                        ? "bg-red-500 hover:bg-red-600 animate-pulse"
+                        : interviewCompleted
+                        ? "bg-gray-500"
+                        : "bg-[#00FFB2] hover:bg-[#00CC8E]"
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {isListening ? (
+                      <Square size={24} className="text-white" />
+                    ) : (
+                      <Mic size={24} className="text-black" />
+                    )}
+                  </button>
 
-                    <div className="text-center">
-                      <div className="text-sm text-gray-400">
-                        {!interviewStarted
-                          ? "Start interview to begin"
-                          : isAISpeaking
-                          ? "AI is speaking..."
-                          : isListening
-                          ? "Recording... Click to stop"
-                          : "Click to speak"}
-                      </div>
-                      {!isMicOn && (
-                        <div className="text-xs text-red-400 mt-1">
-                          Microphone is disabled
-                        </div>
-                      )}
+                  <div className="text-center">
+                    <div className="text-sm text-gray-400">
+                      {!interviewStarted
+                        ? "Start interview to begin"
+                        : interviewCompleted
+                        ? "Interview completed - Click Submit Interview above"
+                        : isAISpeaking
+                        ? "AI is speaking..."
+                        : isListening
+                        ? "Recording... Click to stop"
+                        : submitPhaseActive
+                        ? "Run successful — you have to submit the result"
+                        : "Click to speak"}
                     </div>
+                    {!isMicOn && (
+                      <div className="text-xs text-red-400 mt-1">
+                        Microphone is disabled
+                      </div>
+                    )}
+                    {submitPhaseActive && (
+                      <div className="text-xs text-yellow-400 mt-1">
+                        Note: Mic is disabled until you submit your result
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Panel - Code Editor (if applicable) */}
+          {/* Column 3 - Code Editor (30%) */}
           {hasCodeEditor && showCodeEditor ? (
-            <div className="w-1/2 flex flex-col">
+            <div className="w-full lg:w-[30%] flex flex-col">
               <div className="bg-[#0A0A0A] border-b border-[#00FFB2]/20 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
@@ -2132,18 +2394,30 @@ function VoiceInterviewContent() {
                     </select>
                     <button
                       onClick={runCode}
-                      className="btn-primary px-4 py-1 text-sm flex items-center space-x-1"
+                      disabled={isRunningCode}
+                      className={`btn-primary px-4 py-1 text-sm flex items-center space-x-1 ${
+                        isRunningCode ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
                     >
                       <Terminal size={14} />
-                      <span>Run</span>
+                      <span>{isRunningCode ? "Running..." : "Run"}</span>
                     </button>
                     {codeExecutionSuccess && (
                       <button
                         onClick={submitCode}
-                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 text-sm rounded flex items-center space-x-1"
+                        disabled={isSubmittingCode}
+                        className={`bg-green-500 hover:bg-green-600 text-white px-4 py-1 text-sm rounded flex items-center space-x-1 ${
+                          isSubmittingCode
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
+                        }`}
                       >
                         <Send size={14} />
-                        <span>Submit Solution</span>
+                        <span>
+                          {isSubmittingCode
+                            ? "Submitting..."
+                            : "Submit Solution"}
+                        </span>
                       </button>
                     )}
                   </div>
@@ -2167,7 +2441,7 @@ function VoiceInterviewContent() {
               </div>
             </div>
           ) : hasCodeEditor && !showCodeEditor ? (
-            <div className="w-full lg:w-1/2 flex items-center justify-center bg-[#0A0A0A] border-l-0 lg:border-l border-[#00FFB2]/20 min-h-[400px] lg:min-h-0">
+            <div className="w-full lg:w-[30%] flex items-center justify-center bg-[#0A0A0A] border-l-0 lg:border-l border-[#00FFB2]/20 min-h-[400px] lg:min-h-0">
               <div className="text-center">
                 <Code size={48} className="text-gray-500 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">
@@ -2187,7 +2461,7 @@ function VoiceInterviewContent() {
               </div>
             </div>
           ) : !hasCodeEditor ? (
-            <div className="w-full lg:w-1/2 flex items-center justify-center bg-[#0A0A0A] min-h-[400px] lg:min-h-0">
+            <div className="w-full lg:w-[30%] flex items-center justify-center bg-[#0A0A0A] min-h-[400px] lg:min-h-0">
               <div className="text-center">
                 <Bot size={48} className="text-gray-500 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Voice Interview</h3>

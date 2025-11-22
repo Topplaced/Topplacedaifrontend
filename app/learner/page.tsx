@@ -1,6 +1,6 @@
 "use client";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import { RootState } from "@/store/store";
+import ProtectedRoute from "../../components/ProtectedRoute";
+import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -18,44 +18,141 @@ import {
   BookOpen,
   Zap,
 } from "lucide-react";
-import Navbar from "@/components/Navbar";
-import Sidebar from "@/components/Sidebar";
+import Navbar from "../../components/Navbar";
+import Sidebar from "../../components/Sidebar";
 import { useRouter } from "next/navigation";
+import { 
+  getUserDashboardStats, 
+  getUserInterviewHistory, 
+  getUserInterviewUsage, 
+  getUserAchievements 
+} from "../../utils/api-helpers";
+import { Interview } from "../../types/interview-schema";
 
 export default function LearnerDashboard() {
   const [isVisible, setIsVisible] = useState(false);
-  const [interviewsCount, setInterviewsCount] = useState(1);
-  const [avgScore, setAvgScore] = useState(85);
-  const [mentorsCount, setMentorsCount] = useState(2);
+  const [interviewsCount, setInterviewsCount] = useState(0);
+  const [avgScore, setAvgScore] = useState(0);
+  const [mentorsCount, setMentorsCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
+    stats: null,
+    interviewHistory: null,
+    achievements: null,
+    usage: null
+  });
+  const [skillProgress, setSkillProgress] = useState({
+    interviewSkills: 0,
+    technicalKnowledge: 0,
+    communication: 0
+  });
 
   const dispatch = useDispatch();
   const router = useRouter();
   const { user } = useSelector((state: RootState) => state.auth);
-  console.log
 
   useEffect(() => {
     setIsVisible(true);
-  }, []);
+    fetchDashboardData();
+  }, [user]);
 
-  const recentScores = [
+  const fetchDashboardData = async () => {
+    if (!user?._id) return;
+    
+    try {
+      setLoading(true);
+      
+      // Fetch all dashboard data in parallel
+      const [stats, interviewHistory, achievements, usage] = await Promise.all([
+        getUserDashboardStats(user._id).catch(err => {
+          console.error('Error fetching stats:', err);
+          return null;
+        }),
+        getUserInterviewHistory(user._id, 50).catch(err => {
+          console.error('Error fetching interview history:', err);
+          return null;
+        }),
+        getUserAchievements().catch(err => {
+          console.error('Error fetching achievements:', err);
+          return null;
+        }),
+        getUserInterviewUsage(user._id).catch(err => {
+          console.error('Error fetching usage:', err);
+          return null;
+        })
+      ]);
+
+      // Update dashboard data
+      setDashboardData({
+        stats,
+        interviewHistory,
+        achievements,
+        usage
+      });
+
+      // Update header stats
+      if (interviewHistory?.interviews) {
+        setInterviewsCount(interviewHistory.totalInterviews || interviewHistory.interviews.length);
+        
+        // Calculate average score from recent interviews
+        const interviewsWithScores = interviewHistory.interviews.filter(
+          (interview: any) => interview.scores?.overall
+        );
+        if (interviewsWithScores.length > 0) {
+          const avgScoreValue = interviewsWithScores.reduce(
+            (sum: number, interview: any) => sum + interview.scores.overall, 
+            0
+          ) / interviewsWithScores.length;
+          setAvgScore(Math.round(avgScoreValue));
+          
+          // Calculate skill progress from interview scores
+          const avgCommunication = interviewsWithScores.reduce(
+            (sum: number, interview: any) => sum + (interview.scores?.communication || 0), 
+            0
+          ) / interviewsWithScores.length;
+          
+          const avgTechnical = interviewsWithScores.reduce(
+            (sum: number, interview: any) => sum + (interview.scores?.technical || 0), 
+            0
+          ) / interviewsWithScores.length;
+          
+          setSkillProgress({
+            interviewSkills: Math.round(avgScoreValue),
+            technicalKnowledge: Math.round(avgTechnical || avgScoreValue),
+            communication: Math.round(avgCommunication || avgScoreValue * 0.9)
+          });
+        }
+      } else {
+        // Set default values if no interview data
+        setSkillProgress({
+          interviewSkills: 0,
+          technicalKnowledge: 0,
+          communication: 0
+        });
+      }
+
+      // Set mentors count (placeholder - you may want to add a mentors API)
+      setMentorsCount(2); // Keep static for now or add mentors API
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const recentScores = dashboardData.interviewHistory?.interviews?.slice(0, 3).map((interview: any) => ({
+    date: new Date(interview.createdAt).toLocaleDateString(),
+    role: interview.category?.replace(/[-_]/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Interview',
+    score: interview.scores?.overall || 0,
+    improvement: interview.scores?.improvement || '+0%'
+  })) || [
     {
-      date: "2024-01-15",
-      role: "Software Engineer",
-      score: 85,
-      improvement: "+12%",
-    },
-    {
-      date: "2024-01-12",
-      role: "Product Manager",
-      score: 78,
-      improvement: "+8%",
-    },
-    {
-      date: "2024-01-10",
-      role: "Data Scientist",
-      score: 92,
-      improvement: "+15%",
-    },
+      date: "No interviews yet",
+      role: "Start your first interview",
+      score: 0,
+      improvement: "+0%",
+    }
   ];
 
   const recommendedMentors = [
@@ -134,12 +231,12 @@ export default function LearnerDashboard() {
                     </div>
                     <div className="text-sm text-gray-400">Avg Score</div>
                   </div>
-                  <div className="text-center">
+                  {/* <div className="text-center">
                     <div className="text-2xl font-bold text-[#00FFB2]">
                       {mentorsCount}
                     </div>
                     <div className="text-sm text-gray-400">Mentors</div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>
@@ -203,12 +300,12 @@ export default function LearnerDashboard() {
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span>Interview Skills</span>
-                      <span className="text-[#00FFB2]">87%</span>
+                      <span className="text-[#00FFB2]">{skillProgress.interviewSkills}%</span>
                     </div>
                     <div className="w-full bg-[#1A1A1A] rounded-full h-2">
                       <div
-                        className="bg-gradient-to-r from-[#00FFB2] to-[#00CC8E] h-2 rounded-full"
-                        style={{ width: "87%" }}
+                        className="bg-gradient-to-r from-[#00FFB2] to-[#00CC8E] h-2 rounded-full transition-all duration-1000"
+                        style={{ width: `${skillProgress.interviewSkills}%` }}
                       ></div>
                     </div>
                   </div>
@@ -216,12 +313,12 @@ export default function LearnerDashboard() {
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span>Technical Knowledge</span>
-                      <span className="text-[#00FFB2]">92%</span>
+                      <span className="text-[#00FFB2]">{skillProgress.technicalKnowledge}%</span>
                     </div>
                     <div className="w-full bg-[#1A1A1A] rounded-full h-2">
                       <div
-                        className="bg-gradient-to-r from-[#00FFB2] to-[#00CC8E] h-2 rounded-full"
-                        style={{ width: "92%" }}
+                        className="bg-gradient-to-r from-[#00FFB2] to-[#00CC8E] h-2 rounded-full transition-all duration-1000"
+                        style={{ width: `${skillProgress.technicalKnowledge}%` }}
                       ></div>
                     </div>
                   </div>
@@ -229,12 +326,12 @@ export default function LearnerDashboard() {
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span>Communication</span>
-                      <span className="text-[#00FFB2]">79%</span>
+                      <span className="text-[#00FFB2]">{skillProgress.communication}%</span>
                     </div>
                     <div className="w-full bg-[#1A1A1A] rounded-full h-2">
                       <div
-                        className="bg-gradient-to-r from-[#00FFB2] to-[#00CC8E] h-2 rounded-full"
-                        style={{ width: "79%" }}
+                        className="bg-gradient-to-r from-[#00FFB2] to-[#00CC8E] h-2 rounded-full transition-all duration-1000"
+                        style={{ width: `${skillProgress.communication}%` }}
                       ></div>
                     </div>
                   </div>
@@ -305,29 +402,47 @@ export default function LearnerDashboard() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center p-4 bg-[#1A1A1A] rounded-lg">
-                    <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center mr-4">
-                      <Trophy size={20} className="text-yellow-500" />
-                    </div>
-                    <div>
-                      <div className="font-semibold">Interview Streak</div>
-                      <div className="text-sm text-gray-400">
-                        Completed 5 interviews in a row
+                  {dashboardData.achievements && dashboardData.achievements.length > 0 ? (
+                    dashboardData.achievements.slice(0, 2).map((achievement: any, index: number) => (
+                      <div key={index} className="flex items-center p-4 bg-[#1A1A1A] rounded-lg">
+                        <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center mr-4">
+                          <Trophy size={20} className="text-yellow-500" />
+                        </div>
+                        <div>
+                          <div className="font-semibold">{achievement.achievementId?.title || 'Achievement'}</div>
+                          <div className="text-sm text-gray-400">
+                            {achievement.achievementId?.description || 'Achievement unlocked'}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    ))
+                  ) : (
+                    <>
+                      <div className="flex items-center p-4 bg-[#1A1A1A] rounded-lg">
+                        <div className="w-12 h-12 bg-gray-500/20 rounded-full flex items-center justify-center mr-4">
+                          <Trophy size={20} className="text-gray-500" />
+                        </div>
+                        <div>
+                          <div className="font-semibold">No achievements yet</div>
+                          <div className="text-sm text-gray-400">
+                            Complete interviews to unlock achievements
+                          </div>
+                        </div>
+                      </div>
 
-                  <div className="flex items-center p-4 bg-[#1A1A1A] rounded-lg">
-                    <div className="w-12 h-12 bg-[#00FFB2]/20 rounded-full flex items-center justify-center mr-4">
-                      <Zap size={20} className="text-[#00FFB2]" />
-                    </div>
-                    <div>
-                      <div className="font-semibold">Quick Learner</div>
-                      <div className="text-sm text-gray-400">
-                        Improved score by 15% in one week
+                      <div className="flex items-center p-4 bg-[#1A1A1A] rounded-lg">
+                        <div className="w-12 h-12 bg-[#00FFB2]/20 rounded-full flex items-center justify-center mr-4">
+                          <Zap size={20} className="text-[#00FFB2]" />
+                        </div>
+                        <div>
+                          <div className="font-semibold">Start your journey</div>
+                          <div className="text-sm text-gray-400">
+                            Take your first interview to begin earning achievements
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    </>
+                  )}
                 </div>
               </div>
               {/* Upcoming Sessions */}
@@ -544,3 +659,11 @@ export default function LearnerDashboard() {
     </ProtectedRoute>
   );
 }
+
+// Define dashboard data type to ensure proper typing
+type DashboardData = {
+  stats: any | null;
+  interviewHistory: { interviews: Interview[]; totalInterviews?: number } | null;
+  achievements: any[] | null;
+  usage: any | null;
+};
