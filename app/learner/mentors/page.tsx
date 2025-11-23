@@ -10,6 +10,7 @@ import {
 
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 export default function MentorsPage() {
   const mentors = [
@@ -52,9 +53,10 @@ export default function MentorsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-black">
-      <Navbar />
-      <Sidebar userType="learner" />
+    <ProtectedRoute>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <Sidebar userType="learner" />
 
       <div className="ml-64 pt-20 pb-12">
         <div className="container-custom space-y-10">
@@ -166,6 +168,7 @@ export default function MentorsPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

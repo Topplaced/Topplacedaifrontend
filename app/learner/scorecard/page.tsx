@@ -20,6 +20,7 @@ import {
 
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { RootState } from "@/store/store";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -397,58 +398,63 @@ export default function ScorecardPage() {
   // —— Render ——
   if (loading) {
     return (
-      <div className="min-h-screen bg-black">
-        <Navbar />
-        <Sidebar userType="learner" />
-        <div className="ml-64 pt-20 pb-12">
-          <div className="container-custom flex items-center justify-center min-h-[60vh]">
-            <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-accent mx-auto mb-4" />
-              <p className="text-gray-400">Loading your scorecard...</p>
+      <ProtectedRoute>
+        <div className="min-h-screen bg-black">
+          <Navbar />
+          <Sidebar userType="learner" />
+          <div className="ml-64 pt-20 pb-12">
+            <div className="container-custom flex items-center justify-center min-h-[60vh]">
+              <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-accent mx-auto mb-4" />
+                <p className="text-gray-400">Loading your scorecard...</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </ProtectedRoute>
     );
   }
 
   if (!scorecardData) {
     return (
-      <div className="min-h-screen bg-black">
-        <Navbar />
-        <Sidebar userType="learner" />
-        <div className="ml-64 pt-20 pb-12">
-          <div className="container-custom flex items-center justify-center min-h-[60vh]">
-            <div className="text-center">
-              <div className="glass-card p-8">
-                <h2 className="text-2xl font-bold mb-4">No Interview History Found</h2>
-                <p className="text-gray-400 mb-6">
-                  {error ? (
-                    <span className="text-red-400">{error}</span>
-                  ) : (
-                    "Complete your first interview to see your scorecard"
-                  )}
-                </p>
-                <div className="space-y-4">
-                  <button onClick={() => router.push("/learner/interview/setup")} className="btn-primary w-full">
-                    Start Your First Interview
-                  </button>
-                  <button onClick={() => setInterviews(getMockInterviews())} className="btn-secondary w-full">
-                    View Sample Scorecard
-                  </button>
+      <ProtectedRoute>
+        <div className="min-h-screen bg-black">
+          <Navbar />
+          <Sidebar userType="learner" />
+          <div className="ml-64 pt-20 pb-12">
+            <div className="container-custom flex items-center justify-center min-h-[60vh]">
+              <div className="text-center">
+                <div className="glass-card p-8">
+                  <h2 className="text-2xl font-bold mb-4">No Interview History Found</h2>
+                  <p className="text-gray-400 mb-6">
+                    {error ? (
+                      <span className="text-red-400">{error}</span>
+                    ) : (
+                      "Complete your first interview to see your scorecard"
+                    )}
+                  </p>
+                  <div className="space-y-4">
+                    <button onClick={() => router.push("/learner/interview/setup")} className="btn-primary w-full">
+                      Start Your First Interview
+                    </button>
+                    <button onClick={() => setInterviews(getMockInterviews())} className="btn-secondary w-full">
+                      View Sample Scorecard
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </ProtectedRoute>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black">
-      <Navbar />
-      <Sidebar userType="learner" />
+    <ProtectedRoute>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <Sidebar userType="learner" />
 
       <div className="ml-64 pt-20 pb-12">
         <div className="container-custom space-y-10">
@@ -673,6 +679,7 @@ export default function ScorecardPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

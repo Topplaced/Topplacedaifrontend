@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 
@@ -539,21 +540,23 @@ function InterviewResultsContent() {
 
 export default function InterviewResultsPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-black">
-        <Navbar />
-        <Sidebar userType="learner" />
-        <div className="ml-64 pt-20 pb-12">
-          <div className="container-custom flex items-center justify-center min-h-[60vh]">
-            <div className="text-center">
-              <Loader2 className="h-12 w-12 animate-spin text-[#00FFB2] mx-auto mb-4" />
-              <p className="text-gray-400">Loading...</p>
+    <ProtectedRoute>
+      <Suspense fallback={
+        <div className="min-h-screen bg-black">
+          <Navbar />
+          <Sidebar userType="learner" />
+          <div className="ml-64 pt-20 pb-12">
+            <div className="container-custom flex items-center justify-center min-h-[60vh]">
+              <div className="text-center">
+                <Loader2 className="h-12 w-12 animate-spin text-[#00FFB2] mx-auto mb-4" />
+                <p className="text-gray-400">Loading...</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    }>
-      <InterviewResultsContent />
-    </Suspense>
+      }>
+        <InterviewResultsContent />
+      </Suspense>
+    </ProtectedRoute>
   );
 }

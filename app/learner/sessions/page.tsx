@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Calendar, Clock, Video, User } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 // ✅ Consistent date formatter to avoid hydration error
 function formatDate(dateString: string) {
@@ -110,9 +111,10 @@ export default function SessionsPage() {
   const filteredSessions = sessions.filter((s) => s.status === tab);
 
   return (
-    <div className="min-h-screen bg-black">
-      <Navbar />
-      <Sidebar userType="learner" />
+    <ProtectedRoute>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <Sidebar userType="learner" />
 
       <div className="ml-64 pt-20 pb-12">
         <div className="container-custom space-y-10">
@@ -160,6 +162,7 @@ export default function SessionsPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

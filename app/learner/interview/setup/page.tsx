@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import {
@@ -976,9 +977,10 @@ export default function InterviewSetupPage() {
   const canStartFreeInterview = freeInterviewsUsed < 2 || hasPaidPlan;
 
   return (
-    <div className="min-h-screen bg-black">
-      <Navbar />
-      <Sidebar userType="learner" />
+    <ProtectedRoute>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <Sidebar userType="learner" />
 
       <div className="ml-64 pt-20 pb-12">
         <div className="container-custom space-y-10">
@@ -1245,7 +1247,8 @@ export default function InterviewSetupPage() {
             )}
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

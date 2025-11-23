@@ -3,6 +3,7 @@
 import { Trophy, Star, Target, Award, Medal, Crown } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 export default function AchievementsPage() {
   const achievements = [
@@ -84,9 +85,10 @@ export default function AchievementsPage() {
   const earnedCount = achievements.filter(a => a.earned).length;
 
   return (
-    <div className="min-h-screen bg-black">
-      <Navbar />
-      <Sidebar userType="learner" />
+    <ProtectedRoute>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <Sidebar userType="learner" />
 
       <div className="ml-64 pt-20 pb-12">
         <div className="container-custom space-y-10">
@@ -184,6 +186,7 @@ export default function AchievementsPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

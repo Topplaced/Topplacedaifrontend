@@ -23,6 +23,7 @@ import {
 import Navbar from "@/components/Navbar";
 import CodeEditor from "@/components/CodeEditor";
 import AIAvatar from "@/components/AIAvatar";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import {
@@ -1018,8 +1019,10 @@ function InterviewSessionContent() {
 
 export default function InterviewSessionPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <InterviewSessionContent />
-    </Suspense>
+    <ProtectedRoute>
+      <Suspense fallback={<div>Loading...</div>}>
+        <InterviewSessionContent />
+      </Suspense>
+    </ProtectedRoute>
   );
 }

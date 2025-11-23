@@ -29,6 +29,7 @@ import {
 import Navbar from "@/components/Navbar";
 import CodeEditor from "@/components/CodeEditor";
 import AIAvatar from "@/components/AIAvatar";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { io, Socket } from "socket.io-client";
@@ -2527,17 +2528,19 @@ function VoiceInterviewContent() {
 
 export default function VoiceInterviewPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-black flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00FFB2] mx-auto mb-4"></div>
-            <p className="text-gray-400">Loading interview session...</p>
+    <ProtectedRoute>
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-black flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00FFB2] mx-auto mb-4"></div>
+              <p className="text-gray-400">Loading interview session...</p>
+            </div>
           </div>
-        </div>
-      }
-    >
-      <VoiceInterviewContent />
-    </Suspense>
+        }
+      >
+        <VoiceInterviewContent />
+      </Suspense>
+    </ProtectedRoute>
   );
 }
