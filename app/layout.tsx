@@ -1,7 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import Script from "next/script";
-import ClientProviders from "@/app/client-providers";
+import { ClientProviders } from "./client-providers";
 
 export const metadata: Metadata = {
   title: "Top placed AI | AI-Powered Career Development Platform",

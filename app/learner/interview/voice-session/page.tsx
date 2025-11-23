@@ -1701,7 +1701,6 @@ function VoiceInterviewContent() {
 
   return (
     <div className="min-h-screen bg-black">
-      <Navbar />
 
       {/* Warning Modal */}
       {showWarning && (
