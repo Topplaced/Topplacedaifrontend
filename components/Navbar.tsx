@@ -39,19 +39,19 @@ export default function Navbar() {
             >
               For Learners
             </Link>
-            <Link
+            {/* <Link
               href="/mentor"
               className="text-gray-300 hover:text-[#00FFB2] transition-colors"
             >
               For Mentors
-            </Link>
+            </Link> */}
             <Link
               href="/pricing"
               className="text-gray-300 hover:text-[#00FFB2] transition-colors"
             >
               Pricing
             </Link>
-            {mounted && user && (
+            {/* {mounted && user && (
               <Link
                 href="/achievements"
                 className="text-gray-300 hover:text-[#00FFB2] transition-colors flex items-center space-x-1"
@@ -59,7 +59,7 @@ export default function Navbar() {
                 <Trophy size={16} />
                 <span>Achievements</span>
               </Link>
-            )}
+            )} */}
           </div>
 
           {/* User Menu / Auth */}
