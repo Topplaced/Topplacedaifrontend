@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import BottomNav from "@/components/BottomNav";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import {
@@ -980,7 +981,7 @@ export default function InterviewSetupPage() {
       <Navbar />
       <Sidebar userType="learner" />
 
-      <div className="ml-64 pt-20 pb-12">
+      <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
         <div className="container-custom space-y-10">
           {/* Header */}
           <div className="text-center">
@@ -1246,6 +1247,7 @@ export default function InterviewSetupPage() {
           </div>
         </div>
       </div>
+      <BottomNav />
     </div>
   );
 }

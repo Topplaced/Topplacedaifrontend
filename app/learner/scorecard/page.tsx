@@ -20,6 +20,7 @@ import {
 
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import BottomNav from "@/components/BottomNav";
 import { RootState } from "@/store/store";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -450,7 +451,7 @@ export default function ScorecardPage() {
       <Navbar />
       <Sidebar userType="learner" />
 
-      <div className="ml-64 pt-20 pb-12">
+      <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
         <div className="container-custom space-y-10">
           {/* Header */}
           <div>
@@ -673,6 +674,7 @@ export default function ScorecardPage() {
           </div>
         </div>
       </div>
+      <BottomNav />
     </div>
   );
 }

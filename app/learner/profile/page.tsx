@@ -2,6 +2,7 @@
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
+import BottomNav from "@/components/BottomNav";
 import Sidebar from "@/components/Sidebar";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
@@ -500,7 +501,7 @@ export default function LearnerProfilePage() {
         <Navbar />
         <div className="flex">
           <Sidebar userType="learner" />
-          <main className="flex-1 ml-64 p-8">
+          <main className="flex-1 md:ml-64 ml-0 p-8 pt-16 md:pt-20 pb-24 md:pb-12">
             {isLoadingProfile ? (
               <div className="flex items-center justify-center min-h-[400px]">
                 <div className="flex items-center space-x-2">
@@ -1286,6 +1287,7 @@ export default function LearnerProfilePage() {
             )}
           </main>
         </div>
+        <BottomNav />
       </div>
     </ProtectedRoute>
   );

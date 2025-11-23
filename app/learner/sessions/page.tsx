@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Calendar, Clock, Video, User } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import BottomNav from '@/components/BottomNav';
 
 // ✅ Consistent date formatter to avoid hydration error
 function formatDate(dateString: string) {
@@ -114,7 +115,7 @@ export default function SessionsPage() {
       <Navbar />
       <Sidebar userType="learner" />
 
-      <div className="ml-64 pt-20 pb-12">
+      <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
         <div className="container-custom space-y-10">
           {/* Header */}
           <div className="flex flex-col gap-2">
@@ -125,7 +126,7 @@ export default function SessionsPage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex space-x-4 border-b border-[#333] pb-2">
+          <div className="flex space-x-4 border-b border-[#333] pb-2 overflow-x-auto">
             <button
               onClick={() => setTab('upcoming')}
               className={`text-sm font-medium pb-2 ${tab === 'upcoming'
@@ -147,7 +148,7 @@ export default function SessionsPage() {
           </div>
 
           {/* Session List */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {filteredSessions.length > 0 ? (
               filteredSessions.map((session) => (
                 <SessionCard key={session.id} {...session} />
@@ -160,6 +161,7 @@ export default function SessionsPage() {
           </div>
         </div>
       </div>
+      <BottomNav />
     </div>
   );
 }

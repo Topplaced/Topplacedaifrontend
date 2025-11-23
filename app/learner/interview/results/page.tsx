@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import BottomNav from '@/components/BottomNav';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 
@@ -172,7 +173,7 @@ function InterviewResultsContent() {
       <div className="min-h-screen bg-black">
         <Navbar />
         <Sidebar userType="learner" />
-        <div className="ml-64 pt-20 pb-12">
+        <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
           <div className="container-custom flex items-center justify-center min-h-[60vh]">
             <div className="text-center">
               <Loader2 className="h-12 w-12 animate-spin text-[#00FFB2] mx-auto mb-4" />
@@ -180,6 +181,7 @@ function InterviewResultsContent() {
             </div>
           </div>
         </div>
+        <BottomNav />
       </div>
     );
   }
@@ -190,7 +192,7 @@ function InterviewResultsContent() {
       <div className="min-h-screen bg-black">
         <Navbar />
         <Sidebar userType="learner" />
-        <div className="ml-64 pt-20 pb-12">
+        <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
           <div className="container-custom flex items-center justify-center min-h-[60vh]">
             <div className="text-center">
               <div className="text-red-400 text-6xl mb-4">⚠️</div>
@@ -205,6 +207,7 @@ function InterviewResultsContent() {
             </div>
           </div>
         </div>
+        <BottomNav />
       </div>
     );
   }
@@ -259,7 +262,7 @@ function InterviewResultsContent() {
       <Navbar />
       <Sidebar userType="learner" />
 
-      <div className="ml-64 pt-20 pb-12">
+      <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
         <div className="container-custom space-y-8">
           {/* Header */}
           <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
@@ -533,6 +536,7 @@ function InterviewResultsContent() {
           </div>
         </div>
       </div>
+      <BottomNav />
     </div>
   );
 }
