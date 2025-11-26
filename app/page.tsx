@@ -13,7 +13,6 @@ import {
   Target,
   ChevronDown,
 } from "lucide-react";
-import Navbar from "@/components/Navbar";
 import { useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { RootState } from "@/store/store";
@@ -41,10 +40,9 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-black">
-      <Navbar />
 
       {/* Hero Section */}
-      <section className="relative pt-24 pb-12 overflow-hidden">
+      <section className="relative pt-12 pb-12 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[#00FFB2]/10 via-transparent to-[#00CC8E]/5"></div>
 
         <div className="container-custom relative z-10">
