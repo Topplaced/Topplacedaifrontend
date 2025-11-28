@@ -1,97 +1,31 @@
 "use client";
 
-import type React from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import {
-  Mail,
-  Eye,
-  EyeOff,
-  ArrowLeft,
-  Lock,
-  AlertCircle,
-} from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
-import { loginSuccess } from "@/store/slices/authSlice";
+import { Mail, ArrowLeft, AlertCircle, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { RootState } from "@/store/store";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { requestPasswordReset } from "@/utils/api-helpers";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
-
-  const dispatch = useDispatch();
-  const auth = useSelector((state: RootState) => state.auth);
   const router = useRouter();
-
-  useEffect(() => {
-    if (auth.token && auth.user) {
-      const role = auth.user.role;
-      if (role === "mentor") {
-        router.replace("/mentor");
-      } else if (role === "user") {
-        router.replace("/learner");
-      } else if (role === "admin") {
-        router.replace("/admin");
-      }
-    }
-  }, [auth.token, auth.user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage("");
     setIsLoading(true);
-
     try {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.access_token && data.user) {
-        localStorage.setItem("token", data.access_token);
-        document.cookie = `token=${data.access_token}; Max-Age=86400; Path=/; SameSite=Lax`;
-        dispatch(loginSuccess(data));
-
-        setMessage("Login successful! Redirecting...");
-        toast.success("Login successful!");
-
-        if (data.user.role === "mentor") {
-          router.push("/mentor");
-        } else if (data.user.role === "admin") {
-          router.push("/admin");
-        } else {
-          router.push("/learner");
-        }
-      } else if (
-        res.status === 403 &&
-        data.message?.includes("email not verified")
-      ) {
-        const msg = "Please verify your email before logging in.";
-        setMessage(msg);
-        toast.error(msg);
-        router.push(
-          `/auth/verify-email?email=${encodeURIComponent(email)}`
-        );
-      } else {
-        const msg = data.message || "Invalid credentials.";
-        setMessage(msg);
-        toast.error("Invalid email or password.");
-      }
-    } catch (err) {
-      const msg = "Server error. Please try again.";
-      setMessage(msg);
-      toast.error("Something went wrong. Please try again.");
+      const res = await requestPasswordReset(email);
+      toast.success("Reset code sent to your email");
+      setMessage(res.message || "Reset code sent to your email");
+      router.push(`/auth/reset-password?email=${encodeURIComponent(email)}`);
+    } catch (error) {
+      toast.error("Failed to send reset code");
+      setMessage("Failed to send reset code");
     } finally {
       setIsLoading(false);
     }
@@ -135,7 +69,7 @@ export default function LoginPage() {
 
   return (
     <div className="h-screen bg-gradient-to-b from-black via-slate-950 to-black text-white overflow-hidden relative">
-      {/* styles */}
+      {/* global styles + animations (same as login) */}
       <style>{`
         @media (min-width: 768px) {
           html, body {
@@ -146,19 +80,21 @@ export default function LoginPage() {
             height: 0 !important;
           }
         }
+
         @keyframes glowPulse {
-          0% { opacity: 0.35; transform: translate(-50%, -50%) scale(0.98); }
-          50% { opacity: 0.55; transform: translate(-50%, -50%) scale(1.02); }
-          100% { opacity: 0.35; transform: translate(-50%, -50%) scale(0.98); }
+          0% {
+            opacity: 0.35;
+            transform: translate(-50%, -50%) scale(0.98);
+          }
+          50% {
+            opacity: 0.55;
+            transform: translate(-50%, -50%) scale(1.02);
+          }
+          100% {
+            opacity: 0.35;
+            transform: translate(-50%, -50%) scale(0.98);
+          }
         }
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          20% { transform: translateX(-6px); }
-          40% { transform: translateX(6px); }
-          60% { transform: translateX(-4px); }
-          80% { transform: translateX(4px); }
-        }
-        .animate-shake { animation: shake 0.35s ease-in-out; }
 
         @keyframes scroll-up {
           0% { transform: translateY(0); }
@@ -174,7 +110,7 @@ export default function LoginPage() {
         .scroll-down:hover { animation-play-state: paused; }
       `}</style>
 
-      {/* background */}
+      {/* background grid + glow */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.2),_transparent_55%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.06)_1px,transparent_1px)] bg-[size:80px_80px]" />
@@ -182,7 +118,7 @@ export default function LoginPage() {
 
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[820px] w-[820px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[720px] w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           background:
             "radial-gradient(closest-side, rgba(0,255,178,0.20), rgba(0,204,142,0.12) 45%, rgba(0,0,0,0) 70%)",
@@ -200,9 +136,9 @@ export default function LoginPage() {
         Back to Home
       </Link>
 
-      {/* layout */}
+      {/* 2-column layout like login */}
       <div className="relative z-10 flex h-full flex-col lg:flex-row">
-        {/* LEFT: form */}
+        {/* LEFT: form block */}
         <section className="flex-1 flex items-center justify-center px-6 lg:px-16">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -211,30 +147,20 @@ export default function LoginPage() {
             className="w-full max-w-xl"
           >
             <p className="mb-3 text-[11px] uppercase tracking-[0.3em] text-emerald-300/80">
-              TopPlaced · Login
+              TopPlaced · Forgot Password
             </p>
             <h1 className="text-[32px] sm:text-[36px] font-extrabold leading-tight">
-              Welcome back to
+              Reset your
               <br />
-              TopPlaced
+              password
             </h1>
             <p className="mt-3 text-sm text-gray-400 max-w-md">
-              Pick up where you left off with your interview practice.
+              Enter the email you use with TopPlaced and we&apos;ll send you a
+              one-time reset code.
             </p>
 
-            <div className="mt-5 flex flex-wrap gap-2 text-[11px]">
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/5 px-2.5 py-1 text-emerald-200">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" />
-                Progress synced
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-cyan-400/30 bg-cyan-400/5 px-2.5 py-1 text-cyan-100">
-                <Lock className="h-3 w-3" />
-                Secure login
-              </span>
-            </div>
-
             <form onSubmit={handleSubmit} className="mt-7 space-y-4">
-              {/* Email */}
+              {/* email field */}
               <div>
                 <label
                   htmlFor="email"
@@ -257,64 +183,12 @@ export default function LoginPage() {
                     required
                   />
                 </div>
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Make sure you have access to this inbox.
+                </p>
               </div>
 
-              {/* Password */}
-              <div>
-                <label
-                  htmlFor="password"
-                  className="block text-xs font-medium text-gray-200 mb-1"
-                >
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock
-                    size={18}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    id="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="h-11 w-full rounded-[6px] border border-[#27313e] bg-[#050712]/90 pl-10 pr-9 text-sm text-white placeholder:text-gray-500 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25"
-                    placeholder="Enter your password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-emerald-300"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-xs md:text-sm">
-                <label className="flex items-center gap-2 text-gray-400">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-emerald-400 focus:ring-emerald-400"
-                  />
-                  Remember me
-                </label>
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-emerald-300 hover:text-emerald-200 hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-
-              {message && (
-                <div className="animate-shake rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>{message}</span>
-                </div>
-              )}
-
-              {/* Button – same radius style as register */}
+              {/* submit button – same pill as login/register */}
               <motion.button
                 type="submit"
                 disabled={isLoading}
@@ -330,31 +204,39 @@ export default function LoginPage() {
                 {isLoading ? (
                   <>
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/40 border-t-black" />
-                    Signing in…
+                    Sending…
                   </>
                 ) : (
                   <>
-                    Sign In
-                    <ArrowLeft className="h-4 w-4 rotate-180 transition group-hover:translate-x-0.5" />
+                    Send reset code
+                    <Lock className="h-4 w-4" />
                   </>
                 )}
                 <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition group-hover:translate-x-full" />
               </motion.button>
 
-              <p className="text-center text-xs md:text-sm text-gray-400">
-                Don&apos;t have an account?{" "}
+              {/* status / error message */}
+              {message && (
+                <div className="mt-1 text-center text-xs text-gray-300 flex items-center justify-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-emerald-300" />
+                  <span>{message}</span>
+                </div>
+              )}
+
+              <p className="pt-2 text-center text-xs md:text-sm text-gray-400">
+                Remembered your password?{" "}
                 <Link
-                  href="/auth/register"
-                  className="font-semibold text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline"
+                  href="/auth/login"
+                  className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline font-medium"
                 >
-                  Sign up
+                  Sign in
                 </Link>
               </p>
             </form>
           </motion.div>
         </section>
 
-        {/* RIGHT: testimonials (same as register) */}
+        {/* RIGHT: same testimonial section style as login/register */}
         <section className="hidden lg:flex flex-1 items-center justify-center bg-gradient-to-b from-[#020617] via-[#020b16] to-[#020617] px-8 lg:px-12">
           <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -371,10 +253,11 @@ export default function LoginPage() {
             <div className="mt-4 h-px w-32 rounded-full bg-emerald-400/30" />
 
             <div className="mt-8 h-[420px] flex gap-6 overflow-hidden">
+              {/* column 1 – scroll up */}
               <div className="scroll-up flex flex-col gap-4">
                 {[...testimonialsCol1, ...testimonialsCol1].map((t, idx) => (
                   <div
-                    key={`login-c1-${idx}`}
+                    key={`forgot-c1-${idx}`}
                     className="w-64 rounded-[24px] border border-[#1f2933] bg-[#020814] px-6 py-4"
                   >
                     <p className="mb-3 text-sm text-gray-100 leading-relaxed">
@@ -388,10 +271,11 @@ export default function LoginPage() {
                 ))}
               </div>
 
+              {/* column 2 – scroll down */}
               <div className="scroll-down hidden flex-col gap-4 xl:flex">
                 {[...testimonialsCol2, ...testimonialsCol2].map((t, idx) => (
                   <div
-                    key={`login-c2-${idx}`}
+                    key={`forgot-c2-${idx}`}
                     className="w-64 rounded-[24px] border border-[#1f2933] bg-[#020814] px-6 py-4"
                   >
                     <p className="mb-3 text-sm text-gray-100 leading-relaxed">

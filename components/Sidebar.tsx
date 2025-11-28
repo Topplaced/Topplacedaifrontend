@@ -107,7 +107,7 @@ export default function Sidebar({ userType }: SidebarProps) {
 
   return (
     <div
-      className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-[#0A0A0A] border-r border-[#00FFB2]/20 transition-all duration-300 z-40 ${
+      className={`hidden md:block fixed left-0 top-16 h-[calc(100vh-4rem)] bg-[#0A0A0A] border-r border-[#00FFB2]/20 transition-all duration-300 z-40 ${
         isCollapsed ? "w-16" : "w-64"
       }`}
     >

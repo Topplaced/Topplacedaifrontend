@@ -30,6 +30,7 @@ import {
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import BottomNav from '@/components/BottomNav';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 
@@ -413,12 +414,13 @@ export default function InterviewHistoryPage() {
         <div className="min-h-screen bg-black">
           <Navbar />
           <Sidebar userType="learner" />
-          <div className="ml-64 pt-20 pb-12 flex items-center justify-center">
+          <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12 flex items-center justify-center">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00FFB2] mx-auto mb-4"></div>
               <p className="text-gray-400">Loading your interview history...</p>
             </div>
           </div>
+          <BottomNav />
         </div>
       </ProtectedRoute>
     );
@@ -426,11 +428,11 @@ export default function InterviewHistoryPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-black">
+      <div className="min-h-screen bg-black overflow-x-hidden">
         <Navbar />
         <Sidebar userType="learner" />
-  
-        <div className="ml-64 pt-20 pb-12">
+
+        <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
           <div className="container-custom space-y-8">
           {/* Header */}
           <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
@@ -585,8 +587,8 @@ export default function InterviewHistoryPage() {
 
           {/* Interview Records */}
           <div className="space-y-4">
-            {filteredAndSortedInterviews.length === 0 ? (
-              <div className="glass-card p-12 text-center">
+          {filteredAndSortedInterviews.length === 0 ? (
+            <div className="glass-card p-12 text-center">
                 <BarChart3 size={48} className="text-gray-500 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">No Interview Records Found</h3>
                 <p className="text-gray-400 mb-6">
@@ -608,9 +610,9 @@ export default function InterviewHistoryPage() {
                 const categoryColor = getCategoryColor(interview.category);
                 
                 return (
-                  <div key={interview.id} className="glass-card p-6 hover:border-[#00FFB2]/40 transition-all duration-300">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-4">
+                  <div key={interview.id} className="glass-card p-6 hover:border-[#00FFB2]/40 transition-all duration-300 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 w-full">
+                      <div className="flex items-center space-x-4 flex-wrap gap-3">
                         <div className={`w-12 h-12 rounded-lg bg-[#1A1A1A] flex items-center justify-center`}>
                           <IconComponent size={24} className={categoryColor} />
                         </div>
@@ -631,7 +633,7 @@ export default function InterviewHistoryPage() {
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center space-x-4 text-sm text-gray-400">
+                          <div className="flex items-center text-sm text-gray-400 flex-wrap gap-x-4 gap-y-1">
                             <span className="capitalize">{interview.level} Level</span>
                             <span>•</span>
                             <span>{interview.duration} minutes</span>
@@ -647,7 +649,7 @@ export default function InterviewHistoryPage() {
                         </div>
                       </div>
                       
-                      <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-4 md:self-auto self-end">
                         <div className="text-right">
                           <div className={`text-2xl font-bold ${getScoreColor(interview.overallScore)}`}>
                             {interview.overallScore}%
@@ -691,8 +693,8 @@ export default function InterviewHistoryPage() {
                     </div>
 
                     {/* Additional Info */}
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-600">
-                      <div className="flex items-center space-x-6 text-sm text-gray-400">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-4 border-t border-gray-600">
+                      <div className="flex items-center space-x-6 text-sm text-gray-400 flex-wrap gap-y-2">
                         <div className="flex items-center space-x-1">
                           <Clock size={14} />
                           <span>Time: {formatDuration(interview.timeSpent)}</span>
@@ -710,15 +712,15 @@ export default function InterviewHistoryPage() {
                         )}
                       </div>
                       
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-wrap md:flex-nowrap gap-2 md:space-x-3 justify-start md:justify-end w-full md:w-auto">
                         <button
                           onClick={() => router.push(`/learner/interview/results?id=${interview.id}`)}
-                          className="btn-outline py-1 px-3 text-sm flex items-center"
+                          className="btn-outline py-2 px-3 md:py-2 md:px-4 text-sm md:text-base flex items-center justify-center w-full sm:w-auto min-h-[36px] md:min-w-[140px]"
                         >
                           <Eye size={14} className="mr-1" />
                           View Details
                         </button>
-                        <button className="btn-outline py-1 px-3 text-sm flex items-center">
+                        <button className="btn-outline py-2 px-3 md:py-2 md:px-4 text-sm md:text-base flex items-center justify-center w-full sm:w-auto min-h-[36px] md:min-w-[140px]">
                           <Download size={14} className="mr-1" />
                           Download
                         </button>
@@ -764,6 +766,7 @@ export default function InterviewHistoryPage() {
           )}
           </div>
         </div>
+        <BottomNav />
       </div>
     </ProtectedRoute>
   );

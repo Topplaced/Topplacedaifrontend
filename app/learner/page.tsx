@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Navbar from "../../components/Navbar";
 import Sidebar from "../../components/Sidebar";
+import BottomNav from "../../components/BottomNav";
 import { useRouter } from "next/navigation";
 import { 
   getUserDashboardStats, 
@@ -194,7 +195,7 @@ export default function LearnerDashboard() {
         <Navbar />
         <Sidebar userType="learner" />
 
-        <div className="ml-64 pt-20 pb-12">
+        <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
           <div className="container-custom">
             {/* Welcome Header */}
             <div
@@ -206,7 +207,7 @@ export default function LearnerDashboard() {
             >
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
-                  <h1 className="text-3xl md:text-4xl font-bold mb-2">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">
                     Welcome back,{" "}
                     <span className="gradient-text">
                       {user?.name || "Learner"}
@@ -242,7 +243,7 @@ export default function LearnerDashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
               {/* Start Interview Card */}
               <div className="lg:col-span-2 glass-card p-8 neon-glow card-hover">
                 <div className="flex items-center justify-between mb-6">
@@ -259,7 +260,7 @@ export default function LearnerDashboard() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
                   <div className="bg-[#1A1A1A] rounded-lg p-4 text-center">
                     <Target size={24} className="text-[#00FFB2] mx-auto mb-2" />
                     <div className="font-semibold">Technical</div>
@@ -353,7 +354,7 @@ export default function LearnerDashboard() {
             </div>
 
             {/* Recent Interviews & Mentorship */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-8">
               {/* Recent Interview Scores */}
               <div className="glass-card p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -655,6 +656,7 @@ export default function LearnerDashboard() {
             </div>
           </div>
         </div>
+        <BottomNav />
       </div>
     </ProtectedRoute>
   );
