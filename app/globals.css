@@ -136,6 +136,14 @@ body {
       transform: translateY(0);
     }
   }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .bottom-nav-transition {
+    transition: background-color 0.2s ease, transform 0.2s ease;
+  }
 }
 
 /* Custom scrollbar */

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "@/store/slices/authSlice";
 import { toast } from "sonner";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -14,32 +15,53 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const token = searchParams.get("token");
     const userParam = searchParams.get("user");
+    const userIdParam = searchParams.get("userId");
 
-    if (token && userParam) {
+    if (!token) {
+      toast.error("Authentication failed. Please try again.");
+      router.replace("/auth/login");
+      return;
+    }
+
+    localStorage.setItem("token", token);
+
+    const finalizeLogin = async () => {
       try {
-        const user = JSON.parse(decodeURIComponent(userParam));
+        let user: any = null;
 
-        // Store token and dispatch login success
-        localStorage.setItem("token", token);
+        if (userParam) {
+          user = JSON.parse(decodeURIComponent(userParam));
+        } else {
+          const res = await fetch(`${API_URL}/api/auth/profile`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (!res.ok) throw new Error("Failed to fetch profile");
+          user = await res.json();
+        }
+
         dispatch(loginSuccess({ access_token: token, user }));
-
         toast.success("LinkedIn login successful!");
 
-        // Redirect based on user role
-        if (user.role === "mentor") {
+        const role = user?.role;
+        if (role === "mentor") {
           router.replace("/mentor");
+        } else if (role === "admin") {
+          router.replace("/admin");
         } else {
           router.replace("/learner");
         }
       } catch (error) {
-        console.error("Error parsing user data:", error);
+        console.error("Auth callback error:", error);
         toast.error("Authentication failed. Please try again.");
         router.replace("/auth/login");
       }
-    } else {
-      toast.error("Authentication failed. Please try again.");
-      router.replace("/auth/login");
-    }
+    };
+
+    finalizeLogin();
   }, [searchParams, dispatch, router]);
 
   return (

@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import BottomNav from "@/components/BottomNav";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import {
@@ -35,7 +37,9 @@ export default function InterviewSetupPage() {
   const [selectedLanguage, setSelectedLanguage] = useState("");
   const [selectedDuration, setSelectedDuration] = useState("45");
   const [freeInterviewsUsed, setFreeInterviewsUsed] = useState(0);
+  const [freeInterviewsLimit, setFreeInterviewsLimit] = useState(2);
   const [hasPaidPlan, setHasPaidPlan] = useState(false);
+  const [interviewCredits, setInterviewCredits] = useState(0);
   const [loading, setLoading] = useState(false);
 
   // Check free trial usage on component mount
@@ -69,6 +73,7 @@ export default function InterviewSetupPage() {
         const data = await response.json();
         setFreeInterviewsUsed(data.freeInterviewsUsed || 0);
         setHasPaidPlan(data.hasPaidPlan || false);
+        setFreeInterviewsLimit(data.freeInterviewsLimit ?? 2);
       } catch (error) {
         console.warn(
           "Error checking trial usage, using default values:",
@@ -79,8 +84,21 @@ export default function InterviewSetupPage() {
       }
     };
 
+    const fetchPlan = async () => {
+      try {
+        const res = await fetch(`${API_URL}/payments/plan`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const plan = await res.json();
+          setInterviewCredits(plan.interviewCredits || 0);
+        }
+      } catch {}
+    };
+
     if (user?._id && token) {
       checkFreeTrialUsage();
+      fetchPlan();
     }
   }, [user?._id, token]);
 
@@ -879,8 +897,8 @@ export default function InterviewSetupPage() {
       return;
     }
 
-    // Check if user has exceeded free interviews
-    if (freeInterviewsUsed >= 2 && !hasPaidPlan) {
+    // Check if user has exceeded free interviews based on dynamic limit and credits
+    if (!hasPaidPlan && interviewCredits <= 0 && freeInterviewsUsed >= freeInterviewsLimit) {
       router.push("/pricing");
       return;
     }
@@ -957,7 +975,9 @@ export default function InterviewSetupPage() {
         userId: user._id,
         userName: user.name,
         userEmail: user.email,
-        isFreeInterview: (!hasPaidPlan).toString(),
+        isFreeInterview: (
+          !hasPaidPlan && interviewCredits <= 0 && freeInterviewsUsed < freeInterviewsLimit
+        ).toString(),
       });
 
       router.push(`/learner/interview/voice-session?${params.toString()}`);
@@ -973,14 +993,15 @@ export default function InterviewSetupPage() {
     }
   };
 
-  const canStartFreeInterview = freeInterviewsUsed < 2 || hasPaidPlan;
+  const canStartFreeInterview = hasPaidPlan || interviewCredits > 0 || freeInterviewsUsed < freeInterviewsLimit;
 
   return (
-    <div className="min-h-screen bg-black">
-      <Navbar />
-      <Sidebar userType="learner" />
+    <ProtectedRoute>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <Sidebar userType="learner" />
 
-      <div className="ml-64 pt-20 pb-12">
+      <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
         <div className="container-custom space-y-10">
           {/* Header */}
           <div className="text-center">
@@ -991,29 +1012,31 @@ export default function InterviewSetupPage() {
           </div>
 
           {/* Free Trial Warning */}
-          {!hasPaidPlan && (
-            <div
-              className={`p-4 rounded-lg border ${
-                freeInterviewsUsed >= 2
-                  ? "border-red-500 bg-red-500/10"
-                  : "border-yellow-500 bg-yellow-500/10"
-              }`}
-            >
-              <p className="text-sm">
-                {freeInterviewsUsed >= 2
-                  ? "🚫 You have used all your free interviews. Upgrade to continue practicing."
-                  : `⚡ Free Trial: ${freeInterviewsUsed}/2 interviews used. Upgrade for unlimited access.`}
-              </p>
-              {freeInterviewsUsed >= 2 && (
-                <button
-                  onClick={() => router.push("/pricing")}
-                  className="mt-2 px-4 py-2 bg-[#00FFB2] text-black rounded-lg font-medium hover:bg-[#00FFB2]/80 transition-colors"
+              {!hasPaidPlan && (
+                <div
+                  className={`p-4 rounded-lg border ${
+                    freeInterviewsUsed >= freeInterviewsLimit
+                      ? "border-red-500 bg-red-500/10"
+                      : "border-yellow-500 bg-yellow-500/10"
+                  }`}
                 >
-                  Upgrade Now
-                </button>
+                  <p className="text-sm">
+                    {interviewCredits > 0
+                      ? `✅ You have ${interviewCredits} interview credit(s).`
+                      : freeInterviewsUsed >= freeInterviewsLimit
+                        ? "🚫 You have used all your free interviews. Upgrade or ask admin for more."
+                        : `⚡ Free Trial: ${freeInterviewsUsed}/${freeInterviewsLimit} interviews used.`}
+                  </p>
+                  {!hasPaidPlan && interviewCredits <= 0 && freeInterviewsUsed >= freeInterviewsLimit && (
+                    <button
+                      onClick={() => router.push("/pricing")}
+                      className="mt-2 px-4 py-2 bg-[#00FFB2] text-black rounded-lg font-medium hover:bg-[#00FFB2]/80 transition-colors"
+                    >
+                      Upgrade Now
+                    </button>
+                  )}
+                </div>
               )}
-            </div>
-          )}
 
           {/* Interview Level Selection */}
           <div className="glass-card p-8">
@@ -1246,6 +1269,8 @@ export default function InterviewSetupPage() {
           </div>
         </div>
       </div>
+      <BottomNav />
     </div>
+    </ProtectedRoute>
   );
 }

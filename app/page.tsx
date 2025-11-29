@@ -1,6 +1,4 @@
-"use client";
-
-import { useState, useEffect } from "react";
+import HomeClient from "@/components/HomeClient";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -13,48 +11,20 @@ import {
   Target,
   ChevronDown,
 } from "lucide-react";
-import Navbar from "@/components/Navbar";
-import { useSelector } from "react-redux";
-import { useRouter } from "next/navigation";
-import { RootState } from "@/store/store";
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function HomePage() {
-  const [isVisible, setIsVisible] = useState(false);
-  const auth = useSelector((state: RootState) => state.auth);
-  const router = useRouter();
-  useEffect(() => {
-    if (auth.token && auth.user) {
-      const role = auth.user.role;
-      if (role === "mentor") {
-        router.replace("/mentor");
-      } else if (role === "user") {
-        router.replace("/learner");
-      }
-    }
-  }, [auth, router]);
-
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
 
   return (
     <div className="min-h-screen bg-black">
-      <Navbar />
+      <HomeClient />
 
       {/* Hero Section */}
       <section className="relative pt-24 pb-12 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[#00FFB2]/10 via-transparent to-[#00CC8E]/5"></div>
 
         <div className="container-custom relative z-10">
-          <div
-            className={`text-center transition-all duration-1000 ${
-              isVisible
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-10"
-            }`}
-          >
+            <div className={`text-center transition-all duration-1000 opacity-100 translate-y-0`}>
             <div className="inline-flex items-center px-4 py-2 bg-[#00FFB2]/10 border border-[#00FFB2]/30 rounded-full mb-6">
               <Zap size={16} className="text-[#00FFB2] mr-2" />
               <span className="text-sm font-medium text-[#00FFB2]">
@@ -68,9 +38,7 @@ export default function HomePage() {
             </h1>
 
             <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Practice with AI-powered mock interviews, get personalized
-              feedback, and connect with expert mentors to accelerate your
-              professional growth.
+              Practice with AI-powered mock interviews and get personalized feedback to accelerate your professional growth.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
@@ -92,19 +60,19 @@ export default function HomePage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-16 max-w-2xl mx-auto justify-items-center">
               <div className="text-center">
                 <div className="text-3xl font-bold text-[#00FFB2] mb-2">
-                  10K+
+                  1K+
                 </div>
                 <div className="text-gray-400">Interviews Conducted</div>
               </div>
-              <div className="text-center">
+              {/* <div className="text-center">
                 <div className="text-3xl font-bold text-[#00FFB2] mb-2">
                   500+
                 </div>
                 <div className="text-gray-400">Expert Mentors</div>
-              </div>
+              </div> */}
               <div className="text-center">
                 <div className="text-3xl font-bold text-[#00FFB2] mb-2">
                   95%
@@ -120,6 +88,8 @@ export default function HomePage() {
         <div className="absolute bottom-1/4 right-10 w-32 h-32 bg-[#00CC8E]/10 rounded-full blur-xl animate-pulse-slow"></div>
       </section>
 
+      
+
       {/* Features Section */}
       <section className="section-padding bg-[#0A0A0A]">
         <div className="container-custom">
@@ -133,9 +103,9 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="flex flex-wrap justify-center gap-8 max-w-6xl mx-auto">
             {/* Feature Cards */}
-            <div className="glass-card p-8 card-hover">
+            <div className="glass-card p-8 card-hover w-full sm:w-[360px]">
               <div className="w-12 h-12 bg-[#00FFB2]/20 rounded-lg flex items-center justify-center mb-6">
                 <Target size={24} className="text-[#00FFB2]" />
               </div>
@@ -148,7 +118,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="glass-card p-8 card-hover">
+            {/* <div className="glass-card p-8 card-hover">
               <div className="w-12 h-12 bg-[#00FFB2]/20 rounded-lg flex items-center justify-center mb-6">
                 <Users size={24} className="text-[#00FFB2]" />
               </div>
@@ -157,9 +127,9 @@ export default function HomePage() {
                 Connect with industry professionals who provide personalized
                 guidance based on your career goals and skill gaps.
               </p>
-            </div>
+            </div> */}
 
-            <div className="glass-card p-8 card-hover">
+            <div className="glass-card p-8 card-hover w-full sm:w-[360px]">
               <div className="w-12 h-12 bg-[#00FFB2]/20 rounded-lg flex items-center justify-center mb-6">
                 <Award size={24} className="text-[#00FFB2]" />
               </div>
@@ -172,7 +142,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="glass-card p-8 card-hover">
+            <div className="glass-card p-8 card-hover w-full sm:w-[360px]">
               <div className="w-12 h-12 bg-[#00FFB2]/20 rounded-lg flex items-center justify-center mb-6">
                 <TrendingUp size={24} className="text-[#00FFB2]" />
               </div>
@@ -183,7 +153,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="glass-card p-8 card-hover">
+            <div className="glass-card p-8 card-hover w-full sm:w-[360px]">
               <div className="w-12 h-12 bg-[#00FFB2]/20 rounded-lg flex items-center justify-center mb-6">
                 <Zap size={24} className="text-[#00FFB2]" />
               </div>
@@ -194,7 +164,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="glass-card p-8 card-hover">
+            <div className="glass-card p-8 card-hover w-full sm:w-[360px]">
               <div className="w-12 h-12 bg-[#00FFB2]/20 rounded-lg flex items-center justify-center mb-6">
                 <Star size={24} className="text-[#00FFB2]" />
               </div>
@@ -233,6 +203,29 @@ export default function HomePage() {
               >
                 View Pricing
               </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Watch Demo Video (above footer) */}
+      <section className="section-padding bg-[#0A0A0A] border-t border-[#00FFB2]/20">
+        <div className="container-custom">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">Watch Demo Video</h2>
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto">See how to use Top placed in a quick walkthrough.</p>
+          </div>
+          <div className="flex justify-center">
+            <div className="w-full max-w-4xl rounded-xl overflow-hidden glass-card p-0">
+              <iframe
+                src="https://www.youtube.com/embed/l0Z3ZZ9JroQ?list=RDl0Z3ZZ9JroQ&rel=0"
+                title="Top placed Demo"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+                className="w-full h-[360px] md:h-[480px]"
+              ></iframe>
             </div>
           </div>
         </div>
@@ -298,14 +291,14 @@ export default function HomePage() {
                     About Us
                   </Link>
                 </li>
-                <li>
+                {/* <li>
                   <Link
                     href="/careers"
                     className="hover:text-[#00FFB2] transition-colors"
                   >
                     Careers
                   </Link>
-                </li>
+                </li> */}
                 <li>
                   <Link
                     href="/contact"

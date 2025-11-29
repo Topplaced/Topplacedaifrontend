@@ -23,7 +23,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   useEffect(() => {
     // Only redirect if hydration is complete and user is not authenticated
     if (isHydrated && (!auth.token || !auth.user)) {
-      router.replace('/');
+      router.replace('/auth/login');
     }
   }, [auth, router, isHydrated]);
 

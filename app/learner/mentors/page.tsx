@@ -10,6 +10,8 @@ import {
 
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import BottomNav from '@/components/BottomNav';
 
 export default function MentorsPage() {
   const mentors = [
@@ -52,11 +54,12 @@ export default function MentorsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-black">
-      <Navbar />
-      <Sidebar userType="learner" />
+    <ProtectedRoute>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <Sidebar userType="learner" />
 
-      <div className="ml-64 pt-20 pb-12">
+      <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
         <div className="container-custom space-y-10">
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -166,6 +169,8 @@ export default function MentorsPage() {
           </div>
         </div>
       </div>
+      <BottomNav />
     </div>
+    </ProtectedRoute>
   );
 }

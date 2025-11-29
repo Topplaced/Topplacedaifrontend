@@ -27,8 +27,10 @@ import {
   WifiOff,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import BottomNav from "@/components/BottomNav";
 import CodeEditor from "@/components/CodeEditor";
 import AIAvatar from "@/components/AIAvatar";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { io, Socket } from "socket.io-client";
@@ -1701,12 +1703,11 @@ function VoiceInterviewContent() {
 
   return (
     <div className="min-h-screen bg-black">
-      <Navbar />
 
       {/* Warning Modal */}
       {showWarning && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center">
-          <div className="glass-card p-8 max-w-md text-center border-2 border-red-500/50">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center overflow-y-auto">
+          <div className="glass-card p-8 max-w-md w-full mx-4 text-center border-2 border-red-500/50">
             <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
             <h3 className="text-xl font-bold mb-4 text-red-400">
               Interview Warning
@@ -1724,8 +1725,8 @@ function VoiceInterviewContent() {
 
       {/* Instructions Popup */}
       {showInstructionsPopup && (
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[70] flex items-center justify-center">
-          <div className="glass-card p-8 max-w-2xl text-center border-2 border-[#00FFB2]/50">
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[70] flex items-center justify-center overflow-y-auto">
+          <div className="glass-card p-8 max-w-2xl w-full mx-4 text-center border-2 border-[#00FFB2]/50">
             <div className="mb-6">
               <div className="w-16 h-16 mx-auto mb-4 bg-[#00FFB2]/20 rounded-full flex items-center justify-center">
                 <Bot size={32} className="text-[#00FFB2]" />
@@ -1867,8 +1868,8 @@ function VoiceInterviewContent() {
 
       {/* Starting Interview Popup */}
       {showStartingPopup && (
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[70] flex items-center justify-center">
-          <div className="glass-card p-8 max-w-lg text-center border-2 border-[#00FFB2]/50">
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[70] flex items-center justify-center overflow-y-auto">
+          <div className="glass-card p-6 sm:p-8 w-[92%] max-w-md sm:max-w-lg mx-auto text-center border-2 border-[#00FFB2]/50">
             {!isStartingInterview ? (
               <>
                 <div className="relative mb-6">
@@ -1939,16 +1940,16 @@ function VoiceInterviewContent() {
                   </ul>
                 </div>
 
-                <div className="flex space-x-4">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={() => router.back()}
-                    className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                    className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors w-full"
                   >
                     Go Back
                   </button>
                   <button
                     onClick={handleManualStart}
-                    className="flex-1 px-4 py-2 bg-[#00FFB2] hover:bg-[#00FFB2]/80 text-black font-semibold rounded-lg transition-colors"
+                    className="flex-1 px-4 py-2 bg-[#00FFB2] hover:bg-[#00FFB2]/80 text-black font-semibold rounded-lg transition-colors w-full"
                   >
                     Start Interview
                   </button>
@@ -1987,11 +1988,11 @@ function VoiceInterviewContent() {
         </div>
       )}
 
-      <div className="pt-16">
+      <div className="pt-16 pb-24">
         {/* Header Bar */}
-        <div className="bg-[#0A0A0A] border-b border-[#00FFB2]/20 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
+        <div className="bg-[#0A0A0A] border-b border-[#00FFB2]/20 px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:space-x-6 space-y-2 lg:space-y-0">
               <div className="flex items-center space-x-2">
                 <Clock size={20} className="text-[#00FFB2]" />
                 <span className="font-mono text-lg">
@@ -2002,8 +2003,8 @@ function VoiceInterviewContent() {
                 Voice Interview • {category?.toUpperCase()} •{" "}
                 {level?.toUpperCase()}
               </div>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
+              <div className="flex items-center flex-wrap gap-2 sm:gap-3">
+                <div className="flex items-center flex-wrap gap-2">
                   <span className="px-2 py-1 bg-blue-900/50 border border-blue-700/50 rounded-full text-xs text-blue-200">
                     Answered:{" "}
                     <span className="font-semibold">{questionsAnswered}</span>
@@ -2017,7 +2018,7 @@ function VoiceInterviewContent() {
                     <span className="font-semibold">{interviewProgress}%</span>
                   </span>
                 </div>
-                <div className="w-32 bg-[#1A1A1A] rounded-full h-2">
+                <div className="w-full sm:w-32 bg-[#1A1A1A] rounded-full h-2">
                   <div
                     className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${interviewProgress}%` }}
@@ -2030,7 +2031,7 @@ function VoiceInterviewContent() {
                 </div>
               )}
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center flex-wrap gap-2">
               <button
                 onClick={toggleMic}
                 className={`p-2 rounded-full ${
@@ -2208,9 +2209,9 @@ function VoiceInterviewContent() {
           {/* Column 1 - Video (20%) */}
           <div className="w-full lg:w-[20%] flex flex-col border-r-0 lg:border-r border-[#00FFB2]/20">
             <div className="flex-1 bg-[#0A0A0A] p-2 lg:p-4 overflow-y-auto">
-              <div className="flex flex-col gap-2 lg:gap-4 h-full items-stretch">
+              <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-col lg:gap-4 h-full items-stretch">
                 {/* User Video */}
-                <div className="bg-[#111] rounded-lg overflow-hidden relative aspect-square">
+                <div className="bg-[#111] rounded-lg overflow-hidden relative aspect-video sm:aspect-square">
                   <video
                     ref={videoRef}
                     autoPlay
@@ -2229,7 +2230,7 @@ function VoiceInterviewContent() {
                 </div>
 
                 {/* AI Avatar */}
-                <div className="bg-[#111] rounded-lg overflow-hidden relative aspect-square">
+                <div className="bg-[#111] rounded-lg overflow-hidden relative aspect-video sm:aspect-square">
                   <AIAvatar isActive={isAISpeaking} />
                   <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-sm">
                     AI Interviewer
@@ -2298,7 +2299,7 @@ function VoiceInterviewContent() {
             </div>
 
             {/* Voice Input Section */}
-            <div className="p-4 border-t border-[#00FFB2]/20">
+            <div className="p-3 sm:p-4 border-t border-[#00FFB2]/20">
               <div className="flex flex-col space-y-3">
                 {transcript && (
                   <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#00FFB2]/20">
@@ -2309,7 +2310,7 @@ function VoiceInterviewContent() {
                   </div>
                 )}
 
-                <div className="flex items-center justify-center space-x-4">
+                <div className="flex items-center justify-center space-x-3 sm:space-x-4">
                   <button
                     onClick={isListening ? stopListening : startListening}
                     disabled={
@@ -2319,7 +2320,7 @@ function VoiceInterviewContent() {
                       submitPhaseActive ||
                       isSubmittingCode
                     }
-                    className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
                       isListening
                         ? "bg-red-500 hover:bg-red-600 animate-pulse"
                         : interviewCompleted
@@ -2522,23 +2523,26 @@ function VoiceInterviewContent() {
           </div>
         )}
       </div>
+      <BottomNav />
     </div>
   );
 }
 
 export default function VoiceInterviewPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-black flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00FFB2] mx-auto mb-4"></div>
-            <p className="text-gray-400">Loading interview session...</p>
+    <ProtectedRoute>
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-black flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00FFB2] mx-auto mb-4"></div>
+              <p className="text-gray-400">Loading interview session...</p>
+            </div>
           </div>
-        </div>
-      }
-    >
-      <VoiceInterviewContent />
-    </Suspense>
+        }
+      >
+        <VoiceInterviewContent />
+      </Suspense>
+    </ProtectedRoute>
   );
 }

@@ -399,6 +399,28 @@ export async function getConversationHistory(sessionId: string) {
   return await response.json();
 }
 
+export async function requestPasswordReset(email: string) {
+  const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email })
+  });
+  return await response.json();
+}
+
+export async function resetPassword(email: string, code: string, newPassword: string) {
+  const response = await fetch(`${API_URL}/api/auth/reset-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, code, newPassword })
+  });
+  return await response.json();
+}
+
 // End Interview
 export async function endInterview(sessionId: string, results?: any) {
   const payload = {

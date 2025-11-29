@@ -2,7 +2,7 @@
 
 import { ReduxProvider } from '@/store/provider';
 
-export default function ClientProviders({
+export default function Providers({
   children,
 }: {
   children: React.ReactNode;

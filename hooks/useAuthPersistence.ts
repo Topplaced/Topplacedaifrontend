@@ -14,7 +14,10 @@ export const useAuthPersistence = () => {
       if (isHydrated) return;
 
       try {
-        const storedToken = localStorage.getItem('token');
+        const storedToken = localStorage.getItem('token') || (() => {
+          const match = document.cookie.match(/(?:^|; )token=([^;]+)/);
+          return match ? decodeURIComponent(match[1]) : '';
+        })();
         
         if (storedToken) {
           // Validate token by fetching user profile
@@ -50,6 +53,7 @@ export const useAuthPersistence = () => {
           } else {
             // Token is invalid, remove it
             localStorage.removeItem('token');
+            document.cookie = 'token=; Max-Age=0; Path=/; SameSite=Lax';
             dispatch(setHydrated());
           }
         } else {
@@ -60,6 +64,7 @@ export const useAuthPersistence = () => {
         console.error('Error restoring auth:', error);
         // Remove invalid token and mark as hydrated
         localStorage.removeItem('token');
+        document.cookie = 'token=; Max-Age=0; Path=/; SameSite=Lax';
         dispatch(setHydrated());
       }
     };

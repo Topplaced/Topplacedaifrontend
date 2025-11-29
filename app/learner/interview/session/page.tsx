@@ -21,8 +21,10 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import BottomNav from "@/components/BottomNav";
 import CodeEditor from "@/components/CodeEditor";
 import AIAvatar from "@/components/AIAvatar";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import {
@@ -784,11 +786,11 @@ function InterviewSessionContent() {
         </div>
       )}
 
-      <div className="pt-16">
+      <div className="pt-16 pb-24 md:pb-0">
         {/* Header Bar */}
-        <div className="bg-[#0A0A0A] border-b border-[#00FFB2]/20 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+        <div className="bg-[#0A0A0A] border-b border-[#00FFB2]/20 px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex items-center flex-wrap gap-2 md:space-x-4">
               <div className="flex items-center space-x-2">
                 <Clock size={20} className="text-[#00FFB2]" />
                 <span className="font-mono text-lg">
@@ -805,7 +807,7 @@ function InterviewSessionContent() {
               )}
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center flex-wrap gap-2">
               <button
                 onClick={toggleMic}
                 className={`p-2 rounded-full ${
@@ -839,14 +841,14 @@ function InterviewSessionContent() {
           </div>
         </div>
 
-        <div className="flex h-[calc(100vh-120px)]">
+        <div className="flex flex-col lg:flex-row min-h-[calc(100vh-120px)]">
           {/* Left Panel - Video and Chat */}
-          <div className="w-1/2 flex flex-col border-r border-[#00FFB2]/20">
+          <div className="w-full lg:w-1/2 flex flex-col border-r-0 lg:border-r border-[#00FFB2]/20">
             {/* Video Section */}
-            <div className="h-1/2 bg-[#0A0A0A] p-4">
-              <div className="grid grid-cols-2 gap-4 h-full">
+            <div className="h-auto lg:h-1/2 bg-[#0A0A0A] p-3 sm:p-4">
+              <div className="grid grid-cols-2 gap-2 sm:gap-4 h-full">
                 {/* User Video */}
-                <div className="bg-[#111] rounded-lg overflow-hidden relative">
+                <div className="bg-[#111] rounded-lg overflow-hidden relative aspect-video sm:aspect-square">
                   <video
                     ref={videoRef}
                     autoPlay
@@ -860,7 +862,7 @@ function InterviewSessionContent() {
                 </div>
 
                 {/* AI Avatar */}
-                <div className="bg-[#111] rounded-lg overflow-hidden relative">
+                <div className="bg-[#111] rounded-lg overflow-hidden relative aspect-video sm:aspect-square">
                   <AIAvatar isActive={isAISpeaking} />
                   <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-sm">
                     AI Interviewer
@@ -870,7 +872,7 @@ function InterviewSessionContent() {
             </div>
 
             {/* Chat Section */}
-            <div className="h-1/2 flex flex-col bg-[#0A0A0A]">
+            <div className="h-auto lg:h-1/2 flex flex-col bg-[#0A0A0A]">
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map((message) => (
                   <div
@@ -880,7 +882,7 @@ function InterviewSessionContent() {
                     }`}
                   >
                     <div
-                      className={`max-w-[80%] p-3 rounded-lg ${
+                      className={`max-w-[90%] sm:max-w-[80%] p-3 rounded-lg ${
                         message.type === "user"
                           ? "bg-[#00FFB2] text-black"
                           : "bg-[#1A1A1A] text-white"
@@ -906,8 +908,8 @@ function InterviewSessionContent() {
               </div>
 
               {/* Message Input */}
-              <div className="p-4 border-t border-[#00FFB2]/20">
-                <div className="flex space-x-2">
+              <div className="p-3 sm:p-4 border-t border-[#00FFB2]/20">
+                <div className="flex gap-2">
                   <input
                     type="text"
                     value={userInput}
@@ -933,7 +935,7 @@ function InterviewSessionContent() {
 
           {/* Right Panel - Code Editor (if applicable) */}
           {hasCodeEditor ? (
-            <div className="w-1/2 flex flex-col">
+            <div className="w-full lg:w-1/2 flex flex-col">
               <div className="bg-[#0A0A0A] border-b border-[#00FFB2]/20 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
@@ -973,7 +975,7 @@ function InterviewSessionContent() {
               </div>
             </div>
           ) : (
-            <div className="w-1/2 flex items-center justify-center bg-[#0A0A0A]">
+            <div className="w-full lg:w-1/2 flex items-center justify-center bg-[#0A0A0A]">
               <div className="text-center">
                 <FileText size={48} className="text-gray-500 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Interview Notes</h3>
@@ -988,7 +990,7 @@ function InterviewSessionContent() {
         {/* Start Interview Overlay */}
         {!interviewStarted && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="glass-card p-8 text-center max-w-md">
+            <div className="glass-card p-6 sm:p-8 text-center w-[92%] max-w-md">
               <h2 className="text-2xl font-bold mb-4">Ready to Start?</h2>
               <p className="text-gray-400 mb-6">
                 Your {category} interview at {level} level is about to begin.
@@ -1003,7 +1005,7 @@ function InterviewSessionContent() {
               </div>
               <button
                 onClick={startInterview}
-                className="btn-primary px-8 py-3 text-lg flex items-center justify-center mx-auto"
+                className="btn-primary w-full sm:w-auto px-8 py-3 text-lg flex items-center justify-center mx-auto"
               >
                 <Play className="h-5 w-5 mr-2" />
                 Start Interview
@@ -1012,14 +1014,17 @@ function InterviewSessionContent() {
           </div>
         )}
       </div>
+      <BottomNav />
     </div>
   );
 }
 
 export default function InterviewSessionPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <InterviewSessionContent />
-    </Suspense>
+    <ProtectedRoute>
+      <Suspense fallback={<div>Loading...</div>}>
+        <InterviewSessionContent />
+      </Suspense>
+    </ProtectedRoute>
   );
 }
