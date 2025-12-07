@@ -6,12 +6,34 @@ import { User, LogOut, Settings, Trophy } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../store/store"; // Adjust the import path as necessary
 import { logout } from "@/store/slices/authSlice";
+import { useRouter } from "next/navigation";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const user = useSelector((state: RootState) => state.auth.user);
   const dispatch = useDispatch();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
+      await fetch(`${API_URL}/api/auth/logout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+    } catch (e) {
+      // swallow network errors
+    } finally {
+      document.cookie = 'token=; Max-Age=0; Path=/; SameSite=Lax';
+      dispatch(logout());
+      router.replace("/auth/login");
+    }
+  };
 
   // Prevent hydration mismatch by rendering user-dependent UI only after mount
   useEffect(() => {
@@ -85,7 +107,7 @@ export default function Navbar() {
                       Profile Settings
                     </Link>
                     <button
-                      onClick={() => dispatch(logout())}
+                      onClick={handleLogout}
                       className="flex items-center w-full px-4 py-2 text-sm hover:bg-[#00FFB2]/10 text-red-400"
                     >
                       <LogOut size={16} className="mr-3" />

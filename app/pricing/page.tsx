@@ -9,10 +9,8 @@ import {
   Crown, 
   Rocket,
   ArrowRight,
-  Users,
   Target,
-  Award,
-  TrendingUp
+  
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import PaymentModal from '@/components/PaymentModal';
@@ -29,17 +27,7 @@ export default function PricingPage() {
     setIsVisible(true);
   }, []);
 
-  const handlePurchase = (plan: any) => {
-    const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
-    const planData = {
-      name: plan.name,
-      price: price * 100, // Convert to paise for Razorpay
-      billingCycle,
-      features: plan.features,
-      orderType: 'subscription'
-    };
-    setPaymentModal({ isOpen: true, plan: planData });
-  };
+  
 
   const handleInterviewPurchase = (interview: any) => {
     const planData = {
@@ -127,9 +115,11 @@ export default function PricingPage() {
       features: [
         '90-minute AI interview session',
         'Full comprehensive analysis',
-        'Advanced interview scenarios',
-        'Mentor-level feedback',
-        'Complete skill assessment'
+        'Advanced interview scenarios',        
+        'Complete skill assessment',
+        'Premium feedback insights',
+        'Comprehensive improvement feedback',
+        'Professional-grade feedback'
       ]
     }
   ];
@@ -172,84 +162,7 @@ export default function PricingPage() {
       duration: 90
     }
   ];
-
-  const plans = [
-    {
-      name: 'Starter',
-      icon: Target,
-      description: 'Perfect for getting started with AI interviews',
-      monthlyPrice: 0,
-      yearlyPrice: 0,
-      popular: false,
-      features: [
-        '2 free AI interviews',
-        'Basic scorecard analysis',
-        'Community access',
-        'Email support',
-        'Standard question bank'
-      ],
-      limitations: [
-        'No mentor access',
-        'Limited analytics',
-        'No priority support'
-      ]
-    },
-    {
-      name: 'Professional',
-      icon: Zap,
-      description: 'Ideal for serious career development',
-      monthlyPrice: 29,
-      yearlyPrice: 290,
-      popular: false,
-      features: [
-        'Unlimited AI interviews',
-        'Advanced scorecard with insights',
-        'Access to verified mentors',
-        '2 mentor sessions per month',
-        'Priority support',
-        'Custom interview scenarios',
-        'Progress tracking & analytics',
-        'Resume feedback',
-        'Industry-specific questions'
-      ],
-      limitations: []
-    },
-    {
-      name: 'Enterprise',
-      icon: Crown,
-      description: 'For teams and organizations',
-      monthlyPrice: 99,
-      yearlyPrice: 990,
-      popular: false,
-      features: [
-        'Everything in Professional',
-        'Unlimited mentor sessions',
-        'Team dashboard & analytics',
-        'Custom branding',
-        'API access',
-        'Dedicated account manager',
-        'Custom integrations',
-        'Advanced reporting',
-        'White-label solution',
-        'Priority mentor matching'
-      ],
-      limitations: []
-    }
-  ];
-
-  const mentorPricing = {
-    commission: 15,
-    features: [
-      'Keep 85% of your earnings',
-      'Flexible scheduling',
-      'Built-in video conferencing',
-      'Payment processing included',
-      'Profile verification',
-      'Student matching algorithm',
-      'Performance analytics',
-      'Marketing support'
-    ]
-  };
+  
 
   return (
     <div className="min-h-screen bg-black">
@@ -274,7 +187,7 @@ export default function PricingPage() {
 
             {/* Billing Toggle */}
             <div className="flex items-center justify-center mb-12">
-              <div className="bg-[#1A1A1A] p-1 rounded-lg flex">
+              {/* <div className="bg-[#1A1A1A] p-1 rounded-lg flex">
                 <button
                   onClick={() => setBillingCycle('monthly')}
                   className={`px-6 py-2 rounded-md transition-all ${
@@ -298,7 +211,7 @@ export default function PricingPage() {
                     Save 17%
                   </span>
                 </button>
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -311,7 +224,7 @@ export default function PricingPage() {
               Choose the interview experience that fits your needs
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-16">
               {interviewPricing.map((interview, index) => {
                 const IconComponent = interview.icon;
                 
@@ -381,7 +294,7 @@ export default function PricingPage() {
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               {creditPacks.map((pack, index) => (
                 <div
                    key={index}
@@ -413,136 +326,9 @@ export default function PricingPage() {
             </div>
           </div>
 
-          {/* Learner Plans */}
-          <div className="mb-20">
-            <h2 className="text-3xl font-bold text-center mb-4">
-              Subscription Plans for <span className="gradient-text">Learners</span>
-            </h2>
-            <p className="text-xl text-gray-300 text-center mb-12">
-              For unlimited access and advanced features
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {plans.map((plan, index) => {
-                const IconComponent = plan.icon;
-                const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
-                const monthlyEquivalent = billingCycle === 'yearly' ? Math.round(plan.yearlyPrice / 12) : plan.monthlyPrice;
-                
-                return (
-                  <div
-                    key={index}
-                    className={`glass-card p-8 relative transition-all duration-300 hover:scale-105 ${
-                      plan.popular ? 'border-2 border-[#00FFB2] neon-glow' : ''
-                    }`}
-                  >
-                    {plan.popular && (
-                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                        <div className="bg-[#00FFB2] text-black px-4 py-1 rounded-full text-sm font-semibold">
-                          Most Popular
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="text-center mb-8">
-                      <div className="w-16 h-16 bg-[#00FFB2]/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-                        <IconComponent size={32} className="text-[#00FFB2]" />
-                      </div>
-                      
-                      <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                      <p className="text-gray-400 mb-6">{plan.description}</p>
-                      
-                      <div className="mb-6">
-                        <div className="text-4xl font-bold">
-                          ${price}
-                          <span className="text-lg text-gray-400 font-normal">
-                            /{billingCycle === 'monthly' ? 'mo' : 'yr'}
-                          </span>
-                        </div>
-                        {billingCycle === 'yearly' && plan.yearlyPrice > 0 && (
-                          <div className="text-sm text-[#00FFB2]">
-                            ${monthlyEquivalent}/month billed annually
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4 mb-8">
-                      {plan.features.map((feature, featureIndex) => (
-                        <div key={featureIndex} className="flex items-center">
-                          <Check size={16} className="text-[#00FFB2] mr-3 flex-shrink-0" />
-                          <span className="text-sm">{feature}</span>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {plan.monthlyPrice === 0 ? (
-                      <Link
-                        href="/auth/register"
-                        className="w-full py-3 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center btn-outline"
-                      >
-                        Start Free
-                        <ArrowRight size={16} className="ml-2" />
-                      </Link>
-                    ) : (
-                      <button
-                        onClick={() => handlePurchase(plan)}
-                        className={`w-full py-3 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center ${
-                          plan.popular
-                            ? 'btn-primary'
-                            : 'btn-outline'
-                        }`}
-                      >
-                        Get Started
-                        <ArrowRight size={16} className="ml-2" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          
 
-          {/* Mentor Pricing */}
-          <div className="glass-card p-12 text-center mb-16">
-            <div className="max-w-4xl mx-auto">
-              <div className="w-20 h-20 bg-[#00FFB2]/20 rounded-xl flex items-center justify-center mx-auto mb-6">
-                <Users size={40} className="text-[#00FFB2]" />
-              </div>
-              
-              <h2 className="text-3xl font-bold mb-4">
-                For <span className="gradient-text">Mentors</span>
-              </h2>
-              
-              <p className="text-xl text-gray-300 mb-8">
-                Join our platform and start earning while helping others grow their careers
-              </p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                <div className="text-center">
-                  <div className="text-5xl font-bold text-[#00FFB2] mb-2">85%</div>
-                  <div className="text-gray-400">You keep 85% of earnings</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-5xl font-bold text-[#00FFB2] mb-2">15%</div>
-                  <div className="text-gray-400">Platform fee (includes everything)</div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                {mentorPricing.features.map((feature, index) => (
-                  <div key={index} className="flex items-center justify-center p-3 bg-[#1A1A1A] rounded-lg">
-                    <Check size={16} className="text-[#00FFB2] mr-2 flex-shrink-0" />
-                    <span className="text-sm text-center">{feature}</span>
-                  </div>
-                ))}
-              </div>
-              
-              <Link href="/auth/register" className="btn-primary inline-flex items-center px-8 py-4 text-lg">
-                Become a Mentor
-                <ArrowRight size={20} className="ml-2" />
-              </Link>
-            </div>
-          </div>
+          
 
           {/* FAQ Section */}
           <div className="text-center mb-16">
@@ -562,8 +348,8 @@ export default function PricingPage() {
               </div>
               
               <div className="glass-card p-6 text-left">
-                <h3 className="text-lg font-semibold mb-3">How does mentor matching work?</h3>
-                <p className="text-gray-400">Our AI algorithm matches you with mentors based on your goals, skill gaps, and preferences for optimal learning outcomes.</p>
+                <h3 className="text-lg font-semibold mb-3">How does AI interview matching work?</h3>
+                <p className="text-gray-400">Our system studies your profile and adapts interview questions and feedback to match your career objectives and improvement areas.</p>
               </div>
               
               <div className="glass-card p-6 text-left">

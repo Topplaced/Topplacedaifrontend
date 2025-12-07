@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import BottomNav from '@/components/BottomNav';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
@@ -409,27 +410,30 @@ export default function InterviewHistoryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black">
-        <Navbar />
-        <Sidebar userType="learner" />
-        <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00FFB2] mx-auto mb-4"></div>
-            <p className="text-gray-400">Loading your interview history...</p>
+      <ProtectedRoute>
+        <div className="min-h-screen bg-black">
+          <Navbar />
+          <Sidebar userType="learner" />
+          <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00FFB2] mx-auto mb-4"></div>
+              <p className="text-gray-400">Loading your interview history...</p>
+            </div>
           </div>
+          <BottomNav />
         </div>
-        <BottomNav />
-      </div>
+      </ProtectedRoute>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black overflow-x-hidden">
-      <Navbar />
-      <Sidebar userType="learner" />
+    <ProtectedRoute>
+      <div className="min-h-screen bg-black overflow-x-hidden">
+        <Navbar />
+        <Sidebar userType="learner" />
 
-      <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
-        <div className="container-custom space-y-8">
+        <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
+          <div className="container-custom space-y-8">
           {/* Header */}
           <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
             <h1 className="text-3xl md:text-4xl font-bold mb-2">
@@ -760,9 +764,10 @@ export default function InterviewHistoryPage() {
               </div>
             </div>
           )}
+          </div>
         </div>
+        <BottomNav />
       </div>
-      <BottomNav />
-    </div>
+    </ProtectedRoute>
   );
 }

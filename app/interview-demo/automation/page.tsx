@@ -15,7 +15,6 @@ type ShapedQuestion = {
   question: string;
   questionNumber: number;
   totalQuestions: number;
-  expectedTime?: number;
   requiresCode?: boolean;
   category?: string;
   language?: string;
@@ -326,7 +325,12 @@ export default function InterviewAutomationPage() {
     }
   }, [loginEmail, loginPassword, dispatch]);
 
+  const isRunningRef = useRef(false);
+
   const runAutomation = useCallback(async () => {
+    if (isRunningRef.current) return;
+    isRunningRef.current = true;
+
     setError(null);
     setRunning(true);
     setConversation([]);
@@ -334,6 +338,9 @@ export default function InterviewAutomationPage() {
     setFinalSummary(null);
     setFinalStrengths([]);
     setFinalImprovements([]);
+
+    // Local tracker to avoid dependency on 'conversation' state
+    const localConversation: ConversationItem[] = [];
 
     try {
       // 1) Start interview
@@ -372,15 +379,20 @@ export default function InterviewAutomationPage() {
           convRes.shortResponse ||
           convRes.response ||
           "";
-        setConversation((prev) => [
-          ...prev,
-          {
-            question: currentQ!,
-            candidateAnswer: answer,
-            aiResponse: aiResp,
-            progress: convRes.progress,
-          },
-        ]);
+
+        const newItem: ConversationItem = {
+          question: currentQ!,
+          candidateAnswer: answer,
+          aiResponse: aiResp,
+          progress: convRes.progress,
+        };
+
+        // Update state for UI
+        setConversation((prev) => [...prev, newItem]);
+
+        // Update local tracker for logic
+        localConversation.push(newItem);
+
         // Prepare for potential follow-up
         followUpPrompt = extractFollowUpPrompt(aiResp);
         lastQuestionId = currentQ.id;
@@ -397,7 +409,7 @@ export default function InterviewAutomationPage() {
           status: "completed",
           endTime: new Date().toISOString(),
           totalTimeSpent: 0,
-          questionsAnswered: conversation.length,
+          questionsAnswered: localConversation.length,
           totalQuestions: 10,
           completionPercentage: 100,
         },
@@ -410,8 +422,9 @@ export default function InterviewAutomationPage() {
       setError(e?.message || String(e));
     } finally {
       setRunning(false);
+      isRunningRef.current = false;
     }
-  }, [startPayload, conversation.length]);
+  }, [startPayload]);
 
   // Auto-start interview after login if enabled
   useEffect(() => {

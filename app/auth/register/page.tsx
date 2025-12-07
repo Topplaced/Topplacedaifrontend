@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -7,15 +8,10 @@ import {
   Eye,
   EyeOff,
   User,
-  Briefcase,
-  Linkedin,
   ArrowRight,
   AlertCircle,
-  Clock,
-  Settings,
-  Users,
-  ChevronDown,
   Lock,
+  ArrowLeft,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { loginSuccess } from "@/store/slices/authSlice";
@@ -31,32 +27,27 @@ export default function RegisterPage() {
   const { token, user } = useSelector((state: RootState) => state.auth);
 
   const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
-    role: "user", // "user" = Interviewer, "mentor" = Mentor
-    name: "",
-    experience: "",
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  // Removed verification choice; email verification handled by backend if needed
 
   useEffect(() => {
-    if (token && user) router.replace(user.role === "mentor" ? "/mentor" : "/learner");
+    if (token && user) {
+      router.replace(user.role === "mentor" ? "/mentor" : "/learner");
+    }
   }, [token, user, router]);
 
-  const handleLinkedInLogin = () => {
-    setLoading(true);
-    window.location.href = `${API_URL}/api/auth/linkedin`;
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMessage("");
     setLoading(true);
@@ -68,22 +59,32 @@ export default function RegisterPage() {
       setLoading(false);
       return;
     }
+
+    const fullName = `${form.firstName.trim()} ${form.lastName.trim()}`.trim();
+
     try {
+      if (!API_URL) {
+        throw new Error("API URL not configured");
+      }
+
       const res = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName: form.name,
+          fullName,
           email: form.email,
           password: form.password,
-          role: form.role,
-          experience: form.role === "mentor" ? form.experience : undefined,
+          role: "user",
         }),
       });
-      const data = await res.json();
+
+      let data: any = {};
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      }
 
       if (res.ok && data.access_token && data.user) {
-        // Auto-login and redirect like LoginPage
         localStorage.setItem("token", data.access_token);
         dispatch(loginSuccess(data));
         toast.success("Registration successful! Redirecting...");
@@ -95,22 +96,32 @@ export default function RegisterPage() {
         } else {
           router.push("/learner");
         }
-      } else if (res.status === 403 && data.message?.includes("email not verified")) {
-        // Require verification if backend enforces it
-        setMessage("Please verify your email before logging in.");
-        toast.error("Please verify your email before logging in.");
-        router.push(`/auth/verify-email?email=${encodeURIComponent(form.email)}`);
-      } else if (res.ok && (!data.access_token || !data.user)) {
-        // Backend indicates registration succeeded but verification is required
+      } else if (
+        res.status === 403 &&
+        data?.message?.includes("email not verified")
+      ) {
+        const msg = "Please verify your email before logging in.";
+        setMessage(msg);
+        toast.error(msg);
+        router.push(
+          `/auth/verify-email?email=${encodeURIComponent(form.email)}`
+        );
+      } else if (res.ok && (!data?.access_token || !data?.user)) {
         toast.success("Registration successful! Please verify your email.");
-        router.push(`/auth/verify-email?email=${encodeURIComponent(form.email)}`);
+        router.push(
+          `/auth/verify-email?email=${encodeURIComponent(form.email)}`
+        );
       } else {
-        const msg = data?.message || "Registration failed.";
+        const fallback = !contentType
+          ? `${res.status} ${res.statusText}`
+          : "Registration failed.";
+        const msg = data?.message || fallback;
         setMessage(msg);
         toast.error(msg);
       }
-    } catch {
-      const msg = "Server error. Please try again.";
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Server error. Please try again.";
       setMessage(msg);
       toast.error(msg);
     } finally {
@@ -118,255 +129,357 @@ export default function RegisterPage() {
     }
   };
 
+  const testimonialsCol1 = [
+    {
+      text: "TopPlaced is my go-to platform for realistic 1:1 interviews. It feels very close to actual company rounds.",
+      name: "Jessica",
+      title: "Global Data Lead, Energy Industry",
+    },
+    {
+      text: "The entire experience is just so seamless. My followers love sharing their interview scorecards.",
+      name: "Joerg Storm",
+      title: "300K on LinkedIn",
+    },
+    {
+      text: "Love how easy it is to schedule sessions and practice with role-specific questions. The feedback is super clear.",
+      name: "Aishwarya Srinivasan",
+      title: "LinkedIn Top Voice",
+    },
+  ];
+
+  const testimonialsCol2 = [
+    {
+      text: "Great for busy professionals – jump in, run a focused mock, and export the results in minutes.",
+      name: "Payal & Gaurav",
+      title: "Creators & Mentors",
+    },
+    {
+      text: "The scorecards make it easy to know exactly what to fix before the next round. Super actionable.",
+      name: "Karan",
+      title: "Senior Frontend Engineer",
+    },
+    {
+      text: "I use TopPlaced with my mentees to simulate real panel interviews. The structure is excellent.",
+      name: "Lorraine Lee",
+      title: "Speaker, 320K on LinkedIn",
+    },
+  ];
+
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden">
-      {/* Desktop: no page scroll; Mobile: allow scroll */}
-      <style jsx global>{`
-        @media (min-width: 768px) {
-          html,
-          body {
-            overflow: hidden;
-          }
-          body::-webkit-scrollbar {
-            width: 0 !important;
-            height: 0 !important;
-          }
+    <div className="h-screen bg-gradient-to-b from-black via-slate-950 to-black text-white overflow-hidden relative">
+      <style>{`
+        @keyframes scroll-up {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(-50%); }
         }
+        @keyframes scroll-down {
+          0% { transform: translateY(-50%); }
+          100% { transform: translateY(0); }
+        }
+        .scroll-up {
+          animation: scroll-up 36s linear infinite;
+        }
+        .scroll-down {
+          animation: scroll-down 36s linear infinite;
+        }
+        .scroll-up:hover,
+        .scroll-down:hover {
+          animation-play-state: paused;
+        }
+
         @keyframes glowPulse {
-          0% { opacity: 0.35; transform: translate(-50%, -50%) scale(0.98); }
-          50% { opacity: 0.55; transform: translate(-50%, -50%) scale(1.02); }
-          100% { opacity: 0.35; transform: translate(-50%, -50%) scale(0.98); }
+          0% {
+            opacity: 0.35;
+            transform: translate(-50%, -50%) scale(0.98);
+          }
+          50% {
+            opacity: 0.55;
+            transform: translate(-50%, -50%) scale(1.02);
+          }
+          100% {
+            opacity: 0.35;
+            transform: translate(-50%, -50%) scale(0.98);
+          }
         }
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          20% { transform: translateX(-6px); }
-          40% { transform: translateX(6px); }
-          60% { transform: translateX(-4px); }
-          80% { transform: translateX(4px); }
-        }
-        .animate-shake { animation: shake 0.35s ease-in-out; }
       `}</style>
 
-      {/* Ambient glow */}
+      {/* background grid + glow to match login */}
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),transparent_60%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.2),transparent_55%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.06)_1px,transparent_1px)] bg-[size:80px_80px]" />
+      </div>
+
       <div
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-1/2 h-[820px] w-[820px] -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           background:
-            "radial-gradient(closest-side, rgba(0,255,178,0.16), rgba(0,204,142,0.12) 40%, rgba(0,0,0,0) 70%)",
+            "radial-gradient(closest-side, rgba(0,255,178,0.20), rgba(0,204,142,0.12) 45%, rgba(0,0,0,0) 70%)",
           filter: "blur(26px)",
           animation: "glowPulse 6s ease-in-out infinite",
         }}
       />
 
-      {/* Centered container with small vertical margins so the card border is fully visible */}
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4">
-        <div className="my-6 md:my-8 w-full max-w-[760px] rounded-2xl border border-emerald-400/15 bg-[#0B0D0C]/90 shadow-[0_0_60px_rgba(0,255,178,0.07)] backdrop-blur-xl">
-          {/* Header */}
-          <div className="px-7 pt-6">
-            <h1 className="mb-2 text-2xl font-extrabold tracking-tight">Create Account</h1>
+      {/* back button like login page */}
+      <Link
+        href="/"
+        className="absolute top-6 left-6 z-20 flex items-center text-gray-400 hover:text-emerald-300 transition-colors text-sm"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Home
+      </Link>
 
-            <div className="mb-4 text-center">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-300 text-black">
-                <User className="h-6 w-6" />
-              </div>
-              <p className="text-sm text-gray-400">Join thousands of professionals accelerating their careers</p>
-            </div>
+      {/* 2-column full-height layout */}
+      <div className="flex h-full flex-col lg:flex-row relative z-10">
+        {/* LEFT: centered sign-up block */}
+        <section className="flex-1 flex items-center justify-center px-6 lg:px-16">
+          <div className="w-full max-w-xl">
+            <p className="mb-3 text-[11px] uppercase tracking-[0.32em] text-emerald-300/80">
+              TopPlaced · Sign Up
+            </p>
+            <h1 className="text-[32px] sm:text-[36px] font-extrabold leading-tight">
+              Launch your
+              <br />
+              TopPlaced profile
+            </h1>
+            <p className="mt-3 text-sm text-gray-400 max-w-md">
+              Use your work email to create a secure account and start
+              practicing role-specific interviews with AI.
+            </p>
 
-            <button
-              onClick={handleLinkedInLogin}
-              disabled={loading}
-              className="group mb-5 inline-flex w-full items-center justify-center rounded-xl bg-[#0E6DA0] py-3 font-semibold transition hover:brightness-110 disabled:opacity-60"
-            >
-              {loading ? (
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                  Connecting…
-                </span>
-              ) : (
-                <>
-                  <Linkedin className="mr-2 h-5 w-5" /> Continue with LinkedIn
-                </>
-              )}
-            </button>
-
-            {/* Divider */}
-            <div className="mb-4 flex items-center gap-3">
-              <div className="h-px flex-1 bg-zinc-800" />
-              <span className="text-xs text-gray-400">Or continue with email</span>
-              <div className="h-px flex-1 bg-zinc-800" />
-            </div>
-          </div>
-
-          {/* CONTENT — no fixed height now (removed h-[66vh]) to eliminate the bottom blank space */}
-          <div className="px-7 pb-5">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Row: Name / Email */}
-              <div className="grid gap-3 md:grid-cols-2">
+            <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+              {/* First / Last */}
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs text-gray-300">Full Name</label>
+                  <label className="mb-1 block text-[11px] font-medium text-gray-300">
+                    First Name
+                  </label>
                   <div className="relative">
-                    <User className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <User
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      size={18}
+                    />
                     <input
-                      name="name"
+                      name="firstName"
                       type="text"
-                      autoComplete="name"
-                      placeholder="Enter your full name"
-                      value={form.name}
+                      placeholder="First name"
+                      value={form.firstName}
                       onChange={handleChange}
                       required
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-900/70 py-3 pl-10 pr-3 text-sm text-white outline-none transition focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
+                      className="h-11 w-full rounded-[6px] border border-[#27313e] bg-[#050712]/90 pl-9 pr-3 text-sm text-white placeholder:text-gray-500 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25"
                     />
                   </div>
                 </div>
-
                 <div>
-                  <label className="mb-1 block text-xs text-gray-300">Email Address</label>
+                  <label className="mb-1 block text-[11px] font-medium text-gray-300">
+                    Last Name
+                  </label>
                   <div className="relative">
-                    <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <User
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      size={18}
+                    />
                     <input
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      placeholder="Enter your email address"
-                      value={form.email}
+                      name="lastName"
+                      type="text"
+                      placeholder="Last name"
+                      value={form.lastName}
                       onChange={handleChange}
                       required
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-900/70 py-3 pl-10 pr-3 text-sm text-white outline-none transition focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
+                      className="h-11 w-full rounded-[6px] border border-[#27313e] bg-[#050712]/90 pl-9 pr-3 text-sm text-white placeholder:text-gray-500 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Row: Password / Confirm */}
-              <div className="grid gap-3 md:grid-cols-2">
+              {/* Email */}
+              <div>
+                <label className="mb-1 block text-[11px] font-medium text-gray-300">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    size={18}
+                  />
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder="you@company.com"
+                    autoComplete="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    required
+                    className="h-11 w-full rounded-[6px] border border-[#27313e] bg-[#050712]/90 pl-9 pr-3 text-sm text-white placeholder:text-gray-500 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25"
+                  />
+                </div>
+              </div>
+
+              {/* Password row */}
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs text-gray-300">Password</label>
+                  <label className="mb-1 block text-[11px] font-medium text-gray-300">
+                    Password
+                  </label>
                   <div className="relative">
-                    <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <Lock
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      size={18}
+                    />
                     <input
                       name="password"
                       type={showPassword ? "text" : "password"}
+                      placeholder="At least 8 characters"
                       autoComplete="new-password"
-                      placeholder="Create a strong password"
                       value={form.password}
                       onChange={handleChange}
                       required
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-900/70 py-3 pl-10 pr-10 text-sm text-white outline-none transition focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
+                      className="h-11 w-full rounded-[6px] border border-[#27313e] bg-[#050712]/90 pl-9 pr-9 text-sm text-white placeholder:text-gray-500 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((s) => !s)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-emerald-300"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    Use a mix of letters, numbers and symbols.
+                  </p>
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs text-gray-300">Confirm Password</label>
+                  <label className="mb-1 block text-[11px] font-medium text-gray-300">
+                    Confirm Password
+                  </label>
                   <div className="relative">
-                    <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <Lock
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      size={18}
+                    />
                     <input
                       name="confirmPassword"
                       type="password"
+                      placeholder="Repeat your password"
                       autoComplete="new-password"
-                      placeholder="Confirm your password"
                       value={form.confirmPassword}
                       onChange={handleChange}
                       required
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-900/70 py-3 pl-10 pr-3 text-sm text-white outline-none transition focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
+                      className="h-11 w-full rounded-[6px] border border-[#27313e] bg-[#050712]/90 pl-9 pr-3 text-sm text-white placeholder:text-gray-500 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Row: Role / Experience (if mentor) */}
-              <div className="grid gap-3 md:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-xs text-gray-300">I want to join as</label>
-                  <div className="relative">
-                    <Users className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <select
-                      name="role"
-                      value={form.role}
-                      onChange={handleChange}
-                      className="w-full appearance-none rounded-lg border border-zinc-700 bg-zinc-900/70 py-3 pl-10 pr-8 text-sm text-white outline-none transition focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
-                    >
-                      <option value="user" className="bg-zinc-900">Interviewer (Looking for practice)</option>
-                      <option value="mentor" className="bg-zinc-900">Mentor (Providing guidance)</option>
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  </div>
-                </div>
-
-                {form.role === "mentor" && (
-                  <div>
-                    <label className="mb-1 block text-xs text-gray-300">Professional Experience</label>
-                    <div className="relative">
-                      <Briefcase className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                      <input
-                        name="experience"
-                        type="text"
-                        placeholder="e.g. 3+ years in full-stack development"
-                        value={form.experience}
-                        onChange={handleChange}
-                        required
-                        className="w-full rounded-lg border border-zinc-700 bg-zinc-900/70 py-3 pl-10 pr-3 text-sm text-white outline-none transition focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Verification (compact) */}
-              <div className="grid gap-3 md:grid-cols-2">
-                {/* Entire verification UI removed */}
-              </div>
-
-              {/* Error */}
+              {/* error */}
               {message && (
-                <div className="animate-shake rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>{message}</span>
-                  </div>
+                <div className="mt-1 flex items-center gap-2 rounded-[6px] border border-red-500/45 bg-red-500/12 px-4 py-3 text-sm text-red-300">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{message}</span>
                 </div>
               )}
 
-              {/* Submit + Login */}
-              <div className="grid gap-3">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="group relative inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-300 px-6 py-3 font-bold text-black shadow-[0_10px_30px_rgba(0,255,178,0.25)] transition hover:scale-[1.01] hover:shadow-[0_12px_36px_rgba(0,255,178,0.32)] disabled:opacity-60"
-                >
-                  {loading ? (
-                    <>
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/40 border-t-black" />
-                      Creating Account…
-                    </>
-                  ) : (
-                    <>
-                      Create Account
-                      <ArrowRight className="h-5 w-5 transition group-hover:translate-x-0.5" />
-                    </>
-                  )}
-                  <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition group-hover:translate-x-full" />
-                </button>
+              {/* button – same colour as login, extra shadow */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="mt-2 group relative inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-emerald-400 to-emerald-300 px-6 py-3 text-sm font-bold text-black shadow-[0_14px_45px_rgba(0,255,178,0.45)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_70px_rgba(0,255,178,0.6)] disabled:opacity-60"
+              >
+                {loading ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/40 border-t-black" />
+                    Creating Account…
+                  </>
+                ) : (
+                  <>
+                    Create Account
+                    <ArrowRight className="ml-1.5 h-4 w-4 transition group-hover:translate-x-0.5" />
+                  </>
+                )}
+                <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition group-hover:translate-x-full" />
+              </button>
 
-                <p className="pb-1 text-center text-sm text-gray-400">
-                  Already have an account?{" "}
-                  <Link href="/auth/login" className="font-semibold text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline">
-                    Sign In
-                  </Link>
-                </p>
-              </div>
+              <p className="pt-3 text-center text-[11px] sm:text-xs text-gray-500">
+                By continuing, you agree to our{" "}
+                <Link
+                  href="/terms"
+                  className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline"
+                >
+                  Terms
+                </Link>{" "}
+                and{" "}
+                <Link
+                  href="/privacy"
+                  className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline"
+                >
+                  Privacy Policy
+                </Link>
+                .
+              </p>
+              <p className="pb-1 text-center text-sm text-gray-400">
+                Already have an account?{" "}
+                <Link
+                  href="/auth/login"
+                  className="font-semibold text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline"
+                >
+                  Sign In
+                </Link>
+              </p>
             </form>
           </div>
-        </div>
+        </section>
+
+        {/* RIGHT: testimonials (unchanged, shared with login) */}
+        <section className="hidden lg:flex flex-1 items-center justify-center bg-gradient-to-b from-[#020617] via-[#020b16] to-[#020617] px-8 lg:px-12">
+          <div className="w-full max-w-3xl">
+            <p className="text-[11px] uppercase tracking-[0.32em] text-emerald-200">
+              Loved by candidates
+            </p>
+            <h2 className="mt-2 text-lg font-semibold text-white">
+              Why professionals trust TopPlaced
+            </h2>
+            <div className="mt-4 h-px w-32 rounded-full bg-emerald-400/30" />
+
+            <div className="mt-8 h-[420px] flex gap-6 overflow-hidden">
+              {/* column 1 – scroll up */}
+              <div className="scroll-up flex flex-col gap-4">
+                {[...testimonialsCol1, ...testimonialsCol1].map((t, idx) => (
+                  <div
+                    key={`reg-c1-${idx}`}
+                    className="w-64 rounded-[24px] border border-[#1f2933] bg-[#020814] px-6 py-4"
+                  >
+                    <p className="mb-3 text-sm text-gray-100 leading-relaxed">
+                      “{t.text}”
+                    </p>
+                    <p className="text-sm font-semibold text-emerald-300">
+                      {t.name}
+                    </p>
+                    <p className="text-[11px] text-gray-400">{t.title}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* column 2 – scroll down */}
+              <div className="scroll-down hidden flex-col gap-4 xl:flex">
+                {[...testimonialsCol2, ...testimonialsCol2].map((t, idx) => (
+                  <div
+                    key={`reg-c2-${idx}`}
+                    className="w-64 rounded-[24px] border border-[#1f2933] bg-[#020814] px-6 py-4"
+                  >
+                    <p className="mb-3 text-sm text-gray-100 leading-relaxed">
+                      “{t.text}”
+                    </p>
+                    <p className="text-sm font-semibold text-emerald-300">
+                      {t.name}
+                    </p>
+                    <p className="text-[11px] text-gray-400">{t.title}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

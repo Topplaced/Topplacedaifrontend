@@ -1,7 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import Script from "next/script";
-import { ClientProviders } from "./client-providers";
+import Providers from "./providers";
 
 export const metadata: Metadata = {
   title: "Top placed AI | AI-Powered Career Development Platform",
@@ -26,7 +26,7 @@ export default function RootLayout({
           strategy="lazyOnload"
         />
         <div className="min-h-screen">
-          <ClientProviders>{children}</ClientProviders>
+          <Providers>{children}</Providers>
         </div>
       </body>
     </html>

@@ -6,7 +6,6 @@ export interface InterviewCurrentQuestion {
   question: string;
   questionNumber: number;
   totalQuestions: number;
-  expectedTime?: number;
 }
 
 export interface InterviewScores {
