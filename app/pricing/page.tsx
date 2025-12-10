@@ -32,7 +32,7 @@ export default function PricingPage() {
   const handleInterviewPurchase = (interview: any) => {
     const planData = {
       name: interview.name,
-      price: interview.price * 100, // Convert to paise for Razorpay
+      price: interview.price, // Convert to paise for Razorpay
       features: interview.features,
       orderType: 'credits',
       creditPackage: `${interview.duration}min_interview`,
@@ -44,7 +44,7 @@ export default function PricingPage() {
   const handleCreditPackPurchase = (pack: any) => {
     const planData = {
       name: pack.name,
-      price: pack.price * 100, // Convert to paise for Razorpay
+      price: pack.price, // Convert to paise for Razorpay
       features: [`${pack.credits} interview credits`, `${pack.duration}-minute interviews`, `Save ₹${pack.savings}`],
       orderType: 'credits',
       creditPackage: `${pack.type}_pack_${pack.credits}`,

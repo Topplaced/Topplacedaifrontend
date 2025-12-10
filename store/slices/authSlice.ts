@@ -55,7 +55,7 @@ const authSlice = createSlice({
 
       const userData = {
         ...user,
-        name: user.name || deriveNameFromEmail(user.email),
+        name: user.name || "",
       };
 
       state.token = access_token;
@@ -91,9 +91,7 @@ const authSlice = createSlice({
       if (action.payload?.token && action.payload?.user) {
         const userData = {
           ...action.payload.user,
-          name:
-            action.payload.user.name ||
-            deriveNameFromEmail(action.payload.user.email),
+          name: action.payload.user.name || "",
         };
 
         state.token = action.payload.token;
