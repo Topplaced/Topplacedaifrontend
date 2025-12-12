@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
 import Sidebar from "@/components/Sidebar";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import Image from "next/image";
 import {
@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { updateUserName } from "@/store/slices/authSlice";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -89,6 +90,7 @@ export default function LearnerProfilePage() {
   const [editGoals, setEditGoals] = useState(false);
 
   const { user, token } = useSelector((state: RootState) => state.auth);
+  const dispatch = useDispatch();
 
   const [profileData, setProfileData] = useState<ProfileData>({
     name: user?.name || "",
@@ -470,6 +472,7 @@ export default function LearnerProfilePage() {
 
       toast.success("Profile updated successfully!");
       setHasUnsavedChanges(false);
+      dispatch(updateUserName(profileData.name));
       await fetchProfileData();
     } catch (error) {
       console.error("Save error:", error);
@@ -690,11 +693,8 @@ export default function LearnerProfilePage() {
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                           <div>
                             <h2 className="text-2xl md:text-3xl font-semibold">
-                              {profileData.name || "Your Name"}
+                              {(editHeader ? profileData.name : user?.name) || "Your Name"}
                             </h2>
-                            <p className="text-gray-400 text-sm md:text-base">
-                              Software Developer
-                            </p>
                           </div>
                         </div>
 
@@ -750,7 +750,7 @@ export default function LearnerProfilePage() {
                               onChange={(e) =>
                                 handleInputChange("name", e.target.value)
                               }
-                              placeholder="Enter your full name"
+                              placeholder="full name..."
                               className="w-full bg-[#050505] border border-gray-700 rounded-lg py-3 px-4 text-white"
                             />
                           </div>
@@ -764,7 +764,7 @@ export default function LearnerProfilePage() {
                               onChange={(e) =>
                                 handleInputChange("phone", e.target.value)
                               }
-                              placeholder="e.g., 91 9027653412"
+                              placeholder="phone number..."
                               className="w-full bg-[#050505] border border-gray-700 rounded-lg py-3 px-4 text-white"
                             />
                           </div>
@@ -778,7 +778,7 @@ export default function LearnerProfilePage() {
                               onChange={(e) =>
                                 handleInputChange("location", e.target.value)
                               }
-                              placeholder="City, Country"
+                              placeholder="location..."
                               className="w-full bg-[#050505] border border-gray-700 rounded-lg py-3 px-4 text-white"
                             />
                           </div>
@@ -795,7 +795,7 @@ export default function LearnerProfilePage() {
                                   e.target.value
                                 )
                               }
-                              placeholder="https://linkedin.com/in/yourprofile"
+                              placeholder="url..."
                               className="w-full bg-[#050505] border border-gray-700 rounded-lg py-3 px-4 text-white"
                             />
                           </div>

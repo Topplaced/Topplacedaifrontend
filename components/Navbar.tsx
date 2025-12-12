@@ -99,13 +99,7 @@ export default function Navbar() {
 
                 {isUserMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 glass-card py-2 shadow-lg">
-                    <Link
-                      href="/profile"
-                      className="flex items-center px-4 py-2 text-sm hover:bg-[#00FFB2]/10"
-                    >
-                      <Settings size={16} className="mr-3" />
-                      Profile Settings
-                    </Link>
+                   
                     <button
                       onClick={handleLogout}
                       className="flex items-center w-full px-4 py-2 text-sm hover:bg-[#00FFB2]/10 text-red-400"
