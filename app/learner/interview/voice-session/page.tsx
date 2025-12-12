@@ -694,9 +694,10 @@ function VoiceInterviewContent() {
           setResponseStartTime(Date.now());
 
           // Only set questionContent if we don't already have aiResponseContent
+          if (!aiResponseContent) {
+            questionContent = data.currentQuestion.question;
+          }
           // This prevents duplication when shortResponse contains the question
-
-          questionContent = data.currentQuestion.question;
 
           // Don't combine with messageContent anymore
         } else {
@@ -990,12 +991,6 @@ function VoiceInterviewContent() {
       setIsStartingInterview(false);
       isStartingRef.current = false; // Reset the ref on error or completion
     }
-  };
-
-  const retryStartInterview = () => {
-    setStartError(null);
-    isStartingRef.current = false; // Reset before retry
-    startInterview();
   };
 
   const handleManualStart = async () => {
@@ -1636,71 +1631,6 @@ function VoiceInterviewContent() {
     }
   };
 
-  const getNextQuestion = async () => {
-    if (!sessionId) {
-      console.warn("⚠️ No session ID available for next question");
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `${API_URL}/interview/question/${encodeURIComponent(sessionId)}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log("✅ Next question fetched:", data);
-
-        if (data.question) {
-          setCurrentQuestionId(data.id || currentQuestionId);
-          setCurrentQuestionNumber(
-            data.questionNumber || currentQuestionNumber + 1
-          );
-
-          // Update progress if total questions provided
-          if (data.totalQuestions) {
-            updateProgress(questionsAnswered, data.totalQuestions);
-          }
-
-          const questionMessage: Message = {
-            id: `next_question_${Date.now()}`,
-            type: "ai",
-            content: data.question,
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, questionMessage]);
-          playAIAudio("", data.question);
-        } else if (data.message?.includes("completed")) {
-          const completionMessage: Message = {
-            id: `completion_${Date.now()}`,
-            type: "ai",
-            content: "Interview completed. No more questions available.",
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, completionMessage]);
-        }
-        return data;
-      } else {
-        throw new Error(`HTTP ${response.status}`);
-      }
-    } catch (error) {
-      console.error("❌ Error fetching next question:", error);
-      const errorMessage: Message = {
-        id: `error_${Date.now()}`,
-        type: "system",
-        content: "Error fetching next question. Please try again.",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    }
-  };
-
   const downloadTranscript = () => {
     const transcript = messages
       .map(
@@ -1746,7 +1676,7 @@ function VoiceInterviewContent() {
   };
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="h-screen bg-black overflow-hidden flex flex-col">
       {/* Warning Modal */}
       {showWarning && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center overflow-y-auto">
@@ -2031,7 +1961,7 @@ function VoiceInterviewContent() {
         </div>
       )}
 
-      <div className="pt-16 pb-24">
+      <div className="flex-1 flex flex-col min-h-0 pt-16">
         {/* Header Bar */}
         <div className="bg-[#0A0A0A] border-b border-[#00FFB2]/20 px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
@@ -2248,7 +2178,7 @@ function VoiceInterviewContent() {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)]">
+        <div className="flex-1 flex flex-col lg:flex-row min-h-0">
           {/* Column 1 - Video (20%) */}
           <div className="w-full lg:w-[20%] flex flex-col border-r-0 lg:border-r border-[#00FFB2]/20">
             <div className="flex-1 bg-[#0A0A0A] p-2 lg:p-4 overflow-y-auto">
