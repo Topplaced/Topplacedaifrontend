@@ -695,9 +695,8 @@ function VoiceInterviewContent() {
 
           // Only set questionContent if we don't already have aiResponseContent
           // This prevents duplication when shortResponse contains the question
-          if (!aiResponseContent) {
-            questionContent = data.currentQuestion.question;
-          }
+
+          questionContent = data.currentQuestion.question;
 
           // Don't combine with messageContent anymore
         } else {
@@ -1101,7 +1100,7 @@ function VoiceInterviewContent() {
           "to",
           questionsAnswered + 1
         );
-        setQuestionsAnswered((prev) => prev + 1);
+        // setQuestionsAnswered((prev) => prev + 1);
       } else {
         console.warn(
           "⚠️ Interview already completed - not incrementing questionsAnswered"
@@ -1236,6 +1235,9 @@ function VoiceInterviewContent() {
       // Reset code execution state after successful submission
       setCodeExecutionSuccess(false);
       setLastExecutionResult(null);
+
+      setCode(""); // reset editor
+      setShowCodeEditor(false); // optional: auto-close editor
 
       const submitMessage: Message = {
         id: `submit_${Date.now()}`,
@@ -1745,7 +1747,6 @@ function VoiceInterviewContent() {
 
   return (
     <div className="min-h-screen bg-black">
-
       {/* Warning Modal */}
       {showWarning && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center overflow-y-auto">
