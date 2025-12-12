@@ -496,6 +496,48 @@ function VoiceInterviewContent() {
     };
   }, [mediaStream]);
 
+  useEffect(() => {
+    if (!interviewStarted) return;
+
+    const enterFullscreen = async () => {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+          setIsFullscreen(true);
+        }
+      } catch (error) {
+        setWarningMessage("Please enable fullscreen mode for the interview.");
+        setShowWarning(true);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setTabSwitchCount((prev) => prev + 1);
+        +9;
+        setWarningMessage(
+          "Tab switch detected. Please return to the interview."
+        );
+        setShowWarning(true);
+      }
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "Are you sure you want to leave the interview?";
+      return e.returnValue;
+    };
+
+    enterFullscreen();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [interviewStarted]);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -653,9 +695,8 @@ function VoiceInterviewContent() {
 
           // Only set questionContent if we don't already have aiResponseContent
           // This prevents duplication when shortResponse contains the question
-          if (!aiResponseContent) {
-            questionContent = data.currentQuestion.question;
-          }
+
+          questionContent = data.currentQuestion.question;
 
           // Don't combine with messageContent anymore
         } else {
@@ -1059,7 +1100,7 @@ function VoiceInterviewContent() {
           "to",
           questionsAnswered + 1
         );
-        setQuestionsAnswered((prev) => prev + 1);
+        // setQuestionsAnswered((prev) => prev + 1);
       } else {
         console.warn(
           "⚠️ Interview already completed - not incrementing questionsAnswered"
@@ -1194,6 +1235,9 @@ function VoiceInterviewContent() {
       // Reset code execution state after successful submission
       setCodeExecutionSuccess(false);
       setLastExecutionResult(null);
+
+      setCode(""); // reset editor
+      setShowCodeEditor(false); // optional: auto-close editor
 
       const submitMessage: Message = {
         id: `submit_${Date.now()}`,
@@ -1703,7 +1747,6 @@ function VoiceInterviewContent() {
 
   return (
     <div className="min-h-screen bg-black">
-
       {/* Warning Modal */}
       {showWarning && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center overflow-y-auto">
@@ -2003,7 +2046,7 @@ function VoiceInterviewContent() {
                 Voice Interview • {category?.toUpperCase()} •{" "}
                 {level?.toUpperCase()}
               </div>
-              <div className="flex items-center flex-wrap gap-2 sm:gap-3">
+              {/* <div className="flex items-center flex-wrap gap-2 sm:gap-3">
                 <div className="flex items-center flex-wrap gap-2">
                   <span className="px-2 py-1 bg-blue-900/50 border border-blue-700/50 rounded-full text-xs text-blue-200">
                     Answered:{" "}
@@ -2024,12 +2067,12 @@ function VoiceInterviewContent() {
                     style={{ width: `${interviewProgress}%` }}
                   />
                 </div>
-              </div>
-              {sessionId && (
+              </div> */}
+              {/* {sessionId && (
                 <div className="text-xs text-gray-500">
                   Session: {sessionId.slice(-8)}
                 </div>
-              )}
+              )} */}
             </div>
             <div className="flex items-center flex-wrap gap-2">
               <button
@@ -2062,7 +2105,7 @@ function VoiceInterviewContent() {
                 <Download size={20} />
               </button>
 
-              <button
+              {/* <button
                 onClick={getNextQuestion}
                 className="p-2 rounded-full bg-purple-600/20 text-purple-400 hover:bg-purple-600/30"
                 title="Get Next Question"
@@ -2081,7 +2124,7 @@ function VoiceInterviewContent() {
                     d="M9 5l7 7-7 7"
                   />
                 </svg>
-              </button>
+              </button> */}
 
               {/* Conversation History Button */}
               <button
@@ -2128,7 +2171,7 @@ function VoiceInterviewContent() {
               </button>
 
               {/* Debug Panel Toggle */}
-              <button
+              {/* <button
                 onClick={() => setShowDebugPanel(!showDebugPanel)}
                 className={`p-2 rounded-full transition-colors ${
                   showDebugPanel
@@ -2156,7 +2199,7 @@ function VoiceInterviewContent() {
                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-              </button>
+              </button> */}
 
               {hasCodeEditor && (
                 <button

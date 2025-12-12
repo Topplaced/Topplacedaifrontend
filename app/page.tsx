@@ -11,20 +11,25 @@ import {
   Target,
   ChevronDown,
 } from "lucide-react";
+import { useSelector } from "react-redux";
+import { useRouter } from "next/navigation";
+import { RootState } from "@/store/store";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function HomePage() {
-
   return (
     <div className="min-h-screen bg-black">
       <HomeClient />
 
       {/* Hero Section */}
-      <section className="relative pt-24 pb-12 overflow-hidden">
+      <section className="relative pt-12 pb-12 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[#00FFB2]/10 via-transparent to-[#00CC8E]/5"></div>
 
         <div className="container-custom relative z-10">
-            <div className={`text-center transition-all duration-1000 opacity-100 translate-y-0`}>
+          <div
+            className={`text-center transition-all duration-1000 opacity-100 translate-y-0`}
+          >
             <div className="inline-flex items-center px-4 py-2 bg-[#00FFB2]/10 border border-[#00FFB2]/30 rounded-full mb-6">
               <Zap size={16} className="text-[#00FFB2] mr-2" />
               <span className="text-sm font-medium text-[#00FFB2]">
@@ -38,7 +43,8 @@ export default function HomePage() {
             </h1>
 
             <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Practice with AI-powered mock interviews and get personalized feedback to accelerate your professional growth.
+              Practice with AI-powered mock interviews and get personalized
+              feedback to accelerate your professional growth.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
@@ -87,8 +93,6 @@ export default function HomePage() {
         <div className="absolute top-1/4 left-10 w-20 h-20 bg-[#00FFB2]/10 rounded-full blur-xl animate-pulse-slow"></div>
         <div className="absolute bottom-1/4 right-10 w-32 h-32 bg-[#00CC8E]/10 rounded-full blur-xl animate-pulse-slow"></div>
       </section>
-
-      
 
       {/* Features Section */}
       <section className="section-padding bg-[#0A0A0A]">
@@ -212,8 +216,12 @@ export default function HomePage() {
       <section className="section-padding bg-[#0A0A0A] border-t border-[#00FFB2]/20">
         <div className="container-custom">
           <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Watch Demo Video</h2>
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto">See how to use Top placed in a quick walkthrough.</p>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Watch Demo Video
+            </h2>
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+              See how to use Top placed in a quick walkthrough.
+            </p>
           </div>
           <div className="flex justify-center">
             <div className="w-full max-w-4xl rounded-xl overflow-hidden glass-card p-0">
