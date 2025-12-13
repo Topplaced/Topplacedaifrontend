@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Play,
@@ -25,6 +25,7 @@ import {
 } from "@/types/interview-schema";
 import { startInterview } from "@/utils/interview-api";
 import { buildInterviewConfig } from "@/utils/api-helpers";
+import { toast } from "sonner";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -40,6 +41,8 @@ export default function InterviewSetupPage() {
   const [freeInterviewsLimit, setFreeInterviewsLimit] = useState(2);
   const [hasPaidPlan, setHasPaidPlan] = useState(false);
   const [interviewCredits, setInterviewCredits] = useState(0);
+  const [purchasedPlans, setPurchasedPlans] = useState<Array<{ duration: number; price: number; purchasedAt: string; remaining: number; status: string }>>([]);
+  const unlockedDurations = useMemo(() => purchasedPlans.filter(p => p.status === 'active' && p.remaining > 0).map(p => String(p.duration)), [purchasedPlans]);
   const [loading, setLoading] = useState(false);
 
   // Check free trial usage on component mount
@@ -92,6 +95,9 @@ export default function InterviewSetupPage() {
         if (res.ok) {
           const plan = await res.json();
           setInterviewCredits(plan.interviewCredits || 0);
+          setPurchasedPlans(plan.purchasedPlans || []);
+          const firstUnlocked = (plan.purchasedPlans || []).find((p: any) => p.status === 'active' && p.remaining > 0)?.duration;
+          if (firstUnlocked) setSelectedDuration(String(firstUnlocked));
         }
       } catch {}
     };
@@ -975,9 +981,7 @@ export default function InterviewSetupPage() {
         userId: user._id,
         userName: user.name,
         userEmail: user.email,
-        isFreeInterview: (
-          !hasPaidPlan && interviewCredits <= 0 && freeInterviewsUsed < freeInterviewsLimit
-        ).toString(),
+        isFreeInterview: 'false',
       });
 
       router.push(`/learner/interview/voice-session?${params.toString()}`);
@@ -1194,36 +1198,38 @@ export default function InterviewSetupPage() {
           <div className="glass-card p-8">
             <h2 className="text-2xl font-semibold mb-6">Select Duration</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {durations.map((duration) => (
-                <button
-                  key={duration.value}
-                  onClick={() => setSelectedDuration(duration.value)}
-                  disabled={
-                    !canStartFreeInterview ||
-                    (!hasPaidPlan && duration.value !== "30")
-                  }
-                  className={`p-4 rounded-lg border-2 transition-all text-center ${
-                    selectedDuration === duration.value
-                      ? "border-[#00FFB2] bg-[#00FFB2]/10"
-                      : "border-[#333] hover:border-[#00FFB2]/50"
-                  } ${
-                    !canStartFreeInterview ||
-                    (!hasPaidPlan && duration.value !== "30")
-                      ? "opacity-50 cursor-not-allowed"
-                      : ""
-                  }`}
-                >
-                  <h3 className="font-semibold text-lg">{duration.label}</h3>
-                  <p className="text-sm text-gray-400">
-                    {duration.description}
-                  </p>
-                  {!hasPaidPlan && duration.value !== "30" && (
-                    <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full mt-2 inline-block">
-                      Pro Only
-                    </span>
-                  )}
-                </button>
-              ))}
+              {durations.map((duration) => {
+                const isUnlocked = unlockedDurations.includes(duration.value);
+                return (
+                  <button
+                    key={duration.value}
+                    onClick={() => {
+                      if (!isUnlocked) {
+                        toast.info("Locked / Not Purchased. Please buy this plan.");
+                        return;
+                      }
+                      setSelectedDuration(duration.value);
+                    }}
+                    className={`p-4 rounded-lg border-2 transition-all text-center ${
+                      selectedDuration === duration.value
+                        ? "border-[#00FFB2] bg-[#00FFB2]/10"
+                        : "border-[#333] hover:border-[#00FFB2]/50"
+                    } ${
+                      isUnlocked ? "" : "opacity-50 cursor-not-allowed"
+                    }`}
+                  >
+                    <h3 className="font-semibold text-lg">{duration.label}</h3>
+                    <p className="text-sm text-gray-400">
+                      {duration.description}
+                    </p>
+                    {!isUnlocked && (
+                      <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full mt-2 inline-block">
+                        Locked / Not Purchased
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1236,7 +1242,7 @@ export default function InterviewSetupPage() {
                 !selectedPrimaryCategory ||
                 !selectedCategory ||
                 !selectedLanguage ||
-                !canStartFreeInterview ||
+                !unlockedDurations.includes(selectedDuration) ||
                 loading
               }
               className="btn-primary px-8 py-4 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto min-w-[200px]"
