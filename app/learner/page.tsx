@@ -195,7 +195,7 @@ export default function LearnerDashboard() {
         <Navbar />
         <Sidebar userType="learner" />
 
-        <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
+        <div className="md:ml-64 ml-0 pt-20 md:pt-32 pb-24 md:pb-12">
           <div className="container-custom">
             {/* Welcome Header */}
             <div

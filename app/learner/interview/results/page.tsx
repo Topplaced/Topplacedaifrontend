@@ -281,10 +281,7 @@ function InterviewResultsContent() {
                   <Download size={16} className="mr-2" />
                   Download Report
                 </button>
-                <button className="btn-outline flex items-center">
-                  <Share2 size={16} className="mr-2" />
-                  Share Results
-                </button>
+                
                 {canTakeAnotherFreeInterview ? (
                   <button 
                     onClick={() => router.push('/learner/interview/setup')}
