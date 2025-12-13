@@ -22,6 +22,7 @@ import {
   TrendingUp,
   ChevronLeft,
   ChevronRight,
+  CreditCard,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
@@ -50,6 +51,12 @@ export default function Sidebar({ userType }: SidebarProps) {
       icon: Play,
       label: "Voice Interview",
       href: "/learner/interview/setup",
+      locked: false,
+    },
+    {
+      icon: CreditCard,
+      label: "My Plans",
+      href: "/learner/plans",
       locked: false,
     },
     // {
