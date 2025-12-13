@@ -4,7 +4,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
 import Sidebar from "@/components/Sidebar";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import Image from "next/image";
@@ -58,6 +58,7 @@ interface ProfileData {
   email: string;
   phone: string;
   location: string;
+  designation: string;
   linkedinProfile: string;
   goals: string;
   skills: string[];
@@ -72,6 +73,53 @@ interface ProfileData {
     institution: string;
     year: string;
   }>;
+}
+
+function ProfileCompletionBar({
+  percent,
+  completed,
+  total,
+}: {
+  percent: number;
+  completed: number;
+  total: number;
+}) {
+  return (
+    <div className="sticky top-14 md:top-16 z-30 mb-6">
+      <div className="glass-card px-4 py-3 border border-[#00FFB2]/15 backdrop-blur-xl">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-[0.25em] text-[#00FFB2]/70">
+              Profile Completion
+            </span>
+            <span className="text-xs text-gray-400">
+              ({completed}/{total})
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-white">{percent}%</span>
+            <span
+              className={`text-[10px] px-2 py-1 rounded-full border ${
+                percent >= 80
+                  ? "border-[#00FFB2]/40 bg-[#00FFB2]/10 text-[#00FFB2]"
+                  : "border-gray-600 bg-black/30 text-gray-300"
+              }`}
+            >
+              {percent >= 80 ? "Almost there" : "Keep going"}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-3 h-2 w-full rounded-full bg-black/60 border border-gray-700/60 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-[#00FFB2] transition-all duration-700"
+            style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function LearnerProfilePage() {
@@ -97,6 +145,7 @@ export default function LearnerProfilePage() {
     email: user?.email || "",
     phone: user?.phone || "",
     location: "",
+    designation: user?.bio || "",
     linkedinProfile: user?.linkedin_profile || "",
     goals: user?.goals || "",
     skills: [],
@@ -118,8 +167,37 @@ export default function LearnerProfilePage() {
       : null
   );
 
-  // ---------- API & Data ----------
+  // ---------- Profile completion ----------
+  const completion = useMemo(() => {
+    const fields = [
+      profileData.name,
+      profileData.email,
+      profileData.phone,
+      profileData.location,
+      profileData.designation,
+      profileData.linkedinProfile,
+      profileData.goals,
+      profileData.skills.length > 0,
+      profileData.experience.length > 0,
+      profileData.education.length > 0,
+      !!uploadedResume,
+    ];
 
+    const completed = fields.filter((field) =>
+      field
+        ? typeof field === "boolean"
+          ? field
+          : field.toString().trim() !== ""
+        : false
+    ).length;
+
+    const total = fields.length;
+    const percent = Math.round((completed / total) * 100);
+
+    return { percent, completed, total };
+  }, [profileData, uploadedResume]);
+
+  // ---------- API & Data ----------
   const fetchProfileData = async () => {
     if (!user?._id || !token) return;
 
@@ -141,8 +219,8 @@ export default function LearnerProfilePage() {
           email: backendData.email || user.email || "",
           phone: backendData.phone || user.phone || "",
           location: backendData.location || "",
-          linkedinProfile:
-            backendData.linkedin_url || user.linkedin_profile || "",
+          designation: backendData.designation || user.bio || "",
+          linkedinProfile: backendData.linkedin_url || user.linkedin_profile || "",
           goals: backendData.career_goals || user.goals || "",
           skills:
             backendData.skills ||
@@ -160,8 +238,20 @@ export default function LearnerProfilePage() {
               ? typeof user.education === "string"
                 ? JSON.parse(user.education)
                 : user.education
-            : []),
+              : []),
         });
+
+        if (backendData.resume_url) {
+          const resumeUrl: string = backendData.resume_url;
+          const derivedFilename = resumeUrl.split("/").pop() || "Resume.pdf";
+          setUploadedResume({
+            filename: decodeURIComponent(derivedFilename),
+            url: resumeUrl,
+            uploadDate: new Date().toLocaleDateString(),
+          });
+        } else {
+          setUploadedResume(null);
+        }
       } else if (response.status === 404) {
         // No profile yet – hydrate from user
         setProfileData({
@@ -169,6 +259,7 @@ export default function LearnerProfilePage() {
           email: user?.email || "",
           phone: user?.phone || "",
           location: "",
+          designation: user?.bio || "",
           linkedinProfile: user?.linkedin_profile || "",
           goals: user?.goals || "",
           skills: user?.tech_stack ? user.tech_stack.split(",") : [],
@@ -183,18 +274,32 @@ export default function LearnerProfilePage() {
               : user.education
             : [],
         });
+
+        if (user?.resume_url) {
+          const resumeUrl = user.resume_url;
+          const derivedFilename = resumeUrl.split("/").pop() || "Resume.pdf";
+          setUploadedResume({
+            filename: decodeURIComponent(derivedFilename),
+            url: resumeUrl,
+            uploadDate: new Date().toLocaleDateString(),
+          });
+        } else {
+          setUploadedResume(null);
+        }
       } else {
         throw new Error("Failed to fetch profile data");
       }
     } catch (error) {
       console.error("Error fetching profile data:", error);
       toast.error("Failed to load profile data");
+
       // Fallback
       setProfileData({
         name: user?.name || "",
         email: user?.email || "",
         phone: user?.phone || "",
         location: "",
+        designation: user?.bio || "",
         linkedinProfile: user?.linkedin_profile || "",
         goals: user?.goals || "",
         skills: user?.tech_stack ? user.tech_stack.split(",") : [],
@@ -209,6 +314,18 @@ export default function LearnerProfilePage() {
             : user.education
           : [],
       });
+
+      if (user?.resume_url) {
+        const resumeUrl = user.resume_url;
+        const derivedFilename = resumeUrl.split("/").pop() || "Resume.pdf";
+        setUploadedResume({
+          filename: decodeURIComponent(derivedFilename),
+          url: resumeUrl,
+          uploadDate: new Date().toLocaleDateString(),
+        });
+      } else {
+        setUploadedResume(null);
+      }
     } finally {
       setIsLoadingProfile(false);
     }
@@ -219,10 +336,10 @@ export default function LearnerProfilePage() {
     if (user && token) {
       fetchProfileData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, token]);
 
   // ---------- Local handlers ----------
-
   const handleInputChange = (field: keyof ProfileData, value: any) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
     setHasUnsavedChanges(true);
@@ -247,6 +364,8 @@ export default function LearnerProfilePage() {
   };
 
   const handleExperienceAdd = () => {
+    const nextIndex = profileData.experience.length;
+
     setProfileData((prev) => ({
       ...prev,
       experience: [
@@ -254,7 +373,8 @@ export default function LearnerProfilePage() {
         { title: "", company: "", duration: "", description: "" },
       ],
     }));
-    setEditingExperienceIndex(prev => prev ?? profileData.experience.length);
+
+    setEditingExperienceIndex(nextIndex);
     setHasUnsavedChanges(true);
   };
 
@@ -282,14 +402,14 @@ export default function LearnerProfilePage() {
   };
 
   const handleEducationAdd = () => {
+    const nextIndex = profileData.education.length;
+
     setProfileData((prev) => ({
       ...prev,
-      education: [
-        ...prev.education,
-        { degree: "", institution: "", year: "" },
-      ],
+      education: [...prev.education, { degree: "", institution: "", year: "" }],
     }));
-    setEditingEducationIndex(prev => prev ?? profileData.education.length);
+
+    setEditingEducationIndex(nextIndex);
     setHasUnsavedChanges(true);
   };
 
@@ -333,6 +453,7 @@ export default function LearnerProfilePage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
+
       const response = await fetch(`${API_URL}/users/${user?._id}/resume`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -343,12 +464,12 @@ export default function LearnerProfilePage() {
 
       if (response.ok) {
         setUploadedResume({
-          filename: data.resume.filename,
-          url: data.resume.url,
+          filename: data.resume?.filename || "Resume.pdf",
+          url: data.resume?.url,
           uploadDate: new Date().toLocaleDateString(),
         });
 
-        if (data.resume.extracted_data) {
+        if (data.resume?.extracted_data) {
           setExtractedData(data.resume.extracted_data);
           setShowExtractedData(true);
           toast.success("Resume uploaded and data extracted successfully!");
@@ -368,6 +489,7 @@ export default function LearnerProfilePage() {
 
   const handleApplyExtractedData = () => {
     if (!extractedData) return;
+
     setProfileData((prev) => ({
       ...prev,
       name: extractedData.name || prev.name,
@@ -377,6 +499,7 @@ export default function LearnerProfilePage() {
       experience: extractedData.experience || prev.experience,
       education: extractedData.education || prev.education,
     }));
+
     setShowExtractedData(false);
     setEditHeader(true);
     setEditSkills(true);
@@ -398,9 +521,7 @@ export default function LearnerProfilePage() {
         },
         body: JSON.stringify({
           name: profileData.name,
-          phone: profileData.phone
-            ? profileData.phone.replace(/\s+/g, "")
-            : "",
+          phone: profileData.phone ? profileData.phone.replace(/\s+/g, "") : "",
           goals: profileData.goals,
           tech_stack: profileData.skills.join(","),
           experience:
@@ -415,55 +536,49 @@ export default function LearnerProfilePage() {
       }
 
       // Update / create profile
-      let profileResponse = await fetch(
-        `${API_URL}/users/${user._id}/profile`,
-        {
-          method: "PATCH",
+      let profileResponse = await fetch(`${API_URL}/users/${user._id}/profile`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: profileData.name,
+          email: profileData.email,
+          phone: profileData.phone ? profileData.phone.replace(/\s+/g, "") : "",
+          location: profileData.location,
+          designation: profileData.designation,
+          linkedin_url: profileData.linkedinProfile,
+          skills: profileData.skills,
+          experience: profileData.experience,
+          education: profileData.education,
+          career_goals: profileData.goals,
+        }),
+      });
+
+      if (profileResponse.status === 404) {
+        profileResponse = await fetch(`${API_URL}/users/${user._id}/profile`, {
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
+            user_id: user._id,
             name: profileData.name,
             email: profileData.email,
             phone: profileData.phone
               ? profileData.phone.replace(/\s+/g, "")
               : "",
             location: profileData.location,
+            designation: profileData.designation,
             linkedin_url: profileData.linkedinProfile,
             skills: profileData.skills,
             experience: profileData.experience,
             education: profileData.education,
             career_goals: profileData.goals,
           }),
-        }
-      );
-
-      if (profileResponse.status === 404) {
-        profileResponse = await fetch(
-          `${API_URL}/users/${user._id}/profile`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              user_id: user._id,
-              name: profileData.name,
-              email: profileData.email,
-              phone: profileData.phone
-                ? profileData.phone.replace(/\s+/g, "")
-                : "",
-              location: profileData.location,
-              linkedin_url: profileData.linkedinProfile,
-              skills: profileData.skills,
-              experience: profileData.experience,
-              education: profileData.education,
-              career_goals: profileData.goals,
-            }),
-          }
-        );
+        });
       }
 
       if (!profileResponse.ok) {
@@ -485,7 +600,7 @@ export default function LearnerProfilePage() {
     try {
       await saveProfileData();
     } catch {
-      // toast already handled in saveProfileData
+      // toast already handled
     }
   };
 
@@ -495,13 +610,14 @@ export default function LearnerProfilePage() {
   };
 
   // ---------- UI ----------
-
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-black">
         <Navbar />
+
         <div className="flex">
           <Sidebar userType="learner" />
+
           <main className="flex-1 md:ml-64 ml-0 p-6 md:p-8 pt-16 md:pt-20 pb-24 md:pb-12">
             {isLoadingProfile ? (
               <div className="flex items-center justify-center min-h-[400px]">
@@ -512,9 +628,16 @@ export default function LearnerProfilePage() {
               </div>
             ) : (
               <div className="container-custom">
+                {/* TOP PROGRESS BAR */}
+                <ProfileCompletionBar
+                  percent={completion.percent}
+                  completed={completion.completed}
+                  total={completion.total}
+                />
+
                 {/* Page header */}
                 <div
-                  className={`mb-8 mt-6 md:mt-10 transition-all duration-700 flex justify-between items-center ${
+                  className={`mb-8 mt-2 md:mt-4 transition-all duration-700 flex justify-between items-center ${
                     isVisible
                       ? "opacity-100 translate-y-0"
                       : "opacity-0 translate-y-10"
@@ -525,18 +648,19 @@ export default function LearnerProfilePage() {
                       Profile
                     </p>
                     <h1 className="text-3xl md:text-4xl font-bold mb-2">
-                      Your{" "}
-                      <span className="gradient-text">
-                        Professional Profile
-                      </span>
+                      Your <span className="gradient-text">Professional Profile</span>
                     </h1>
                     <p className="text-gray-400 text-sm md:text-base">
-                      Build your professional presence and showcase your
-                      expertise for interviews and career opportunities.
+                      Build your professional presence and showcase your expertise
+                      for interviews and career opportunities.
                     </p>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="hidden md:inline-flex px-3 py-1 rounded-full text-xs border border-[#00FFB2]/30 bg-[#00FFB2]/10 text-[#00FFB2]">
+                      {completion.percent}% Complete
+                    </span>
+
                     {!editHeader ? (
                       <button
                         onClick={() => setEditHeader(true)}
@@ -591,9 +715,7 @@ export default function LearnerProfilePage() {
                             <label className="text-xs uppercase tracking-wide text-gray-400">
                               Name
                             </label>
-                            <p className="text-white text-base">
-                              {extractedData.name}
-                            </p>
+                            <p className="text-white text-base">{extractedData.name}</p>
                           </div>
                         )}
                         {extractedData.email && (
@@ -601,9 +723,7 @@ export default function LearnerProfilePage() {
                             <label className="text-xs uppercase tracking-wide text-gray-400">
                               Email
                             </label>
-                            <p className="text-white text-base">
-                              {extractedData.email}
-                            </p>
+                            <p className="text-white text-base">{extractedData.email}</p>
                           </div>
                         )}
                         {extractedData.phone && (
@@ -611,30 +731,27 @@ export default function LearnerProfilePage() {
                             <label className="text-xs uppercase tracking-wide text-gray-400">
                               Phone
                             </label>
-                            <p className="text-white text-base">
-                              {extractedData.phone}
-                            </p>
+                            <p className="text-white text-base">{extractedData.phone}</p>
                           </div>
                         )}
 
-                        {extractedData.skills &&
-                          extractedData.skills.length > 0 && (
-                            <div>
-                              <label className="text-xs uppercase tracking-wide text-gray-400">
-                                Skills
-                              </label>
-                              <div className="flex flex-wrap gap-2 mt-1">
-                                {extractedData.skills.map((skill, index) => (
-                                  <span
-                                    key={index}
-                                    className="px-3 py-1 bg-[#00FFB2]/20 text-[#00FFB2] rounded-full text-xs"
-                                  >
-                                    {skill}
-                                  </span>
-                                ))}
-                              </div>
+                        {extractedData.skills && extractedData.skills.length > 0 && (
+                          <div>
+                            <label className="text-xs uppercase tracking-wide text-gray-400">
+                              Skills
+                            </label>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {extractedData.skills.map((skill, index) => (
+                                <span
+                                  key={index}
+                                  className="px-3 py-1 bg-[#00FFB2]/20 text-[#00FFB2] rounded-full text-xs"
+                                >
+                                  {skill}
+                                </span>
+                              ))}
                             </div>
-                          )}
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex gap-3">
@@ -659,7 +776,6 @@ export default function LearnerProfilePage() {
                 <div className="space-y-8">
                   {/* Profile Header Card */}
                   <div className="glass-card p-8 neon-glow">
-                    <div className="h-1 w-full bg-gradient-to-r from-[#00FFB2]/40 via-[#00FFB2] to-[#00FFB2]/40 rounded-full mb-6" />
 
                     <div className="flex flex-col lg:flex-row items-start lg:items-center gap-8">
                       {/* Profile Image */}
@@ -679,11 +795,7 @@ export default function LearnerProfilePage() {
                         {editHeader && (
                           <label className="absolute bottom-1 right-1 w-9 h-9 bg-[#00FFB2] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#00CC8E] transition-colors shadow-lg shadow-[#00FFB2]/50">
                             <Upload size={16} className="text-black" />
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                            />
+                            <input type="file" accept="image/*" className="hidden" />
                           </label>
                         )}
                       </div>
@@ -695,6 +807,9 @@ export default function LearnerProfilePage() {
                             <h2 className="text-2xl md:text-3xl font-semibold">
                               {(editHeader ? profileData.name : user?.name) || "Your Name"}
                             </h2>
+                            <p className="text-gray-300 mt-1">
+                              {profileData.designation || "Designation not set"}
+                            </p>
                           </div>
                         </div>
 
@@ -708,16 +823,12 @@ export default function LearnerProfilePage() {
 
                           <div className="flex items-center text-gray-300 gap-2">
                             <Phone size={18} className="text-[#00FFB2]" />
-                            <span>
-                              {profileData.phone || "Phone not set"}
-                            </span>
+                            <span>{profileData.phone || "Phone not set"}</span>
                           </div>
 
                           <div className="flex items-center text-gray-300 gap-2">
                             <MapPin size={18} className="text-[#00FFB2]" />
-                            <span>
-                              {profileData.location || "Location not set"}
-                            </span>
+                            <span>{profileData.location || "Location not set"}</span>
                           </div>
                         </div>
 
@@ -747,10 +858,22 @@ export default function LearnerProfilePage() {
                             </label>
                             <Input
                               value={profileData.name}
-                              onChange={(e) =>
-                                handleInputChange("name", e.target.value)
-                              }
+                              onChange={(e) => handleInputChange("name", e.target.value)}
                               placeholder="full name..."
+                              className="w-full bg-[#050505] border border-gray-700 rounded-lg py-3 px-4 text-white"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                              Designation
+                            </label>
+                            <Input
+                              value={profileData.designation}
+                              onChange={(e) =>
+                                handleInputChange("designation", e.target.value)
+                              }
+                              placeholder="e.g., Frontend Developer"
                               className="w-full bg-[#050505] border border-gray-700 rounded-lg py-3 px-4 text-white"
                             />
                           </div>
@@ -761,9 +884,7 @@ export default function LearnerProfilePage() {
                             </label>
                             <Input
                               value={profileData.phone}
-                              onChange={(e) =>
-                                handleInputChange("phone", e.target.value)
-                              }
+                              onChange={(e) => handleInputChange("phone", e.target.value)}
                               placeholder="phone number..."
                               className="w-full bg-[#050505] border border-gray-700 rounded-lg py-3 px-4 text-white"
                             />
@@ -790,10 +911,7 @@ export default function LearnerProfilePage() {
                             <Input
                               value={profileData.linkedinProfile}
                               onChange={(e) =>
-                                handleInputChange(
-                                  "linkedinProfile",
-                                  e.target.value
-                                )
+                                handleInputChange("linkedinProfile", e.target.value)
                               }
                               placeholder="url..."
                               className="w-full bg-[#050505] border border-gray-700 rounded-lg py-3 px-4 text-white"
@@ -816,8 +934,7 @@ export default function LearnerProfilePage() {
                             Resume &amp; AI Extraction
                           </h3>
                           <p className="text-gray-400 text-xs md:text-sm">
-                            Upload once. We’ll auto-extract your skills and
-                            experience into your profile.
+                            Upload once. We’ll auto-extract your skills and experience into your profile.
                           </p>
                         </div>
                       </div>
@@ -840,7 +957,7 @@ export default function LearnerProfilePage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <a
-                            href={`${API_URL}${uploadedResume.url}`}
+                            href={uploadedResume.url.startsWith("http") ? uploadedResume.url : `${API_URL}${uploadedResume.url}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="btn-outline py-1 px-3 text-xs md:text-sm flex items-center gap-1"
@@ -860,17 +977,12 @@ export default function LearnerProfilePage() {
                     )}
 
                     <div className="border-2 border-dashed border-gray-700 rounded-xl p-8 text-center bg-black/40">
-                      <FileText
-                        size={40}
-                        className="text-gray-500 mx-auto mb-4"
-                      />
-                      <h4 className="text-lg font-semibold mb-1">
-                        Upload Your Resume
-                      </h4>
+                      <FileText size={40} className="text-gray-500 mx-auto mb-4" />
+                      <h4 className="text-lg font-semibold mb-1">Upload Your Resume</h4>
                       <p className="text-gray-400 text-sm mb-4 max-w-lg mx-auto">
-                        Upload a PDF resume and let AI pre-fill your profile
-                        with skills, experience, and education.
+                        Upload a PDF resume and let AI pre-fill your profile with skills, experience, and education.
                       </p>
+
                       <label className="btn-primary cursor-pointer inline-flex items-center gap-2">
                         {isUploading ? (
                           <>
@@ -891,6 +1003,7 @@ export default function LearnerProfilePage() {
                           disabled={isUploading}
                         />
                       </label>
+
                       <p className="text-xs text-gray-500 mt-2">
                         PDF format only, max size 5MB
                       </p>
@@ -905,12 +1018,9 @@ export default function LearnerProfilePage() {
                           <Settings size={20} className="text-[#00FFB2]" />
                         </div>
                         <div>
-                          <h3 className="text-lg md:text-xl font-semibold">
-                            Skills
-                          </h3>
+                          <h3 className="text-lg md:text-xl font-semibold">Skills</h3>
                           <p className="text-gray-400 text-xs md:text-sm">
-                            Highlight tools, languages, and frameworks you’re
-                            confident with.
+                            Highlight tools, languages, and frameworks you’re confident with.
                           </p>
                         </div>
                       </div>
@@ -928,6 +1038,7 @@ export default function LearnerProfilePage() {
                             Add Skill
                           </button>
                         )}
+
                         {!editSkills ? (
                           <button
                             onClick={() => setEditSkills(true)}
@@ -981,13 +1092,8 @@ export default function LearnerProfilePage() {
                         ))
                       ) : (
                         <div className="text-center py-8 w-full">
-                          <Settings
-                            size={40}
-                            className="text-gray-500 mx-auto mb-3"
-                          />
-                          <p className="text-gray-400 mb-2 text-sm">
-                            No skills added yet.
-                          </p>
+                          <Settings size={40} className="text-gray-500 mx-auto mb-3" />
+                          <p className="text-gray-400 mb-2 text-sm">No skills added yet.</p>
                           {editSkills && (
                             <button
                               onClick={() => {
@@ -1012,15 +1118,13 @@ export default function LearnerProfilePage() {
                           <Briefcase size={20} className="text-[#00FFB2]" />
                         </div>
                         <div>
-                          <h3 className="text-lg md:text-xl font-semibold">
-                            Experience
-                          </h3>
+                          <h3 className="text-lg md:text-xl font-semibold">Experience</h3>
                           <p className="text-gray-400 text-xs md:text-sm">
-                            Share the roles where you applied your skills in
-                            real projects.
+                            Share the roles where you applied your skills in real projects.
                           </p>
                         </div>
                       </div>
+
                       <button
                         onClick={handleExperienceAdd}
                         className="btn-outline py-1 px-3 text-xs md:text-sm flex items-center gap-1"
@@ -1048,14 +1152,13 @@ export default function LearnerProfilePage() {
                                     </h4>
                                     <div className="flex items-center gap-2">
                                       <button
-                                        onClick={() =>
-                                          handleExperienceRemove(index)
-                                        }
+                                        onClick={() => handleExperienceRemove(index)}
                                         className="text-red-400 hover:text-red-300"
                                         aria-label="Delete experience"
                                       >
                                         <Trash2 size={16} />
                                       </button>
+
                                       <button
                                         onClick={async () => {
                                           await handleSave();
@@ -1066,10 +1169,9 @@ export default function LearnerProfilePage() {
                                         <Check size={14} />
                                         Save
                                       </button>
+
                                       <button
-                                        onClick={() =>
-                                          setEditingExperienceIndex(null)
-                                        }
+                                        onClick={() => setEditingExperienceIndex(null)}
                                         className="btn-outline py-1 px-3 text-xs flex items-center gap-1"
                                       >
                                         <X size={14} />
@@ -1077,15 +1179,12 @@ export default function LearnerProfilePage() {
                                       </button>
                                     </div>
                                   </div>
+
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <Input
                                       value={exp.title}
                                       onChange={(e) =>
-                                        handleExperienceUpdate(
-                                          index,
-                                          "title",
-                                          e.target.value
-                                        )
+                                        handleExperienceUpdate(index, "title", e.target.value)
                                       }
                                       placeholder="Job Title"
                                       className="bg-[#020202] border border-gray-700"
@@ -1093,11 +1192,7 @@ export default function LearnerProfilePage() {
                                     <Input
                                       value={exp.company}
                                       onChange={(e) =>
-                                        handleExperienceUpdate(
-                                          index,
-                                          "company",
-                                          e.target.value
-                                        )
+                                        handleExperienceUpdate(index, "company", e.target.value)
                                       }
                                       placeholder="Company Name"
                                       className="bg-[#020202] border border-gray-700"
@@ -1105,24 +1200,17 @@ export default function LearnerProfilePage() {
                                     <Input
                                       value={exp.duration}
                                       onChange={(e) =>
-                                        handleExperienceUpdate(
-                                          index,
-                                          "duration",
-                                          e.target.value
-                                        )
+                                        handleExperienceUpdate(index, "duration", e.target.value)
                                       }
                                       placeholder="Duration (e.g., Jan 2020 - Present)"
                                       className="bg-[#020202] border border-gray-700"
                                     />
                                   </div>
+
                                   <textarea
                                     value={exp.description}
                                     onChange={(e) =>
-                                      handleExperienceUpdate(
-                                        index,
-                                        "description",
-                                        e.target.value
-                                      )
+                                      handleExperienceUpdate(index, "description", e.target.value)
                                     }
                                     placeholder="Job description and achievements..."
                                     rows={3}
@@ -1139,18 +1227,19 @@ export default function LearnerProfilePage() {
                                       {exp.duration || "Duration not set"}
                                     </span>
                                   </div>
+
                                   <p className="text-[#00FFB2] text-sm mb-2">
                                     {exp.company || "Company"}
                                   </p>
+
                                   <p className="text-gray-300 text-sm leading-relaxed">
                                     {exp.description ||
                                       "Add a short description about what you worked on and your impact."}
                                   </p>
+
                                   <div className="mt-3">
                                     <button
-                                      onClick={() =>
-                                        setEditingExperienceIndex(index)
-                                      }
+                                      onClick={() => setEditingExperienceIndex(index)}
                                       className="btn-outline py-1 px-3 text-xs flex items-center gap-1"
                                     >
                                       <Pencil size={14} />
@@ -1164,13 +1253,8 @@ export default function LearnerProfilePage() {
                         ))
                       ) : (
                         <div className="text-center py-8">
-                          <Briefcase
-                            size={40}
-                            className="text-gray-500 mx-auto mb-3"
-                          />
-                          <p className="text-gray-400 mb-3 text-sm">
-                            No experience added yet.
-                          </p>
+                          <Briefcase size={40} className="text-gray-500 mx-auto mb-3" />
+                          <p className="text-gray-400 mb-3 text-sm">No experience added yet.</p>
                           <button
                             onClick={handleExperienceAdd}
                             className="btn-outline text-xs md:text-sm"
@@ -1187,20 +1271,16 @@ export default function LearnerProfilePage() {
                     <div className="flex items-center justify-between mb-6">
                       <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-full bg-[#00FFB2]/15 flex items-center justify-center">
-                          <GraduationCap
-                            size={20}
-                            className="text-[#00FFB2]"
-                          />
+                          <GraduationCap size={20} className="text-[#00FFB2]" />
                         </div>
                         <div>
-                          <h3 className="text-lg md:text-xl font-semibold">
-                            Education
-                          </h3>
+                          <h3 className="text-lg md:text-xl font-semibold">Education</h3>
                           <p className="text-gray-400 text-xs md:text-sm">
                             Show where you studied and what you completed.
                           </p>
                         </div>
                       </div>
+
                       <button
                         onClick={handleEducationAdd}
                         className="btn-outline py-1 px-3 text-xs md:text-sm flex items-center gap-1"
@@ -1218,6 +1298,7 @@ export default function LearnerProfilePage() {
                             className="bg-[#050505] rounded-xl p-4 border border-gray-700 relative overflow-hidden"
                           >
                             <div className="absolute left-0 top-0 h-full w-[3px] bg-gradient-to-b from-[#00FFB2] via-[#00FFB2]/40 to-transparent" />
+
                             <div className="pl-4">
                               {editingEducationIndex === index ? (
                                 <div className="space-y-4">
@@ -1227,14 +1308,13 @@ export default function LearnerProfilePage() {
                                     </h4>
                                     <div className="flex items-center gap-2">
                                       <button
-                                        onClick={() =>
-                                          handleEducationRemove(index)
-                                        }
+                                        onClick={() => handleEducationRemove(index)}
                                         className="text-red-400 hover:text-red-300"
                                         aria-label="Delete education"
                                       >
                                         <Trash2 size={16} />
                                       </button>
+
                                       <button
                                         onClick={async () => {
                                           await handleSave();
@@ -1245,10 +1325,9 @@ export default function LearnerProfilePage() {
                                         <Check size={14} />
                                         Save
                                       </button>
+
                                       <button
-                                        onClick={() =>
-                                          setEditingEducationIndex(null)
-                                        }
+                                        onClick={() => setEditingEducationIndex(null)}
                                         className="btn-outline py-1 px-3 text-xs flex items-center gap-1"
                                       >
                                         <X size={14} />
@@ -1256,15 +1335,12 @@ export default function LearnerProfilePage() {
                                       </button>
                                     </div>
                                   </div>
+
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <Input
                                       value={edu.degree}
                                       onChange={(e) =>
-                                        handleEducationUpdate(
-                                          index,
-                                          "degree",
-                                          e.target.value
-                                        )
+                                        handleEducationUpdate(index, "degree", e.target.value)
                                       }
                                       placeholder="Degree (e.g., BSc Computer Science)"
                                       className="bg-[#020202] border border-gray-700"
@@ -1272,11 +1348,7 @@ export default function LearnerProfilePage() {
                                     <Input
                                       value={edu.institution}
                                       onChange={(e) =>
-                                        handleEducationUpdate(
-                                          index,
-                                          "institution",
-                                          e.target.value
-                                        )
+                                        handleEducationUpdate(index, "institution", e.target.value)
                                       }
                                       placeholder="Institution Name"
                                       className="bg-[#020202] border border-gray-700"
@@ -1284,11 +1356,7 @@ export default function LearnerProfilePage() {
                                     <Input
                                       value={edu.year}
                                       onChange={(e) =>
-                                        handleEducationUpdate(
-                                          index,
-                                          "year",
-                                          e.target.value
-                                        )
+                                        handleEducationUpdate(index, "year", e.target.value)
                                       }
                                       placeholder="Year (e.g., 2020-2024)"
                                       className="bg-[#020202] border border-gray-700"
@@ -1305,14 +1373,14 @@ export default function LearnerProfilePage() {
                                       {edu.year || "Year not set"}
                                     </span>
                                   </div>
+
                                   <p className="text-[#00FFB2] text-sm">
                                     {edu.institution || "Institution"}
                                   </p>
+
                                   <div className="mt-3">
                                     <button
-                                      onClick={() =>
-                                        setEditingEducationIndex(index)
-                                      }
+                                      onClick={() => setEditingEducationIndex(index)}
                                       className="btn-outline py-1 px-3 text-xs flex items-center gap-1"
                                     >
                                       <Pencil size={14} />
@@ -1326,13 +1394,8 @@ export default function LearnerProfilePage() {
                         ))
                       ) : (
                         <div className="text-center py-8">
-                          <GraduationCap
-                            size={40}
-                            className="text-gray-500 mx-auto mb-3"
-                          />
-                          <p className="text-gray-400 mb-3 text-sm">
-                            No education added yet.
-                          </p>
+                          <GraduationCap size={40} className="text-gray-500 mx-auto mb-3" />
+                          <p className="text-gray-400 mb-3 text-sm">No education added yet.</p>
                           <button
                             onClick={handleEducationAdd}
                             className="btn-outline text-xs md:text-sm"
@@ -1352,15 +1415,13 @@ export default function LearnerProfilePage() {
                           <Target size={20} className="text-[#00FFB2]" />
                         </div>
                         <div>
-                          <h3 className="text-lg md:text-xl font-semibold">
-                            Career Goals
-                          </h3>
+                          <h3 className="text-lg md:text-xl font-semibold">Career Goals</h3>
                           <p className="text-gray-400 text-xs md:text-sm">
-                            Tell us where you want to go so we can match the
-                            right opportunities.
+                            Tell us where you want to go so we can match the right opportunities.
                           </p>
                         </div>
                       </div>
+
                       {!editGoals ? (
                         <button
                           onClick={() => setEditGoals(true)}
@@ -1396,9 +1457,7 @@ export default function LearnerProfilePage() {
                       <div className="space-y-4">
                         <textarea
                           value={profileData.goals}
-                          onChange={(e) =>
-                            handleInputChange("goals", e.target.value)
-                          }
+                          onChange={(e) => handleInputChange("goals", e.target.value)}
                           placeholder="Describe your career aspirations, target roles, and what you want to learn next..."
                           rows={4}
                           className="w-full bg-[#050505] border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-400 resize-none text-sm"
@@ -1412,16 +1471,12 @@ export default function LearnerProfilePage() {
                       </div>
                     ) : (
                       <div className="text-center py-8">
-                        <Target
-                          size={40}
-                          className="text-gray-500 mx-auto mb-3"
-                        />
+                        <Target size={40} className="text-gray-500 mx-auto mb-3" />
                         <p className="text-gray-400 mb-2 text-sm">
                           No career goals set yet.
                         </p>
                         <p className="text-gray-500 text-xs">
-                          Click the edit button above to describe your goals and
-                          preferred roles.
+                          Click the edit button above to describe your goals and preferred roles.
                         </p>
                       </div>
                     )}
@@ -1433,51 +1488,29 @@ export default function LearnerProfilePage() {
                       <Award size={22} className="text-[#00FFB2]" />
                       Profile Statistics
                     </h3>
+
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="bg-[#050505] p-4 rounded-lg text-center border border-gray-700">
                         <div className="text-[#00FFB2] text-2xl font-bold mb-1">
-                          {(() => {
-                            const fields = [
-                              profileData.name,
-                              profileData.email,
-                              profileData.phone,
-                              profileData.location,
-                              profileData.linkedinProfile,
-                              profileData.goals,
-                              profileData.skills.length > 0,
-                              profileData.experience.length > 0,
-                              profileData.education.length > 0,
-                              uploadedResume,
-                            ];
-                            const completedFields = fields.filter((field) =>
-                              field
-                                ? typeof field === "boolean"
-                                  ? field
-                                  : field.toString().trim() !== ""
-                                : false
-                            ).length;
-                            return Math.round(
-                              (completedFields / fields.length) * 100
-                            );
-                          })()}
-                          %
+                          {completion.percent}%
                         </div>
-                        <div className="text-xs text-gray-400">
-                          Profile Completion
-                        </div>
+                        <div className="text-xs text-gray-400">Profile Completion</div>
                       </div>
+
                       <div className="bg-[#050505] p-4 rounded-lg text-center border border-gray-700">
                         <div className="text-[#00FFB2] text-2xl font-bold mb-1">
                           {profileData.skills.length}
                         </div>
                         <div className="text-xs text-gray-400">Skills</div>
                       </div>
+
                       <div className="bg-[#050505] p-4 rounded-lg text-center border border-gray-700">
                         <div className="text-[#00FFB2] text-2xl font-bold mb-1">
                           {profileData.experience.length}
                         </div>
                         <div className="text-xs text-gray-400">Experience</div>
                       </div>
+
                       <div className="bg-[#050505] p-4 rounded-lg text-center border border-gray-700">
                         <div className="text-[#00FFB2] text-2xl font-bold mb-1">
                           {profileData.education.length}
@@ -1485,12 +1518,19 @@ export default function LearnerProfilePage() {
                         <div className="text-xs text-gray-400">Education</div>
                       </div>
                     </div>
+
+                    {hasUnsavedChanges && (
+                      <div className="mt-4 text-xs text-yellow-300/90">
+                        You have unsaved changes. Don’t forget to save sections after editing.
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             )}
           </main>
         </div>
+
         <BottomNav />
       </div>
     </ProtectedRoute>

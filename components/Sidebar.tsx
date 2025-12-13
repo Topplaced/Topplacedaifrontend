@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Home,
@@ -88,7 +89,6 @@ export default function Sidebar({ userType }: SidebarProps) {
     //   locked: false,
     // },
     { icon: User, label: "Profile", href: "/learner/profile", locked: false },
-    { icon: Settings, label: "Settings", href: "/settings", locked: false },
   ];
 
   const mentorMenuItems: MenuItem[] = [
@@ -118,6 +118,8 @@ export default function Sidebar({ userType }: SidebarProps) {
       >
         {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
+
+     
 
       {/* Menu Items */}
       <div className="p-4 space-y-2">

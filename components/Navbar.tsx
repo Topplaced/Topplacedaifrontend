@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { User, LogOut, Settings, Trophy } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../store/store"; // Adjust the import path as necessary
@@ -44,12 +45,17 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-[#00FFB2]/20">
       <div className="container-custom">
         <div className="flex items-center justify-between h-14 md:h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-7 h-7 md:w-8 md:h-8 bg-gradient-to-r from-[#00FFB2] to-[#00CC8E] rounded-lg flex items-center justify-center">
-              <span className="text-black font-bold text-sm">TP</span>
-            </div>
-            <span className="text-lg md:text-xl font-bold gradient-text">Top placed</span>
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/images/logo.png"
+              alt="TopPlaced"
+              width={240}
+              height={72}
+              quality={100}
+              sizes="(max-width: 768px) 140px, 220px"
+              className="h-9 md:h-11 w-auto object-contain"
+              priority
+            />
           </Link>
 
           {/* Desktop Navigation */}
