@@ -695,8 +695,9 @@ function VoiceInterviewContent() {
 
           // Only set questionContent if we don't already have aiResponseContent
           // This prevents duplication when shortResponse contains the question
-
-          questionContent = data.currentQuestion.question;
+          if (!aiResponseContent) {
+            questionContent = data.currentQuestion.question;
+          }
 
           // Don't combine with messageContent anymore
         } else {
