@@ -55,7 +55,7 @@ const authSlice = createSlice({
 
       const userData = {
         ...user,
-        name: user.name || deriveNameFromEmail(user.email),
+        name: (user as any).name || (user as any).fullName || deriveNameFromEmail(user.email),
       };
 
       state.token = access_token;
@@ -92,7 +92,8 @@ const authSlice = createSlice({
         const userData = {
           ...action.payload.user,
           name:
-            action.payload.user.name ||
+            (action.payload.user as any).name ||
+            (action.payload.user as any).fullName ||
             deriveNameFromEmail(action.payload.user.email),
         };
 
@@ -101,9 +102,15 @@ const authSlice = createSlice({
       }
       state.isHydrated = true;
     },
+
+    updateUserName(state, action: PayloadAction<string>) {
+      if (state.user) {
+        state.user.name = action.payload || state.user.name;
+      }
+    },
   },
 });
 
-export const { loginSuccess, logout, setHydrated, restoreAuth } =
+export const { loginSuccess, logout, setHydrated, restoreAuth, updateUserName } =
   authSlice.actions;
 export const authReducer = authSlice.reducer;

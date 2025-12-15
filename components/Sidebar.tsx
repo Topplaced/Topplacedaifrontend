@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Home,
@@ -21,6 +22,7 @@ import {
   TrendingUp,
   ChevronLeft,
   ChevronRight,
+  CreditCard,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
@@ -49,6 +51,12 @@ export default function Sidebar({ userType }: SidebarProps) {
       icon: Play,
       label: "Voice Interview",
       href: "/learner/interview/setup",
+      locked: false,
+    },
+    {
+      icon: CreditCard,
+      label: "My Plans",
+      href: "/learner/plans",
       locked: false,
     },
     // {
@@ -88,7 +96,6 @@ export default function Sidebar({ userType }: SidebarProps) {
     //   locked: false,
     // },
     { icon: User, label: "Profile", href: "/learner/profile", locked: false },
-    { icon: Settings, label: "Settings", href: "/settings", locked: false },
   ];
 
   const mentorMenuItems: MenuItem[] = [
@@ -118,6 +125,8 @@ export default function Sidebar({ userType }: SidebarProps) {
       >
         {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
+
+     
 
       {/* Menu Items */}
       <div className="p-4 space-y-2">

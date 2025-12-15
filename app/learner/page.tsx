@@ -195,7 +195,7 @@ export default function LearnerDashboard() {
         <Navbar />
         <Sidebar userType="learner" />
 
-        <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
+        <div className="md:ml-64 ml-0 pt-20 md:pt-32 pb-24 md:pb-12">
           <div className="container-custom">
             {/* Welcome Header */}
             <div
@@ -255,9 +255,13 @@ export default function LearnerDashboard() {
                       Practice with our AI interviewer and get instant feedback
                     </p>
                   </div>
-                  <div className="w-16 h-16 bg-[#00FFB2]/20 rounded-xl flex items-center justify-center">
+                  <button
+                    onClick={() => router.push("/learner/interview/voice-session")}
+                    className="w-16 h-16 bg-[#00FFB2]/20 rounded-xl flex items-center justify-center hover:bg-[#00FFB2]/30 transition-colors"
+                    aria-label="Start Voice Interview"
+                  >
                     <Play size={32} className="text-[#00FFB2]" />
-                  </div>
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
@@ -281,13 +285,22 @@ export default function LearnerDashboard() {
                   </div>
                 </div>
 
-                <Link
-                  href="/learner/interview/setup"
-                  className="btn-primary flex items-center justify-center w-full py-3"
-                >
-                  <Play size={20} className="mr-2" />
-                  Start AI Interview
-                </Link>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link
+                    href="/learner/interview/setup"
+                    className="btn-primary flex items-center justify-center w-full py-3"
+                  >
+                    <Play size={20} className="mr-2" />
+                    Start AI Interview
+                  </Link>
+                  <Link
+                    href="/learner/interview/voice-session"
+                    className="btn-outline flex items-center justify-center w-full py-3"
+                  >
+                    <Play size={20} className="mr-2" />
+                    Start Voice Interview
+                  </Link>
+                </div>
               </div>
 
               {/* Progress Card */}
