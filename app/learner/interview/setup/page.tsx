@@ -41,8 +41,22 @@ export default function InterviewSetupPage() {
   const [freeInterviewsLimit, setFreeInterviewsLimit] = useState(2);
   const [hasPaidPlan, setHasPaidPlan] = useState(false);
   const [interviewCredits, setInterviewCredits] = useState(0);
-  const [purchasedPlans, setPurchasedPlans] = useState<Array<{ duration: number; price: number; purchasedAt: string; remaining: number; status: string }>>([]);
-  const unlockedDurations = useMemo(() => purchasedPlans.filter(p => p.status === 'active' && p.remaining > 0).map(p => String(p.duration)), [purchasedPlans]);
+  const [purchasedPlans, setPurchasedPlans] = useState<
+    Array<{
+      duration: number;
+      price: number;
+      purchasedAt: string;
+      remaining: number;
+      status: string;
+    }>
+  >([]);
+  const unlockedDurations = useMemo(
+    () =>
+      purchasedPlans
+        .filter((p) => p.status === "active" && p.remaining > 0)
+        .map((p) => String(p.duration)),
+    [purchasedPlans]
+  );
   const [loading, setLoading] = useState(false);
 
   // Check free trial usage on component mount
@@ -96,7 +110,9 @@ export default function InterviewSetupPage() {
           const plan = await res.json();
           setInterviewCredits(plan.interviewCredits || 0);
           setPurchasedPlans(plan.purchasedPlans || []);
-          const firstUnlocked = (plan.purchasedPlans || []).find((p: any) => p.status === 'active' && p.remaining > 0)?.duration;
+          const firstUnlocked = (plan.purchasedPlans || []).find(
+            (p: any) => p.status === "active" && p.remaining > 0
+          )?.duration;
           if (firstUnlocked) setSelectedDuration(String(firstUnlocked));
         }
       } catch {}
@@ -904,7 +920,20 @@ export default function InterviewSetupPage() {
     }
 
     // Check if user has exceeded free interviews based on dynamic limit and credits
-    if (!hasPaidPlan && interviewCredits <= 0 && freeInterviewsUsed >= freeInterviewsLimit) {
+    // 30 min is free if under limit
+    const isFreeTrialOption = selectedDuration === "30";
+
+    // Logic:
+    // If it's NOT the free trial option, follow standard rules (paid/credits).
+    // If it IS the free trial option, check if they have remaining free interviews OR credits/paid plan.
+    // Actually, if they have credits/paid plan, they can use them. If not, they rely on free limit.
+
+    const canProceed =
+      hasPaidPlan ||
+      interviewCredits > 0 ||
+      (isFreeTrialOption && freeInterviewsUsed < freeInterviewsLimit);
+
+    if (!canProceed) {
       router.push("/pricing");
       return;
     }
@@ -981,7 +1010,10 @@ export default function InterviewSetupPage() {
         userId: user._id,
         userName: user.name,
         userEmail: user.email,
-        isFreeInterview: 'false',
+        isFreeInterview:
+          selectedDuration === "30" && !hasPaidPlan && interviewCredits <= 0
+            ? "true"
+            : "false",
       });
 
       router.push(`/learner/interview/voice-session?${params.toString()}`);
@@ -997,7 +1029,10 @@ export default function InterviewSetupPage() {
     }
   };
 
-  const canStartFreeInterview = hasPaidPlan || interviewCredits > 0 || freeInterviewsUsed < freeInterviewsLimit;
+  const canStartFreeInterview =
+    hasPaidPlan ||
+    interviewCredits > 0 ||
+    freeInterviewsUsed < freeInterviewsLimit;
 
   return (
     <ProtectedRoute>
@@ -1005,33 +1040,35 @@ export default function InterviewSetupPage() {
         <Navbar />
         <Sidebar userType="learner" />
 
-      <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
-        <div className="container-custom space-y-10">
-          {/* Header */}
-          <div className="text-center">
-            <h1 className="text-4xl font-bold mb-4">Interview Setup Test </h1>
-            <p className="text-gray-400 text-lg">
-              Configure your AI-powered interview session
-            </p>
-          </div>
+        <div className="md:ml-64 ml-0 pt-16 md:pt-20 pb-24 md:pb-12">
+          <div className="container-custom space-y-10">
+            {/* Header */}
+            <div className="text-center">
+              <h1 className="text-4xl font-bold mb-4">Interview Setup Test </h1>
+              <p className="text-gray-400 text-lg">
+                Configure your AI-powered interview session
+              </p>
+            </div>
 
-          {/* Free Trial Warning */}
-              {!hasPaidPlan && (
-                <div
-                  className={`p-4 rounded-lg border ${
-                    freeInterviewsUsed >= freeInterviewsLimit
-                      ? "border-red-500 bg-red-500/10"
-                      : "border-yellow-500 bg-yellow-500/10"
-                  }`}
-                >
-                  <p className="text-sm">
-                    {interviewCredits > 0
-                      ? `✅ You have ${interviewCredits} interview credit(s).`
-                      : freeInterviewsUsed >= freeInterviewsLimit
-                        ? "🚫 You have used all your free interviews. Upgrade or ask admin for more."
-                        : `⚡ Free Trial: ${freeInterviewsUsed}/${freeInterviewsLimit} interviews used.`}
-                  </p>
-                  {!hasPaidPlan && interviewCredits <= 0 && freeInterviewsUsed >= freeInterviewsLimit && (
+            {/* Free Trial Warning */}
+            {!hasPaidPlan && (
+              <div
+                className={`p-4 rounded-lg border ${
+                  freeInterviewsUsed >= freeInterviewsLimit
+                    ? "border-red-500 bg-red-500/10"
+                    : "border-yellow-500 bg-yellow-500/10"
+                }`}
+              >
+                <p className="text-sm">
+                  {interviewCredits > 0
+                    ? `✅ You have ${interviewCredits} interview credit(s).`
+                    : freeInterviewsUsed >= freeInterviewsLimit
+                    ? "🚫 You have used all your free interviews. Upgrade or ask admin for more."
+                    : `⚡ Free Trial: ${freeInterviewsUsed}/${freeInterviewsLimit} interviews used.`}
+                </p>
+                {!hasPaidPlan &&
+                  interviewCredits <= 0 &&
+                  freeInterviewsUsed >= freeInterviewsLimit && (
                     <button
                       onClick={() => router.push("/pricing")}
                       className="mt-2 px-4 py-2 bg-[#00FFB2] text-black rounded-lg font-medium hover:bg-[#00FFB2]/80 transition-colors"
@@ -1039,64 +1076,22 @@ export default function InterviewSetupPage() {
                       Upgrade Now
                     </button>
                   )}
-                </div>
-              )}
+              </div>
+            )}
 
-          {/* Interview Level Selection */}
-          <div className="glass-card p-8">
-            <h2 className="text-2xl font-semibold mb-6">
-              Select Interview Level
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {interviewLevels.map((level) => (
-                <button
-                  key={level.id}
-                  onClick={() => setSelectedLevel(level.id)}
-                  disabled={!canStartFreeInterview}
-                  className={`p-6 rounded-lg border-2 transition-all text-left ${
-                    selectedLevel === level.id
-                      ? "border-[#00FFB2] bg-[#00FFB2]/10"
-                      : "border-[#333] hover:border-[#00FFB2]/50"
-                  } ${
-                    !canStartFreeInterview
-                      ? "opacity-50 cursor-not-allowed"
-                      : ""
-                  }`}
-                >
-                  <div className="text-3xl mb-3">{level.icon}</div>
-                  <h3 className="font-semibold text-lg mb-2">{level.name}</h3>
-                  <p className="text-sm text-gray-400 mb-3">
-                    {level.description}
-                  </p>
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full ${
-                      level.difficulty === "Easy"
-                        ? "bg-green-500/20 text-green-400"
-                        : level.difficulty === "Medium"
-                        ? "bg-yellow-500/20 text-yellow-400"
-                        : "bg-red-500/20 text-red-400"
-                    }`}
-                  >
-                    {level.difficulty}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Primary Category Selection */}
-          <div className="glass-card p-8">
-            <h2 className="text-2xl font-semibold mb-6">Select Field</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {primaryCategories.map((field) => {
-                const IconComponent = field.icon;
-                return (
+            {/* Interview Level Selection */}
+            <div className="glass-card p-8">
+              <h2 className="text-2xl font-semibold mb-6">
+                Select Interview Level
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {interviewLevels.map((level) => (
                   <button
-                    key={field.id}
-                    onClick={() => handlePrimaryCategorySelect(field.id)}
+                    key={level.id}
+                    onClick={() => setSelectedLevel(level.id)}
                     disabled={!canStartFreeInterview}
                     className={`p-6 rounded-lg border-2 transition-all text-left ${
-                      selectedPrimaryCategory === field.id
+                      selectedLevel === level.id
                         ? "border-[#00FFB2] bg-[#00FFB2]/10"
                         : "border-[#333] hover:border-[#00FFB2]/50"
                     } ${
@@ -1105,31 +1100,40 @@ export default function InterviewSetupPage() {
                         : ""
                     }`}
                   >
-                    <div className="flex items-center mb-4">
-                      <IconComponent className="h-8 w-8 text-[#00FFB2] mr-3" />
-                      <h3 className="font-semibold text-lg">{field.name}</h3>
-                    </div>
-                    <p className="text-sm text-gray-400">{field.description}</p>
+                    <div className="text-3xl mb-3">{level.icon}</div>
+                    <h3 className="font-semibold text-lg mb-2">{level.name}</h3>
+                    <p className="text-sm text-gray-400 mb-3">
+                      {level.description}
+                    </p>
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full ${
+                        level.difficulty === "Easy"
+                          ? "bg-green-500/20 text-green-400"
+                          : level.difficulty === "Medium"
+                          ? "bg-yellow-500/20 text-yellow-400"
+                          : "bg-red-500/20 text-red-400"
+                      }`}
+                    >
+                      {level.difficulty}
+                    </span>
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Interview Category Selection */}
-          {selectedPrimaryCategory && (
+            {/* Primary Category Selection */}
             <div className="glass-card p-8">
-              <h2 className="text-2xl font-semibold mb-6">Select Category</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {getAvailableCategories().map((category) => {
-                  const IconComponent = category.icon;
+              <h2 className="text-2xl font-semibold mb-6">Select Field</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {primaryCategories.map((field) => {
+                  const IconComponent = field.icon;
                   return (
                     <button
-                      key={category.id}
-                      onClick={() => handleCategorySelect(category.id)}
+                      key={field.id}
+                      onClick={() => handlePrimaryCategorySelect(field.id)}
                       disabled={!canStartFreeInterview}
                       className={`p-6 rounded-lg border-2 transition-all text-left ${
-                        selectedCategory === category.id
+                        selectedPrimaryCategory === field.id
                           ? "border-[#00FFB2] bg-[#00FFB2]/10"
                           : "border-[#333] hover:border-[#00FFB2]/50"
                       } ${
@@ -1138,145 +1142,199 @@ export default function InterviewSetupPage() {
                           : ""
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center">
-                          <IconComponent className="h-6 w-6 text-[#00FFB2] mr-3" />
-                          <h3 className="font-semibold">{category.name}</h3>
-                        </div>
-                        {category.hasCodeEditor && (
-                          <span className="text-xs bg-[#00FFB2]/20 text-[#00FFB2] px-2 py-1 rounded-full">
-                            Code Editor
-                          </span>
-                        )}
+                      <div className="flex items-center mb-4">
+                        <IconComponent className="h-8 w-8 text-[#00FFB2] mr-3" />
+                        <h3 className="font-semibold text-lg">{field.name}</h3>
                       </div>
                       <p className="text-sm text-gray-400">
-                        {category.description}
+                        {field.description}
                       </p>
                     </button>
                   );
                 })}
               </div>
             </div>
-          )}
 
-          {/* Language/Tool Selection */}
-          {selectedCategory && (
+            {/* Interview Category Selection */}
+            {selectedPrimaryCategory && (
+              <div className="glass-card p-8">
+                <h2 className="text-2xl font-semibold mb-6">Select Category</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {getAvailableCategories().map((category) => {
+                    const IconComponent = category.icon;
+                    return (
+                      <button
+                        key={category.id}
+                        onClick={() => handleCategorySelect(category.id)}
+                        disabled={!canStartFreeInterview}
+                        className={`p-6 rounded-lg border-2 transition-all text-left ${
+                          selectedCategory === category.id
+                            ? "border-[#00FFB2] bg-[#00FFB2]/10"
+                            : "border-[#333] hover:border-[#00FFB2]/50"
+                        } ${
+                          !canStartFreeInterview
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center">
+                            <IconComponent className="h-6 w-6 text-[#00FFB2] mr-3" />
+                            <h3 className="font-semibold">{category.name}</h3>
+                          </div>
+                          {category.hasCodeEditor && (
+                            <span className="text-xs bg-[#00FFB2]/20 text-[#00FFB2] px-2 py-1 rounded-full">
+                              Code Editor
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-400">
+                          {category.description}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Language/Tool Selection */}
+            {selectedCategory && (
+              <div className="glass-card p-8">
+                <h2 className="text-2xl font-semibold mb-6">
+                  Select{" "}
+                  {selectedPrimaryCategory === "development"
+                    ? "Programming Language"
+                    : "Tool/Technology"}
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {getAvailableLanguages().map((language) => (
+                    <button
+                      key={language.id}
+                      onClick={() => setSelectedLanguage(language.id)}
+                      disabled={!canStartFreeInterview}
+                      className={`p-4 rounded-lg border-2 transition-all text-left ${
+                        selectedLanguage === language.id
+                          ? "border-[#00FFB2] bg-[#00FFB2]/10"
+                          : "border-[#333] hover:border-[#00FFB2]/50"
+                      } ${
+                        !canStartFreeInterview
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }`}
+                    >
+                      <h3 className="font-semibold mb-2">{language.name}</h3>
+                      <p className="text-sm text-gray-400">
+                        {language.description}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Duration Selection */}
             <div className="glass-card p-8">
-              <h2 className="text-2xl font-semibold mb-6">
-                Select{" "}
-                {selectedPrimaryCategory === "development"
-                  ? "Programming Language"
-                  : "Tool/Technology"}
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {getAvailableLanguages().map((language) => (
-                  <button
-                    key={language.id}
-                    onClick={() => setSelectedLanguage(language.id)}
-                    disabled={!canStartFreeInterview}
-                    className={`p-4 rounded-lg border-2 transition-all text-left ${
-                      selectedLanguage === language.id
-                        ? "border-[#00FFB2] bg-[#00FFB2]/10"
-                        : "border-[#333] hover:border-[#00FFB2]/50"
-                    } ${
-                      !canStartFreeInterview
-                        ? "opacity-50 cursor-not-allowed"
-                        : ""
-                    }`}
-                  >
-                    <h3 className="font-semibold mb-2">{language.name}</h3>
-                    <p className="text-sm text-gray-400">
-                      {language.description}
-                    </p>
-                  </button>
-                ))}
+              <h2 className="text-2xl font-semibold mb-6">Select Duration</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {durations.map((duration) => {
+                  const isFreeOption = duration.value === "30";
+                  const canTakeFree =
+                    isFreeOption && freeInterviewsUsed < freeInterviewsLimit;
+                  const isUnlocked =
+                    canTakeFree || unlockedDurations.includes(duration.value);
+
+                  return (
+                    <button
+                      key={duration.value}
+                      onClick={() => {
+                        if (!isUnlocked) {
+                          toast.info(
+                            "Locked / Not Purchased. Please buy this plan."
+                          );
+                          return;
+                        }
+                        setSelectedDuration(duration.value);
+                      }}
+                      className={`p-4 rounded-lg border-2 transition-all text-center ${
+                        selectedDuration === duration.value
+                          ? "border-[#00FFB2] bg-[#00FFB2]/10"
+                          : "border-[#333] hover:border-[#00FFB2]/50"
+                      } ${isUnlocked ? "" : "opacity-50 cursor-not-allowed"}`}
+                    >
+                      <h3 className="font-semibold text-lg">
+                        {duration.label}
+                      </h3>
+                      <p className="text-sm text-gray-400">
+                        {duration.description}
+                      </p>
+                      {!isUnlocked && (
+                        <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full mt-2 inline-block">
+                          Locked / Not Purchased
+                        </span>
+                      )}
+                      {canTakeFree && !hasPaidPlan && interviewCredits <= 0 && (
+                        <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full mt-2 inline-block">
+                          Free Trial ({freeInterviewsLimit - freeInterviewsUsed}{" "}
+                          left)
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          )}
 
-          {/* Duration Selection */}
-          <div className="glass-card p-8">
-            <h2 className="text-2xl font-semibold mb-6">Select Duration</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {durations.map((duration) => {
-                const isUnlocked = unlockedDurations.includes(duration.value);
-                return (
-                  <button
-                    key={duration.value}
-                    onClick={() => {
-                      if (!isUnlocked) {
-                        toast.info("Locked / Not Purchased. Please buy this plan.");
-                        return;
-                      }
-                      setSelectedDuration(duration.value);
-                    }}
-                    className={`p-4 rounded-lg border-2 transition-all text-center ${
-                      selectedDuration === duration.value
-                        ? "border-[#00FFB2] bg-[#00FFB2]/10"
-                        : "border-[#333] hover:border-[#00FFB2]/50"
-                    } ${
-                      isUnlocked ? "" : "opacity-50 cursor-not-allowed"
-                    }`}
-                  >
-                    <h3 className="font-semibold text-lg">{duration.label}</h3>
-                    <p className="text-sm text-gray-400">
-                      {duration.description}
-                    </p>
-                    {!isUnlocked && (
-                      <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full mt-2 inline-block">
-                        Locked / Not Purchased
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Start Interview Button */}
-          <div className="text-center">
-            <button
-              onClick={handleStartInterview}
-              disabled={
-                !selectedLevel ||
+            {/* Start Interview Button */}
+            <div className="text-center">
+              <button
+                onClick={handleStartInterview}
+                disabled={
+                  !selectedLevel ||
+                  !selectedPrimaryCategory ||
+                  !selectedCategory ||
+                  !selectedLanguage ||
+                  !(
+                    (selectedDuration === "30" &&
+                      freeInterviewsUsed < freeInterviewsLimit) ||
+                    unlockedDurations.includes(selectedDuration)
+                  ) ||
+                  loading
+                }
+                className="btn-primary px-8 py-4 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto min-w-[200px]"
+              >
+                <Play className="mr-2 h-5 w-5" />
+                {loading
+                  ? "Starting..."
+                  : (selectedDuration === "30" &&
+                      freeInterviewsUsed < freeInterviewsLimit) ||
+                    canStartFreeInterview
+                  ? "Start Interview"
+                  : "Upgrade Required"}
+              </button>
+              {(!selectedLevel ||
                 !selectedPrimaryCategory ||
                 !selectedCategory ||
-                !selectedLanguage ||
-                !unlockedDurations.includes(selectedDuration) ||
-                loading
-              }
-              className="btn-primary px-8 py-4 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto min-w-[200px]"
-            >
-              <Play className="mr-2 h-5 w-5" />
-              {loading
-                ? "Starting..."
-                : !canStartFreeInterview
-                ? "Upgrade Required"
-                : "Start Interview"}
-            </button>
-            {(!selectedLevel ||
-              !selectedPrimaryCategory ||
-              !selectedCategory ||
-              !selectedLanguage) &&
-              canStartFreeInterview && (
-                <p className="text-sm text-gray-400 mt-2">
-                  Please select interview level, field, category, and{" "}
-                  {selectedPrimaryCategory === "development"
-                    ? "programming language"
-                    : "tool/technology"}
+                !selectedLanguage) &&
+                canStartFreeInterview && (
+                  <p className="text-sm text-gray-400 mt-2">
+                    Please select interview level, field, category, and{" "}
+                    {selectedPrimaryCategory === "development"
+                      ? "programming language"
+                      : "tool/technology"}
+                  </p>
+                )}
+              {!canStartFreeInterview && (
+                <p className="text-sm text-red-400 mt-2">
+                  You have reached the free interview limit. Please upgrade to
+                  continue.
                 </p>
               )}
-            {!canStartFreeInterview && (
-              <p className="text-sm text-red-400 mt-2">
-                You have reached the free interview limit. Please upgrade to
-                continue.
-              </p>
-            )}
+            </div>
           </div>
         </div>
+        <BottomNav />
       </div>
-      <BottomNav />
-    </div>
     </ProtectedRoute>
   );
 }
