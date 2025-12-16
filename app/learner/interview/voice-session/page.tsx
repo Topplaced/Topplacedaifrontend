@@ -149,6 +149,7 @@ function VoiceInterviewContent() {
   const [showCodeEditor, setShowCodeEditor] = useState<boolean>(hasCodeEditor); // Show by default if available
   const [recognition, setRecognition] = useState<any>(null);
   const [speechSynthesis, setSpeechSynthesis] = useState<any>(null);
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
 
   const [sessionId, setSessionId] = useState<string>("");
   const [totalQuestions, setTotalQuestions] = useState(6);
@@ -574,6 +575,7 @@ function VoiceInterviewContent() {
     }
 
     try {
+      setIsAiProcessing(true);
       const body: any = {
         sessionId,
         message: answer,
@@ -801,6 +803,8 @@ function VoiceInterviewContent() {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsAiProcessing(false);
     }
   };
 
@@ -2268,6 +2272,26 @@ function VoiceInterviewContent() {
                   </div>
                 </div>
               ))}
+              {isAiProcessing && (
+                <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="max-w-[90%] sm:max-w-[80%] p-4 rounded-lg bg-[#1A1A1A] text-white rounded-tl-none border border-[#00FFB2]/20 shadow-[0_0_15px_rgba(0,255,178,0.05)]">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <div className="relative">
+                        <Bot size={18} className="text-[#00FFB2]" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-[#00FFB2] rounded-full animate-ping opacity-75"></div>
+                      </div>
+                      <span className="text-xs text-[#00FFB2] font-mono tracking-wider font-semibold">
+                        AI IS THINKING
+                      </span>
+                    </div>
+                    <div className="flex space-x-1.5 h-3 items-center pl-1 opacity-80">
+                      <div className="w-2 h-2 bg-[#00FFB2] rounded-full animate-[bounce_1.4s_infinite_-0.32s]"></div>
+                      <div className="w-2 h-2 bg-[#00FFB2] rounded-full animate-[bounce_1.4s_infinite_-0.16s]"></div>
+                      <div className="w-2 h-2 bg-[#00FFB2] rounded-full animate-[bounce_1.4s_infinite]"></div>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
 
