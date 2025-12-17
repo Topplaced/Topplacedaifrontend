@@ -38,10 +38,12 @@ export default function APITestClient() {
     setStatus(`Calling ${method} ${endpoint}...`);
 
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
       const config: RequestInit = {
         method,
         headers: {
           "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
           // "ngrok-skip-browser-warning": "true",
         },
       };

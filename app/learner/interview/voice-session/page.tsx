@@ -615,6 +615,7 @@ function VoiceInterviewContent() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
             // "ngrok-skip-browser-warning": "true",
           },
           body: JSON.stringify(body),
@@ -924,6 +925,7 @@ function VoiceInterviewContent() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
           // "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify(interviewPayload),
@@ -1144,6 +1146,7 @@ function VoiceInterviewContent() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
           // "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify({
@@ -1329,6 +1332,7 @@ function VoiceInterviewContent() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
           // "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify(endPayload),
@@ -1455,6 +1459,7 @@ function VoiceInterviewContent() {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -1547,6 +1552,7 @@ function VoiceInterviewContent() {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
         }
       );
