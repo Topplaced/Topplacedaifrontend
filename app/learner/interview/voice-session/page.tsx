@@ -994,9 +994,14 @@ function VoiceInterviewContent() {
       }
 
       setStartError(errorMessage);
-    } finally {
+      // Only hide loader if there was an error
       setIsStartingInterview(false);
-      isStartingRef.current = false; // Reset the ref on error or completion
+    } finally {
+      // Don't reset isStartingInterview here on success, as it causes a flash
+      // It will be handled by setShowStartingPopup(false) which hides the modal
+      if (isStartingRef.current) {
+        isStartingRef.current = false;
+      }
     }
   };
 
@@ -1348,59 +1353,89 @@ function VoiceInterviewContent() {
         console.log("✅ Interview ended successfully:", interviewData);
 
         // Format the results according to the specified structure
-        const showCodeMetrics =
-          interviewData.configuration?.hasCodeEditor === true;
+        // Use local configuration since the API response structure might vary
+        const config = endPayload.configuration;
+        const showCodeMetrics = config.hasCodeEditor === true;
+
+        // Handle different response structures (DB object vs API response)
+        // The endInterview API returns statistics at the root level, while getInterviewResults returns scores object
+        const overallScore =
+          interviewData.overallScore ??
+          interviewData.scores?.overall ??
+          interviewData.statistics?.averageScore ??
+          0;
+
         const results = {
-          overallScore: interviewData.scores?.overall || 0,
-          category: interviewData.configuration?.category || "Interview",
-          level: interviewData.configuration?.level || "Unknown",
-          duration: `${interviewData.configuration?.duration || 0} minutes`,
+          overallScore: overallScore,
+          category:
+            interviewData.configuration?.category ||
+            config.category ||
+            "Interview",
+          level:
+            interviewData.configuration?.level || config.level || "Unknown",
+          duration: `${
+            interviewData.configuration?.duration || config.duration || 0
+          } minutes`,
           completedAt: interviewData.createdAt
             ? new Date(interviewData.createdAt).toLocaleDateString()
-            : "Unknown",
+            : new Date().toLocaleDateString(),
           scores: {
             technical:
               interviewData.scores?.technical ||
+              interviewData.statistics?.technicalAverage ||
               interviewData.scoreboard?.detailedScores?.technical ||
               0,
             communication:
               interviewData.scores?.communication ||
+              interviewData.statistics?.communicationAverage ||
               interviewData.scoreboard?.detailedScores?.communication ||
               0,
             problemSolving:
               interviewData.scores?.problemSolving ||
+              interviewData.statistics?.problemSolvingAverage ||
               interviewData.scoreboard?.detailedScores?.problemSolving ||
               0,
             codeQuality: showCodeMetrics
               ? interviewData.scores?.codeQuality ||
+                interviewData.statistics?.codeQualityAverage ||
                 interviewData.scoreboard?.detailedScores?.codeQuality ||
                 0
               : undefined,
           },
-          strengths: interviewData.results?.detailedAnalysis?.strengths || [
-            "Completed the interview successfully",
-            "Demonstrated problem-solving skills",
-            "Showed technical knowledge",
-          ],
-          improvements: interviewData.results?.detailedAnalysis
-            ?.improvements || [
-            "Continue practicing coding challenges",
-            "Work on communication skills",
-            "Review technical concepts",
-          ],
+          strengths: interviewData.results?.detailedAnalysis?.strengths ||
+            interviewData.detailedAnalysis?.strengths || [
+              "Completed the interview successfully",
+              "Demonstrated problem-solving skills",
+              "Showed technical knowledge",
+            ],
+          improvements: interviewData.results?.detailedAnalysis?.improvements ||
+            interviewData.detailedAnalysis?.improvements || [
+              "Continue practicing coding challenges",
+              "Work on communication skills",
+              "Review technical concepts",
+            ],
           detailedFeedback: {
             technical:
+              interviewData.results?.detailedAnalysis?.technicalFeedback ||
+              interviewData.detailedAnalysis?.technicalFeedback ||
               interviewData.results?.technicalFeedback ||
               "Technical performance was evaluated based on problem-solving approach and code quality.",
             communication:
+              interviewData.results?.detailedAnalysis?.communicationFeedback ||
+              interviewData.detailedAnalysis?.communicationFeedback ||
               interviewData.results?.communicationFeedback ||
               "Communication skills were assessed throughout the interview process.",
             problemSolving:
+              interviewData.results?.detailedAnalysis?.problemSolvingFeedback ||
+              interviewData.detailedAnalysis?.problemSolvingFeedback ||
               interviewData.results?.problemSolvingFeedback ||
               "Problem-solving approach and analytical thinking were evaluated.",
             ...(showCodeMetrics
               ? {
                   codeQuality:
+                    interviewData.results?.detailedAnalysis
+                      ?.codeQualityFeedback ||
+                    interviewData.detailedAnalysis?.codeQualityFeedback ||
                     interviewData.results?.codeQualityFeedback ||
                     "Code structure, readability, and best practices were reviewed.",
                 }
