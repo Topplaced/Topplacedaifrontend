@@ -1037,6 +1037,17 @@ export default function InterviewSetupPage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-black">
+        {loading && (
+          <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center">
+            <div className="text-center">
+              <svg className="animate-spin h-12 w-12 text-[#00FFB2] mx-auto mb-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3.5-3.5L12 0 8.5 3.5 12 7V4a8 8 0 110 16 8 8 0 01-8-8z" />
+              </svg>
+              <p className="text-gray-300">Preparing your interview...</p>
+            </div>
+          </div>
+        )}
         <Navbar />
         <Sidebar userType="learner" />
 

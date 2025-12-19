@@ -125,6 +125,7 @@ function VoiceInterviewContent() {
   const [isRunningCode, setIsRunningCode] = useState(false);
   const [isSubmittingCode, setIsSubmittingCode] = useState(false);
   const [isEndingInterview, setIsEndingInterview] = useState(false);
+  const [showConfirmEnd, setShowConfirmEnd] = useState(false);
 
   // Response time tracking like testInterview.html
   const [responseStartTime, setResponseStartTime] = useState<number | null>(
@@ -1347,6 +1348,8 @@ function VoiceInterviewContent() {
         console.log("✅ Interview ended successfully:", interviewData);
 
         // Format the results according to the specified structure
+        const showCodeMetrics =
+          interviewData.configuration?.hasCodeEditor === true;
         const results = {
           overallScore: interviewData.scores?.overall || 0,
           category: interviewData.configuration?.category || "Interview",
@@ -1368,10 +1371,11 @@ function VoiceInterviewContent() {
               interviewData.scores?.problemSolving ||
               interviewData.scoreboard?.detailedScores?.problemSolving ||
               0,
-            codeQuality:
-              interviewData.scores?.codeQuality ||
-              interviewData.scoreboard?.detailedScores?.codeQuality ||
-              0,
+            codeQuality: showCodeMetrics
+              ? interviewData.scores?.codeQuality ||
+                interviewData.scoreboard?.detailedScores?.codeQuality ||
+                0
+              : undefined,
           },
           strengths: interviewData.results?.detailedAnalysis?.strengths || [
             "Completed the interview successfully",
@@ -1394,9 +1398,13 @@ function VoiceInterviewContent() {
             problemSolving:
               interviewData.results?.problemSolvingFeedback ||
               "Problem-solving approach and analytical thinking were evaluated.",
-            codeQuality:
-              interviewData.results?.codeQualityFeedback ||
-              "Code structure, readability, and best practices were reviewed.",
+            ...(showCodeMetrics
+              ? {
+                  codeQuality:
+                    interviewData.results?.codeQualityFeedback ||
+                    "Code structure, readability, and best practices were reviewed.",
+                }
+              : {}),
           },
           codeSubmissions: interviewData.results?.codeSubmissions || [],
         };
@@ -1970,6 +1978,69 @@ function VoiceInterviewContent() {
           </div>
         </div>
       )}
+      {isStartingInterview && !showStartingPopup && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[80] flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-20 h-20 mx-auto mb-4 relative">
+              <div className="absolute inset-0 rounded-full border-4 border-[#00FFB2]/20"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-[#00FFB2] border-t-transparent animate-spin"></div>
+            </div>
+            <h3 className="text-xl font-semibold text-[#00FFB2] mb-2">
+              Starting interview…
+            </h3>
+            <p className="text-gray-300">
+              Please wait while we prepare your session.
+            </p>
+          </div>
+        </div>
+      )}
+      {showConfirmEnd && (
+        <div className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="glass-card w-[92%] max-w-md p-6 border-2 border-yellow-500/40">
+            <div className="flex items-center mb-3">
+              <svg
+                className="h-6 w-6 text-yellow-400 mr-2"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 9v2m0 4h.01M7.938 4.938l-3 3A2 2 0 004 9v6a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-.938-1.688l-3-3A2 2 0 0013.124 4H10.876a2 2 0 00-1.938.938z"
+                />
+              </svg>
+              <h3 className="text-xl font-semibold text-yellow-400">
+                Confirm End Interview
+              </h3>
+            </div>
+            <p className="text-sm text-gray-300 mb-4">
+              Are you sure you want to end this interview now?
+              {!isFreeInterview
+                ? " Your credits are countable and will be deducted upon completion."
+                : " This session is part of your free interviews."}
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowConfirmEnd(false)}
+                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowConfirmEnd(false);
+                  handleEndInterview();
+                }}
+                className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg"
+              >
+                Yes, End Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col min-h-0 pt-16">
         {/* Header Bar */}
@@ -2159,7 +2230,7 @@ function VoiceInterviewContent() {
 
               {interviewCompleted ? (
                 <button
-                  onClick={handleEndInterview}
+                  onClick={() => setShowConfirmEnd(true)}
                   disabled={isEndingInterview}
                   className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 ${
                     isEndingInterview ? "opacity-50 cursor-not-allowed" : ""
@@ -2172,7 +2243,7 @@ function VoiceInterviewContent() {
                 </button>
               ) : (
                 <button
-                  onClick={handleEndInterview}
+                  onClick={() => setShowConfirmEnd(true)}
                   disabled={isEndingInterview}
                   className={`bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 ${
                     isEndingInterview ? "opacity-50 cursor-not-allowed" : ""
