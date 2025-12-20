@@ -399,8 +399,8 @@ function VoiceInterviewContent() {
         })
         .catch((error) => {
           console.error("TTS error, using fallback:", error);
-          // Fallback simulation
-          const duration = Math.random() * 2000 + 3000;
+          // Fallback simulation - reduce time to avoid long silence on error
+          const duration = Math.random() * 1000 + 1000;
           setTimeout(handleSuccess, duration);
         });
     });
@@ -967,10 +967,15 @@ function VoiceInterviewContent() {
         setMessages((prev) => [...prev, welcomeMessage]);
 
         if (data.firstQuestion) {
-          playAIAudio("", combinedContent);
+          try {
+            playAIAudio("", combinedContent);
+          } catch (audioError) {
+            console.error("Failed to queue initial audio:", audioError);
+          }
         }
 
         setInterviewStarted(true);
+        setIsStartingInterview(false); // Ensure loader stops
         setShowStartingPopup(false); // Close the popup on successful start
         isStartingRef.current = false; // Reset the ref on successful start
       } else {
