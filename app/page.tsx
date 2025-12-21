@@ -11,9 +11,6 @@ import {
   Target,
   ChevronDown,
 } from "lucide-react";
-import { useSelector } from "react-redux";
-import { useRouter } from "next/navigation";
-import { RootState } from "@/store/store";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
