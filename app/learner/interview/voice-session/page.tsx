@@ -375,7 +375,7 @@ function VoiceInterviewContent() {
         // Try to select a preferred voice
         const voices = speechSynthesis.getVoices();
         const preferredVoice = voices.find(
-          (voice) =>
+          (voice: SpeechSynthesisVoice) =>
             (voice.name.includes("Female") ||
               voice.name.includes("Samantha") ||
               voice.name.includes("Google US English")) &&

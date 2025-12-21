@@ -63,7 +63,10 @@ function InterviewSessionContent() {
     category || "fullstack",
     duration || "45"
   );
-  const hasCodeEditor = hasCodeEditorParam !== null ? hasCodeEditorParam === "true" : config.hasCodeEditor;
+  const hasCodeEditor =
+    hasCodeEditorParam !== null
+      ? hasCodeEditorParam === "true"
+      : config.hasCodeEditor;
   const defaultLanguage = selectedLanguage || config.language; // Use selected language first, fallback to config
 
   // State management
