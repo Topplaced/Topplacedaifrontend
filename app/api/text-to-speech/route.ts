@@ -17,8 +17,8 @@ export async function POST(request: NextRequest) {
 
   const {
     text,
-    voice_id = 'pNInz6obpgDQGcFmaJgB', // Custom voice (female)
-    model_id = 'eleven_multilingual_v2', // Supports multiple languages
+    voice_id = 'alloy', // Default to OpenAI voice
+    model_id = 'tts-1',
   } = requestBody;
 
   if (!text || typeof text !== 'string') {
@@ -28,6 +28,84 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // --- OpenAI TTS Implementation (Active) ---
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+
+  if (!openaiApiKey) {
+    console.error('OpenAI API key not found');
+    return NextResponse.json(
+      {
+        audioUrl: null,
+        useBrowserTTS: true,
+        text,
+        error: 'OpenAI API key not configured',
+      },
+      { status: 500 }
+    );
+  }
+
+  console.log(`🔊 TTS request: ${text.slice(0, 60)}...`);
+
+  try {
+    const response = await fetch(
+      'https://api.openai.com/v1/audio/speech',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'tts-1',
+          input: text,
+          voice: 'alloy', // Options: alloy, echo, fable, onyx, nova, shimmer
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ OpenAI TTS API error: ${response.status} - ${errorText}`);
+      return NextResponse.json(
+        {
+          audioUrl: null,
+          useBrowserTTS: true,
+          text,
+          source: 'browser-fallback',
+          error: `OpenAI TTS API error: ${response.status}`,
+        },
+        { status: 500 }
+      );
+    }
+
+    const audioBuffer = await response.arrayBuffer();
+    const audioBase64 = Buffer.from(audioBuffer).toString('base64');
+
+    console.log('✅ OpenAI TTS success');
+
+    return NextResponse.json({
+      audioContent: audioBase64,
+      audioUrl: `data:audio/mpeg;base64,${audioBase64}`,
+      text,
+      useBrowserTTS: false,
+      source: 'openai-tts',
+    });
+  } catch (error) {
+    console.error('❌ OpenAI TTS fetch error:', error);
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        audioUrl: null,
+        useBrowserTTS: true,
+        text,
+        source: 'fallback-error',
+      },
+      { status: 500 }
+    );
+  }
+
+  /*
+  // --- PREVIOUS ELEVENLABS IMPLEMENTATION (COMMENTED OUT) ---
   const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
 
   if (!elevenLabsApiKey) {
@@ -108,4 +186,5 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+  */
 }

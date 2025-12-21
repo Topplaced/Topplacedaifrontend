@@ -476,7 +476,6 @@ function InterviewSessionContent() {
         userPerformance: {
           responseTime: 0,
           communicationScore: 85,
-          clarityScore: 80,
           confidenceLevel: 75,
         },
         interviewState: {

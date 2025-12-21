@@ -191,7 +191,7 @@ function generateFakeAnswer(q: ShapedQuestion): string {
   // Technical general fallback
   if (cat.includes("technical")) {
     return [
-      `In ${lang}, I emphasize correctness and clarity: direct definitions when asked, and concise code examples for implementation questions.`,
+      `In ${lang}, I emphasize correctness and code quality: direct definitions when asked, and concise code examples for implementation questions.`,
       "I focus on testability, performance, and maintainability, with typed interfaces and small, composable functions.",
     ].join("\n\n");
   }

@@ -3,7 +3,13 @@
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { motion } from "framer-motion";
-import { Sparkles, Headphones, Code2, BarChart3, ShieldCheck } from "lucide-react";
+import {
+  Sparkles,
+  Headphones,
+  Code2,
+  BarChart3,
+  ShieldCheck,
+} from "lucide-react";
 
 export default function AboutPage() {
   return (
@@ -36,9 +42,10 @@ export default function AboutPage() {
               actually useful.
             </h1>
             <p className="text-sm md:text-base text-gray-300 max-w-3xl mx-auto">
-              TopPlaced is an AI-first interview and assessment platform. We help
-              learners practice with realistic interviews, get measurable feedback,
-              and show companies what they can actually do—beyond just a résumé.
+              TopPlaced is an AI-first interview and assessment platform. We
+              help learners practice with realistic interviews, get measurable
+              feedback, and show companies what they can actually do—beyond just
+              a résumé.
             </p>
           </motion.header>
 
@@ -59,12 +66,20 @@ export default function AboutPage() {
               <motion.div
                 className="pointer-events-none absolute -top-32 -right-24 h-72 w-72 rounded-full bg-sky-500/30 blur-3xl"
                 animate={{ opacity: [0.2, 0.5, 0.2] }}
-                transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+                transition={{
+                  duration: 7,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
               />
               <motion.div
                 className="pointer-events-none absolute -bottom-40 -left-24 h-72 w-72 rounded-full bg-emerald-500/25 blur-3xl"
                 animate={{ opacity: [0.15, 0.45, 0.15] }}
-                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                transition={{
+                  duration: 8,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
               />
 
               <div className="relative p-6 md:p-8 lg:p-10 space-y-10">
@@ -80,15 +95,15 @@ export default function AboutPage() {
                       <span className="font-medium">
                         interviews should measure skill, not just confidence.
                       </span>{" "}
-                      Traditional prep focuses on memorizing answers. We focus on
-                      helping you practice real scenarios with instant, structured
-                      feedback—so you actually get better.
+                      Traditional prep focuses on memorizing answers. We focus
+                      on helping you practice real scenarios with instant,
+                      structured feedback—so you actually get better.
                     </p>
                     <p className="text-gray-300">
-                      Whether you&apos;re preparing for your first job, switching
-                      roles, or aiming for top companies, TopPlaced gives you an
-                      always-available AI interviewer that never gets tired and
-                      always has one more question ready.
+                      Whether you&apos;re preparing for your first job,
+                      switching roles, or aiming for top companies, TopPlaced
+                      gives you an always-available AI interviewer that never
+                      gets tired and always has one more question ready.
                     </p>
                   </div>
 
@@ -98,10 +113,18 @@ export default function AboutPage() {
                       What TopPlaced focuses on
                     </p>
                     <ul className="space-y-2 text-gray-200">
-                      <li>• Realistic interview flows (behavioral & technical)</li>
-                      <li>• Clear scorecards instead of vague &quot;you did okay&quot;</li>
+                      <li>
+                        • Realistic interview flows (behavioral & technical)
+                      </li>
+                      <li>
+                        • Clear scorecards instead of vague &quot;you did
+                        okay&quot;
+                      </li>
                       <li>• Actionable tips on how to improve next attempt</li>
-                      <li>• Signal that you can share with recruiters and companies</li>
+                      <li>
+                        • Signal that you can share with recruiters and
+                        companies
+                      </li>
                     </ul>
                   </div>
                 </div>
@@ -120,9 +143,9 @@ export default function AboutPage() {
                       <h3 className="text-lg font-semibold">What we offer</h3>
                     </div>
                     <p className="text-gray-300 text-sm leading-relaxed">
-                      Voice-based interviews, coding prompts, case-style questions,
-                      and role-specific scenarios—run by AI and tailored to your
-                      level.
+                      Voice-based interviews, coding prompts, case-style
+                      questions, and role-specific scenarios—run by AI and
+                      tailored to your level.
                     </p>
                   </motion.div>
 
@@ -153,12 +176,14 @@ export default function AboutPage() {
                       <span className="h-8 w-8 rounded-full bg-cyan-500/20 flex items-center justify-center">
                         <Code2 className="h-4 w-4 text-cyan-300" />
                       </span>
-                      <h3 className="text-lg font-semibold">Who it&apos;s for</h3>
+                      <h3 className="text-lg font-semibold">
+                        Who it&apos;s for
+                      </h3>
                     </div>
                     <p className="text-gray-300 text-sm leading-relaxed">
-                      Developers, product folks, fresh graduates, and professionals
-                      switching careers—anyone who wants structured practice and
-                      proof of progress.
+                      Developers, product folks, fresh graduates, and
+                      professionals switching careers—anyone who wants
+                      structured practice and proof of progress.
                     </p>
                   </motion.div>
                 </div>
@@ -172,18 +197,23 @@ export default function AboutPage() {
                     </h3>
                     <ul className="list-disc list-inside space-y-1 text-gray-300">
                       <li>Be honest about how AI evaluates and scores.</li>
-                      <li>Focus on learning, not just &quot;passing&quot; a test.</li>
+                      <li>
+                        Focus on learning, not just &quot;passing&quot; a test.
+                      </li>
                       <li>Respect candidate privacy and data ownership.</li>
-                      <li>Continuously improve fairness and clarity of feedback.</li>
+                      <li>
+                        Continuously improve fairness and quality of feedback.
+                      </li>
                     </ul>
                   </div>
 
                   <div className="space-y-3 text-sm">
                     <h3 className="text-base font-semibold">Get started</h3>
                     <p className="text-gray-300">
-                      Create an account, choose a role you&apos;re targeting, and
-                      start your first AI interview in minutes. You&apos;ll get a
-                      clear scorecard and improvement plan after every session.
+                      Create an account, choose a role you&apos;re targeting,
+                      and start your first AI interview in minutes. You&apos;ll
+                      get a clear scorecard and improvement plan after every
+                      session.
                     </p>
 
                     <div className="flex flex-wrap gap-3 mt-2">

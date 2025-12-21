@@ -158,6 +158,11 @@ function VoiceInterviewContent() {
   const [currentQuestionId, setCurrentQuestionId] = useState<string>("");
   const [interviewCompleted, setInterviewCompleted] = useState(false);
 
+  // Fallback STT State
+  const [useFallbackSTT, setUseFallbackSTT] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
   // Build interview payload from URL parameters and user data
   const buildInterviewPayload = () => {
     return {
@@ -225,7 +230,10 @@ function VoiceInterviewContent() {
       (window as any).SpeechRecognition;
 
     if (!SpeechRecognition) {
-      console.warn("Speech recognition not supported in this browser.");
+      console.warn(
+        "Speech recognition not supported. Switching to fallback (Whisper)."
+      );
+      setUseFallbackSTT(true);
       return;
     }
 
@@ -352,6 +360,78 @@ function VoiceInterviewContent() {
         reject(error);
       };
 
+      // Strategy: Browser Native TTS (Default) -> OpenAI TTS API (Fallback)
+
+      // 1. Try Browser Native TTS first
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        // Cancel any ongoing speech
+        speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0; // Normal speed
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        // Try to select a preferred voice
+        const voices = speechSynthesis.getVoices();
+        const preferredVoice = voices.find(
+          (voice) =>
+            (voice.name.includes("Female") ||
+              voice.name.includes("Samantha") ||
+              voice.name.includes("Google US English")) &&
+            voice.lang.startsWith("en")
+        );
+
+        if (preferredVoice) {
+          utterance.voice = preferredVoice;
+        }
+
+        utterance.onend = handleSuccess;
+        utterance.onerror = (e) => {
+          console.warn("Browser TTS error, falling back to API:", e);
+          callApiFallback();
+        };
+
+        speechSynthesis.speak(utterance);
+        return;
+      }
+
+      // 2. API Fallback (OpenAI TTS)
+      callApiFallback();
+
+      function callApiFallback() {
+        fetch("/api/text-to-speech", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text,
+            voice_id: "alloy", // OpenAI voice
+            model_id: "tts-1",
+          }),
+        })
+          .then((response) =>
+            response.ok ? response.json() : Promise.reject(response)
+          )
+          .then((data) => {
+            if (data.audioUrl && data.audioContent) {
+              const audio = new Audio(data.audioUrl);
+              audio.onended = handleSuccess;
+              audio.onerror = handleError;
+              audio.play().catch(handleError);
+            } else {
+              throw new Error("No audio content available");
+            }
+          })
+          .catch((error) => {
+            console.error("TTS error, using fallback:", error);
+            // Fallback simulation - reduce time to avoid long silence on error
+            const duration = Math.random() * 1000 + 1000;
+            setTimeout(handleSuccess, duration);
+          });
+      }
+
+      /*
+      // PREVIOUS ELEVENLABS IMPLEMENTATION (COMMENTED OUT)
       // Try ElevenLabs TTS API first
       fetch("/api/text-to-speech", {
         method: "POST",
@@ -403,6 +483,7 @@ function VoiceInterviewContent() {
           const duration = Math.random() * 1000 + 1000;
           setTimeout(handleSuccess, duration);
         });
+      */
     });
   };
 
@@ -667,7 +748,6 @@ function VoiceInterviewContent() {
                 `\n\n**Detailed Analysis:**\n` +
                 `• Correctness: ${data.detailedScores.correctness}/100\n` +
                 `• Completeness: ${data.detailedScores.completeness}/100\n` +
-                `• Clarity: ${data.detailedScores.clarity}/100\n` +
                 `• Technical Accuracy: ${data.detailedScores.technicalAccuracy}/100\n` +
                 `• Communication: ${data.detailedScores.communicationQuality}/100`;
               aiResponseContent += detailsText;
@@ -1034,10 +1114,112 @@ function VoiceInterviewContent() {
     await actuallyStartInterview();
   };
 
+  // Fallback STT: Start Recording
+  const startFallbackRecording = () => {
+    if (!mediaStream) {
+      console.error("No media stream available for fallback recording");
+      setWarningMessage("Microphone access is required.");
+      setShowWarning(true);
+      return;
+    }
+
+    try {
+      const mediaRecorder = new MediaRecorder(mediaStream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/webm",
+        });
+
+        // Send to backend
+        setTranscript("Processing audio...");
+        const formData = new FormData();
+        formData.append("audio", audioBlob, "recording.webm");
+
+        try {
+          const response = await fetch("/api/speech-to-text", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) throw new Error("Speech to text failed");
+
+          const data = await response.json();
+          const transcriptText = data.transcript;
+
+          if (transcriptText) {
+            setTranscript(transcriptText);
+            // Handle success
+            const userMessage: Message = {
+              id: `user_${Date.now()}`,
+              type: "user",
+              content: transcriptText,
+              timestamp: new Date(),
+            };
+
+            setMessages((prev) => [...prev, userMessage]);
+
+            if (sessionId) {
+              sendAnswerToAPI(transcriptText);
+            }
+          } else {
+            setTranscript("Could not understand audio. Please try again.");
+          }
+        } catch (error) {
+          console.error("Fallback STT error:", error);
+          setTranscript("Error processing speech. Please try again.");
+        } finally {
+          setIsListening(false);
+          // Reset transcript after delay
+          setTimeout(() => {
+            // Only clear if it's still the processing/error message
+            setTranscript((prev) => {
+              if (prev === "Processing audio..." || prev.startsWith("Error")) {
+                return "";
+              }
+              return prev;
+            });
+          }, 2000);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsListening(true);
+      setTranscript("Listening...");
+    } catch (error) {
+      console.error("Error starting fallback recorder:", error);
+      setWarningMessage("Failed to start audio recording.");
+      setShowWarning(true);
+    }
+  };
+
+  // Fallback STT: Stop Recording
+  const stopFallbackRecording = () => {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      mediaRecorderRef.current.stop();
+    }
+  };
+
   const startListening = async () => {
     if (!isMicOn) {
       setWarningMessage("Please enable your microphone to respond.");
       setShowWarning(true);
+      return;
+    }
+
+    if (useFallbackSTT) {
+      startFallbackRecording();
       return;
     }
 
@@ -1054,14 +1236,22 @@ function VoiceInterviewContent() {
         setTranscript("Speech recognition not available. Please try again.");
       }
     } else {
-      console.warn("⚠️ Speech recognition not available, using fallback");
-      setIsListening(false);
-      setTranscript("Speech recognition not supported in this browser.");
+      console.warn(
+        "⚠️ Speech recognition not available, switching to fallback"
+      );
+      setUseFallbackSTT(true);
+      startFallbackRecording();
     }
   };
 
   const stopListening = () => {
     console.log("🛑 Stopping speech recognition...");
+
+    if (useFallbackSTT) {
+      stopFallbackRecording();
+      return;
+    }
+
     if (recognition) {
       recognition.stop();
     }
@@ -2449,6 +2639,23 @@ function VoiceInterviewContent() {
                     )}
                   </button>
 
+                  {codeExecutionSuccess && (
+                    <button
+                      onClick={submitCode}
+                      disabled={isSubmittingCode}
+                      className={`bg-green-500 hover:bg-green-600 text-white px-6 py-3 text-base rounded-full flex items-center space-x-2 transition-all shadow-lg ${
+                        isSubmittingCode
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:scale-105"
+                      }`}
+                    >
+                      <Send size={18} />
+                      <span>
+                        {isSubmittingCode ? "Submitting..." : "Submit Solution"}
+                      </span>
+                    </button>
+                  )}
+
                   <div className="text-center">
                     <div className="text-sm text-gray-400">
                       {!interviewStarted
@@ -2517,24 +2724,6 @@ function VoiceInterviewContent() {
                       <Terminal size={14} />
                       <span>{isRunningCode ? "Running..." : "Run"}</span>
                     </button>
-                    {codeExecutionSuccess && (
-                      <button
-                        onClick={submitCode}
-                        disabled={isSubmittingCode}
-                        className={`bg-green-500 hover:bg-green-600 text-white px-4 py-1 text-sm rounded flex items-center space-x-1 ${
-                          isSubmittingCode
-                            ? "opacity-50 cursor-not-allowed"
-                            : ""
-                        }`}
-                      >
-                        <Send size={14} />
-                        <span>
-                          {isSubmittingCode
-                            ? "Submitting..."
-                            : "Submit Solution"}
-                        </span>
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>

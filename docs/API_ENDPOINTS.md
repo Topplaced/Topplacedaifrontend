@@ -550,7 +550,6 @@ GET /interview/results/{sessionId}
       "responseMetrics": {
         "responseTime": 12.5,
         "wordCount": 87,
-        "clarityScore": 90,
         "relevanceScore": 88
       }
     }

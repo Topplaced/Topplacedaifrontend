@@ -432,7 +432,7 @@ export async function endInterview(sessionId: string, results?: any) {
       communicationScore: 82,
       problemSolvingScore: 87,
       feedback: 'Good performance overall',
-      recommendations: ['Practice more complex algorithms', 'Improve explanation clarity']
+      recommendations: ['Practice more complex algorithms', 'Improve explanation quality']
     }
   };
   

@@ -131,7 +131,6 @@ export interface ChatConversationPayload {
   userPerformance: {
     responseTime: number; // seconds taken to respond
     communicationScore: number; // 0-100
-    clarityScore: number; // 0-100
     confidenceLevel: number; // 0-100
   };
   interviewState: {
@@ -319,7 +318,6 @@ export interface InterviewResultsPayload {
     responseMetrics: {
       responseTime: number;
       wordCount: number;
-      clarityScore: number;
       relevanceScore: number;
     };
   }>;
@@ -487,7 +485,6 @@ export const EXAMPLE_CHAT_CONVERSATION: ChatConversationPayload = {
   userPerformance: {
     responseTime: 12.5,
     communicationScore: 85,
-    clarityScore: 90,
     confidenceLevel: 78
   },
   interviewState: {
@@ -656,7 +653,7 @@ export const EXAMPLE_INTERVIEW_RESULTS: InterviewResultsPayload = {
       responseMetrics: {
         responseTime: 12.5,
         wordCount: 87,
-        clarityScore: 90,
+        // clarityScore: 90,
         relevanceScore: 88
       }
     }
