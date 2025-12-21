@@ -145,10 +145,10 @@
   dependencies:
     glob "7.1.7"
 
-"@next/swc-win32-x64-msvc@13.5.1":
+"@next/swc-linux-x64-gnu@13.5.1":
   version "13.5.1"
-  resolved "https://registry.npmjs.org/@next/swc-win32-x64-msvc/-/swc-win32-x64-msvc-13.5.1.tgz"
-  integrity sha512-+9XBQizy7X/GuwNegq+5QkkxAPV7SBsIwapVRQd9WSvvU20YO23B3bZUpevdabi4fsd25y9RJDDncljy/V54ww==
+  resolved "https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-13.5.1.tgz"
+  integrity sha512-QVvMrlrFFYvLtABk092kcZ5Mzlmsk2+SV3xYuAu8sbTuIoh0U2+HGNhVklmuYCuM3DAAxdiMQTNlRQmNH11udw==
 
 "@nodelib/fs.scandir@2.1.5":
   version "2.1.5"
@@ -964,10 +964,10 @@
     "@typescript-eslint/types" "6.21.0"
     eslint-visitor-keys "^3.4.1"
 
-"@unrs/resolver-binding-win32-x64-msvc@1.9.2":
+"@unrs/resolver-binding-linux-x64-gnu@1.9.2":
   version "1.9.2"
-  resolved "https://registry.npmjs.org/@unrs/resolver-binding-win32-x64-msvc/-/resolver-binding-win32-x64-msvc-1.9.2.tgz"
-  integrity sha512-ryoo+EB19lMxAd80ln9BVf8pdOAxLb97amrQ3SFN9OCRn/5M5wvwDgAe4i8ZjhpbiHoDeP8yavcTEnpKBo7lZg==
+  resolved "https://registry.npmjs.org/@unrs/resolver-binding-linux-x64-gnu/-/resolver-binding-linux-x64-gnu-1.9.2.tgz"
+  integrity sha512-jkSkwch0uPFva20Mdu8orbQjv2A3G88NExTN2oPTI1AJ+7mZfYW3cDCTyoH6OnctBKbBVeJCEqh0U02lTkqD5w==
 
 acorn-jsx@^5.3.2:
   version "5.3.2"
