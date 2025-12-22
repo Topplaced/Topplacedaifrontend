@@ -103,24 +103,54 @@ function InterviewResultsContent() {
         }
 
         // Fallback to API if no localStorage data
-        const response = await fetch(
-          `${API_URL}/users/${user._id}/interview-history`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        // Try fetching detailed interview data first
+        let interview = null;
+        try {
+          const detailResponse = await fetch(
+            `${API_URL}/interview/results/${interviewId}/detailed`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch interview data");
+          if (detailResponse.ok) {
+            const responseData = await detailResponse.json();
+            if (responseData.success && responseData.results) {
+              interview = responseData.results;
+            } else {
+              interview = responseData;
+            }
+          }
+        } catch (detailError) {
+          console.warn(
+            "Failed to fetch details, falling back to history:",
+            detailError
+          );
         }
 
-        const data = await response.json();
-        const interview = data.interviews?.find(
-          (int: any) => int.sessionId === interviewId
-        );
+        if (!interview) {
+          const response = await fetch(
+            `${API_URL}/users/${user._id}/interview-history`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch interview data");
+          }
+
+          const data = await response.json();
+          interview = data.interviews?.find(
+            (int: any) => int.sessionId === interviewId
+          );
+        }
 
         if (!interview) {
           throw new Error("Interview not found");
@@ -290,6 +320,11 @@ function InterviewResultsContent() {
         : {}),
     },
     codeSubmissions: interviewData.results?.codeSubmissions || [],
+    questionAnswers: (interviewData.questionAnswers || []).map((qa: any) => ({
+      ...qa,
+      questionText: qa.questionText || qa.aiQuestion,
+      feedback: qa.feedback || qa.aiResponse || qa.shortResponse,
+    })),
   };
 
   const getScoreColor = (score: number) => {
@@ -562,6 +597,76 @@ function InterviewResultsContent() {
               )}
             </div>
           </div>
+
+          {/* Question & Answer Analysis */}
+          {results.questionAnswers.length > 0 && (
+            <div className="glass-card p-6">
+              <h2 className="text-xl font-semibold mb-6 flex items-center">
+                <MessageSquare className="h-6 w-6 text-[#00FFB2] mr-2" />
+                Question & Answer Analysis
+              </h2>
+              <div className="space-y-6">
+                {results.questionAnswers.map((qa: any, index: number) => (
+                  <div
+                    key={index}
+                    className="p-4 bg-[#1A1A1A] rounded-lg space-y-4"
+                  >
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-semibold text-lg text-white">
+                        Question {index + 1}
+                      </h3>
+                      {qa.scores?.overall > 0 && (
+                        <span
+                          className={`px-2 py-1 rounded text-sm font-bold ${getScoreColor(
+                            qa.scores.overall
+                          )}`}
+                        >
+                          {qa.scores.overall}%
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-gray-200 font-medium text-lg">
+                        {qa.questionText}
+                      </p>
+
+                      <div className="bg-[#111] p-4 rounded border border-gray-800">
+                        <p className="text-sm text-gray-400 mb-2 font-semibold">
+                          Your Answer:
+                        </p>
+                        <p className="text-gray-300 whitespace-pre-wrap">
+                          {qa.userAnswer}
+                        </p>
+                      </div>
+                    </div>
+
+                    {qa.improvements && qa.improvements.length > 0 && (
+                      <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded">
+                        <p className="text-sm text-yellow-400 font-semibold mb-2">
+                          Areas for Improvement:
+                        </p>
+                        <ul className="list-disc list-inside text-sm text-gray-300 space-y-1">
+                          {qa.improvements.map((imp: string, i: number) => (
+                            <li key={i}>{imp}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {qa.feedback && (
+                      <div className="text-sm text-gray-400 italic bg-[#111] p-3 rounded">
+                        <span className="text-[#00FFB2] font-semibold">
+                          AI Feedback:
+                        </span>{" "}
+                        {qa.feedback}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Code Submissions */}
           {results.codeSubmissions.length > 0 && (
