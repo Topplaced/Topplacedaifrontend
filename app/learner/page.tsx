@@ -22,11 +22,11 @@ import Navbar from "../../components/Navbar";
 import Sidebar from "../../components/Sidebar";
 import BottomNav from "../../components/BottomNav";
 import { useRouter } from "next/navigation";
-import { 
-  getUserDashboardStats, 
-  getUserInterviewHistory, 
-  getUserInterviewUsage, 
-  getUserAchievements 
+import {
+  getUserDashboardStats,
+  getUserInterviewHistory,
+  getUserInterviewUsage,
+  getUserAchievements,
 } from "../../utils/api-helpers";
 import { Interview } from "../../types/interview-schema";
 
@@ -40,12 +40,12 @@ export default function LearnerDashboard() {
     stats: null,
     interviewHistory: null,
     achievements: null,
-    usage: null
+    usage: null,
   });
   const [skillProgress, setSkillProgress] = useState({
     interviewSkills: 0,
     technicalKnowledge: 0,
-    communication: 0
+    communication: 0,
   });
 
   const dispatch = useDispatch();
@@ -59,28 +59,28 @@ export default function LearnerDashboard() {
 
   const fetchDashboardData = async () => {
     if (!user?._id) return;
-    
+
     try {
       setLoading(true);
-      
+
       // Fetch all dashboard data in parallel
       const [stats, interviewHistory, achievements, usage] = await Promise.all([
-        getUserDashboardStats(user._id).catch(err => {
-          console.error('Error fetching stats:', err);
+        getUserDashboardStats(user._id).catch((err) => {
+          console.error("Error fetching stats:", err);
           return null;
         }),
-        getUserInterviewHistory(user._id, 50).catch(err => {
-          console.error('Error fetching interview history:', err);
+        getUserInterviewHistory(user._id, 50).catch((err) => {
+          console.error("Error fetching interview history:", err);
           return null;
         }),
-        getUserAchievements().catch(err => {
-          console.error('Error fetching achievements:', err);
+        getUserAchievements().catch((err) => {
+          console.error("Error fetching achievements:", err);
           return null;
         }),
-        getUserInterviewUsage(user._id).catch(err => {
-          console.error('Error fetching usage:', err);
+        getUserInterviewUsage(user._id).catch((err) => {
+          console.error("Error fetching usage:", err);
           return null;
-        })
+        }),
       ]);
 
       // Update dashboard data
@@ -88,39 +88,46 @@ export default function LearnerDashboard() {
         stats,
         interviewHistory,
         achievements,
-        usage
+        usage,
       });
 
       // Update header stats
       if (interviewHistory?.interviews) {
-        setInterviewsCount(interviewHistory.totalInterviews || interviewHistory.interviews.length);
-        
+        setInterviewsCount(
+          interviewHistory.totalInterviews || interviewHistory.interviews.length
+        );
+
         // Calculate average score from recent interviews
         const interviewsWithScores = interviewHistory.interviews.filter(
           (interview: any) => interview.scores?.overall
         );
         if (interviewsWithScores.length > 0) {
-          const avgScoreValue = interviewsWithScores.reduce(
-            (sum: number, interview: any) => sum + interview.scores.overall, 
-            0
-          ) / interviewsWithScores.length;
+          const avgScoreValue =
+            interviewsWithScores.reduce(
+              (sum: number, interview: any) => sum + interview.scores.overall,
+              0
+            ) / interviewsWithScores.length;
           setAvgScore(Math.round(avgScoreValue));
-          
+
           // Calculate skill progress from interview scores
-          const avgCommunication = interviewsWithScores.reduce(
-            (sum: number, interview: any) => sum + (interview.scores?.communication || 0), 
-            0
-          ) / interviewsWithScores.length;
-          
-          const avgTechnical = interviewsWithScores.reduce(
-            (sum: number, interview: any) => sum + (interview.scores?.technical || 0), 
-            0
-          ) / interviewsWithScores.length;
-          
+          const avgCommunication =
+            interviewsWithScores.reduce(
+              (sum: number, interview: any) =>
+                sum + (interview.scores?.communication || 0),
+              0
+            ) / interviewsWithScores.length;
+
+          const avgTechnical =
+            interviewsWithScores.reduce(
+              (sum: number, interview: any) =>
+                sum + (interview.scores?.technical || 0),
+              0
+            ) / interviewsWithScores.length;
+
           setSkillProgress({
             interviewSkills: Math.round(avgScoreValue),
             technicalKnowledge: Math.round(avgTechnical || avgScoreValue),
-            communication: Math.round(avgCommunication || avgScoreValue * 0.9)
+            communication: Math.round(avgCommunication || avgScoreValue * 0.9),
           });
         }
       } else {
@@ -128,32 +135,36 @@ export default function LearnerDashboard() {
         setSkillProgress({
           interviewSkills: 0,
           technicalKnowledge: 0,
-          communication: 0
+          communication: 0,
         });
       }
 
       // Set mentors count (placeholder - you may want to add a mentors API)
       setMentorsCount(2); // Keep static for now or add mentors API
-
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error("Error fetching dashboard data:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const recentScores = dashboardData.interviewHistory?.interviews?.slice(0, 3).map((interview: any) => ({
-    date: new Date(interview.createdAt).toLocaleDateString(),
-    role: interview.category?.replace(/[-_]/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Interview',
-    score: interview.scores?.overall || 0,
-    improvement: interview.scores?.improvement || '+0%'
-  })) || [
+  const recentScores = dashboardData.interviewHistory?.interviews
+    ?.slice(0, 3)
+    .map((interview: any) => ({
+      date: new Date(interview.createdAt).toLocaleDateString(),
+      role:
+        interview.category
+          ?.replace(/[-_]/g, " ")
+          .replace(/\b\w/g, (l: string) => l.toUpperCase()) || "Interview",
+      score: interview.scores?.overall || 0,
+      improvement: interview.scores?.improvement || "+0%",
+    })) || [
     {
       date: "No interviews yet",
       role: "Start your first interview",
       score: 0,
       improvement: "+0%",
-    }
+    },
   ];
 
   const recommendedMentors = [
@@ -211,7 +222,6 @@ export default function LearnerDashboard() {
                     Welcome back,{" "}
                     <span className="gradient-text">
                       {user?.name || "Learner"}
-                      
                     </span>
                     ! 👋
                   </h1>
@@ -255,13 +265,6 @@ export default function LearnerDashboard() {
                       Practice with our AI interviewer and get instant feedback
                     </p>
                   </div>
-                  <button
-                    onClick={() => router.push("/learner/interview/voice-session")}
-                    className="w-16 h-16 bg-[#00FFB2]/20 rounded-xl flex items-center justify-center hover:bg-[#00FFB2]/30 transition-colors"
-                    aria-label="Start Voice Interview"
-                  >
-                    <Play size={32} className="text-[#00FFB2]" />
-                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
@@ -293,13 +296,6 @@ export default function LearnerDashboard() {
                     <Play size={20} className="mr-2" />
                     Start AI Interview
                   </Link>
-                  <Link
-                    href="/learner/interview/voice-session"
-                    className="btn-outline flex items-center justify-center w-full py-3"
-                  >
-                    <Play size={20} className="mr-2" />
-                    Start Voice Interview
-                  </Link>
                 </div>
               </div>
 
@@ -314,7 +310,9 @@ export default function LearnerDashboard() {
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span>Interview Skills</span>
-                      <span className="text-[#00FFB2]">{skillProgress.interviewSkills}%</span>
+                      <span className="text-[#00FFB2]">
+                        {skillProgress.interviewSkills}%
+                      </span>
                     </div>
                     <div className="w-full bg-[#1A1A1A] rounded-full h-2">
                       <div
@@ -327,12 +325,16 @@ export default function LearnerDashboard() {
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span>Technical Knowledge</span>
-                      <span className="text-[#00FFB2]">{skillProgress.technicalKnowledge}%</span>
+                      <span className="text-[#00FFB2]">
+                        {skillProgress.technicalKnowledge}%
+                      </span>
                     </div>
                     <div className="w-full bg-[#1A1A1A] rounded-full h-2">
                       <div
                         className="bg-gradient-to-r from-[#00FFB2] to-[#00CC8E] h-2 rounded-full transition-all duration-1000"
-                        style={{ width: `${skillProgress.technicalKnowledge}%` }}
+                        style={{
+                          width: `${skillProgress.technicalKnowledge}%`,
+                        }}
                       ></div>
                     </div>
                   </div>
@@ -340,7 +342,9 @@ export default function LearnerDashboard() {
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span>Communication</span>
-                      <span className="text-[#00FFB2]">{skillProgress.communication}%</span>
+                      <span className="text-[#00FFB2]">
+                        {skillProgress.communication}%
+                      </span>
                     </div>
                     <div className="w-full bg-[#1A1A1A] rounded-full h-2">
                       <div
@@ -416,20 +420,30 @@ export default function LearnerDashboard() {
                 </div>
 
                 <div className="space-y-4">
-                  {dashboardData.achievements && dashboardData.achievements.length > 0 ? (
-                    dashboardData.achievements.slice(0, 2).map((achievement: any, index: number) => (
-                      <div key={index} className="flex items-center p-4 bg-[#1A1A1A] rounded-lg">
-                        <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center mr-4">
-                          <Trophy size={20} className="text-yellow-500" />
-                        </div>
-                        <div>
-                          <div className="font-semibold">{achievement.achievementId?.title || 'Achievement'}</div>
-                          <div className="text-sm text-gray-400">
-                            {achievement.achievementId?.description || 'Achievement unlocked'}
+                  {dashboardData.achievements &&
+                  dashboardData.achievements.length > 0 ? (
+                    dashboardData.achievements
+                      .slice(0, 2)
+                      .map((achievement: any, index: number) => (
+                        <div
+                          key={index}
+                          className="flex items-center p-4 bg-[#1A1A1A] rounded-lg"
+                        >
+                          <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center mr-4">
+                            <Trophy size={20} className="text-yellow-500" />
+                          </div>
+                          <div>
+                            <div className="font-semibold">
+                              {achievement.achievementId?.title ||
+                                "Achievement"}
+                            </div>
+                            <div className="text-sm text-gray-400">
+                              {achievement.achievementId?.description ||
+                                "Achievement unlocked"}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      ))
                   ) : (
                     <>
                       <div className="flex items-center p-4 bg-[#1A1A1A] rounded-lg">
@@ -437,7 +451,9 @@ export default function LearnerDashboard() {
                           <Trophy size={20} className="text-gray-500" />
                         </div>
                         <div>
-                          <div className="font-semibold">No achievements yet</div>
+                          <div className="font-semibold">
+                            No achievements yet
+                          </div>
                           <div className="text-sm text-gray-400">
                             Complete interviews to unlock achievements
                           </div>
@@ -449,9 +465,12 @@ export default function LearnerDashboard() {
                           <Zap size={20} className="text-[#00FFB2]" />
                         </div>
                         <div>
-                          <div className="font-semibold">Start your journey</div>
+                          <div className="font-semibold">
+                            Start your journey
+                          </div>
                           <div className="text-sm text-gray-400">
-                            Take your first interview to begin earning achievements
+                            Take your first interview to begin earning
+                            achievements
                           </div>
                         </div>
                       </div>
@@ -678,7 +697,10 @@ export default function LearnerDashboard() {
 // Define dashboard data type to ensure proper typing
 type DashboardData = {
   stats: any | null;
-  interviewHistory: { interviews: Interview[]; totalInterviews?: number } | null;
+  interviewHistory: {
+    interviews: Interview[];
+    totalInterviews?: number;
+  } | null;
   achievements: any[] | null;
   usage: any | null;
 };
