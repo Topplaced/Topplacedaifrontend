@@ -288,6 +288,16 @@ export default function ScorecardPage() {
 
   const formatH = (sec: number) => `${Math.round(sec / 3600)}h`;
 
+  const humanizeLabel = (value?: string) => {
+    if (!value) return "";
+    return value
+      .toString()
+      .replace(/[_-]+/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .trim();
+  };
+
   // —— Strength/Improvement/Recommendation generators ——
   function generateStrengths(technical: number, communication: number, problemSolving: number): string {
     const strengths: string[] = [];
@@ -572,7 +582,7 @@ export default function ScorecardPage() {
                   <div key={interview.id} className={`p-4 rounded-lg border border-blue-500/30`}>
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <div className="font-medium text-white capitalize">{interview.role || interview.category}</div>
+                        <div className="font-medium text-white">{humanizeLabel(interview.role || interview.category)}</div>
                         <div className="text-xs text-gray-400">{formatDate(interview.completedAt)}</div>
                       </div>
                       <div className={`text-lg font-bold ${getScoreColor(interview.overallScore)}`}>

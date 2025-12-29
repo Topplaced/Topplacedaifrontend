@@ -20,7 +20,7 @@ export default function HomePage() {
       <HomeClient />
 
       {/* Hero Section */}
-      <section className="relative pt-12 pb-12 overflow-hidden">
+      <section className="relative pt-20 md:pt-24 pb-12 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[#00FFB2]/10 via-transparent to-[#00CC8E]/5"></div>
 
         <div className="container-custom relative z-10">

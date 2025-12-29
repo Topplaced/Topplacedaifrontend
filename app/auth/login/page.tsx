@@ -76,7 +76,7 @@ export default function LoginPage() {
         }
       } else if (
         res.status === 403 &&
-        data.message?.includes("email not verified")
+        (data.message?.toLowerCase().includes("email not verified") || data.message?.toLowerCase().includes("verify your email"))
       ) {
         const msg = "Please verify your email before logging in.";
         setMessage(msg);

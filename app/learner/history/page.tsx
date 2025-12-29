@@ -502,74 +502,9 @@ export default function InterviewHistoryPage() {
             </div>
 
             {/* Filters (one row, small, smooth) */}
-            <div className="glass-card p-5">
-              <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
-                <div className="relative min-w-[260px] flex-1">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search interviews..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className={searchInput}
-                  />
-                </div>
+            {/* Filters (perfect, equal-width, smooth, no big buttons) */}
 
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className={`w-[170px] shrink-0 ${selectBase}`}
-                >
-                  <option value="all">All Categories</option>
-                  <option value="hr">HR Interview</option>
-                  <option value="fullstack">Full-Stack</option>
-                  <option value="frontend">Frontend</option>
-                  <option value="backend">Backend</option>
-                  <option value="sql">SQL</option>
-                  <option value="data-analyst">Data Analyst</option>
-                  <option value="aws">AWS</option>
-                </select>
 
-                <select
-                  value={filterLevel}
-                  onChange={(e) => setFilterLevel(e.target.value)}
-                  className={`w-[155px] shrink-0 ${selectBase}`}
-                >
-                  <option value="all">All Levels</option>
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                </select>
-
-                <select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value as any)}
-                  className={`w-[140px] shrink-0 ${selectBase}`}
-                >
-                  <option value="all">All Types</option>
-                  <option value="free">Free</option>
-                  <option value="paid">Paid</option>
-                </select>
-
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className={`w-[150px] shrink-0 ${selectBase}`}
-                >
-                  <option value="date">Sort by Date</option>
-                  <option value="score">Sort by Score</option>
-                  <option value="duration">Sort by Duration</option>
-                </select>
-
-                <button
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className={`w-[150px] shrink-0 ${inputBase} px-3 font-semibold hover:border-[#00FFB2]/40 hover:bg-white/5 flex items-center justify-center gap-2`}
-                >
-                  {sortOrder === 'asc' ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-                  {sortOrder === 'asc' ? 'Ascending' : 'Descending'}
-                </button>
-              </div>
-            </div>
 
             {/* Interview Records */}
             <div className="space-y-4">
