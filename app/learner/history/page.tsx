@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Clock,
   Trophy,
@@ -20,15 +20,15 @@ import {
   Briefcase,
   Star,
   Gift,
-  CreditCard
-} from 'lucide-react';
+  CreditCard,
+} from "lucide-react";
 
-import Navbar from '@/components/Navbar';
-import Sidebar from '@/components/Sidebar';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import BottomNav from '@/components/BottomNav';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/store/store';
+import Navbar from "@/components/Navbar";
+import Sidebar from "@/components/Sidebar";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import BottomNav from "@/components/BottomNav";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -48,7 +48,7 @@ interface InterviewRecord {
   timeSpent: number; // seconds
   tabSwitchCount: number;
   codeSubmissions?: number;
-  status: 'completed' | 'terminated' | 'incomplete';
+  status: "completed" | "terminated" | "incomplete";
   isFreeInterview?: boolean;
   role?: string;
 }
@@ -61,12 +61,12 @@ export default function InterviewHistoryPage() {
   const [interviews, setInterviews] = useState<InterviewRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState('all');
-  const [filterLevel, setFilterLevel] = useState('all');
-  const [filterType, setFilterType] = useState<'all' | 'free' | 'paid'>('all');
-  const [sortBy, setSortBy] = useState<'date' | 'score' | 'duration'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterLevel, setFilterLevel] = useState("all");
+  const [filterType, setFilterType] = useState<"all" | "free" | "paid">("all");
+  const [sortBy, setSortBy] = useState<"date" | "score" | "duration">("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
@@ -76,51 +76,51 @@ export default function InterviewHistoryPage() {
     freeInterviewsUsed: 0,
     freeInterviewsLimit: 2,
     totalInterviews: 0,
-    averageScore: 0
+    averageScore: 0,
   });
 
   // ---------- helpers ----------
   const clampScore = (n: any) => {
-    if (typeof n !== 'number' || Number.isNaN(n)) return 0;
+    if (typeof n !== "number" || Number.isNaN(n)) return 0;
     const pct = n <= 1 ? n * 100 : n; // supports 0-1 or 0-100
     return Math.max(0, Math.min(100, Math.round(pct)));
   };
 
   // Remove underscores/hyphens + Title Case
   const humanizeLabel = (value?: string) => {
-    if (!value) return '';
+    if (!value) return "";
     return value
       .toString()
-      .replace(/[_-]+/g, ' ')
+      .replace(/[_-]+/g, " ")
       .toLowerCase()
       .replace(/\b\w/g, (c) => c.toUpperCase())
       .trim();
   };
 
   const formatInterviewTitle = (category?: string, role?: string) => {
-    const base = role || category || 'Interview';
+    const base = role || category || "Interview";
     return humanizeLabel(base);
   };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'hr':
+      case "hr":
         return Users;
-      case 'product-manager':
+      case "product-manager":
         return Briefcase;
-      case 'fullstack':
+      case "fullstack":
         return Code;
-      case 'frontend':
+      case "frontend":
         return Code;
-      case 'backend':
+      case "backend":
         return Database;
-      case 'sql':
+      case "sql":
         return Database;
-      case 'data-analyst':
+      case "data-analyst":
         return Brain;
-      case 'aws':
+      case "aws":
         return Cloud;
-      case 'devops':
+      case "devops":
         return Cloud;
       default:
         return Code;
@@ -129,58 +129,58 @@ export default function InterviewHistoryPage() {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'hr':
-        return 'text-blue-400';
-      case 'product-manager':
-        return 'text-purple-400';
-      case 'fullstack':
-        return 'text-[#00FFB2]';
-      case 'frontend':
-        return 'text-yellow-400';
-      case 'backend':
-        return 'text-red-400';
-      case 'sql':
-        return 'text-orange-400';
-      case 'data-analyst':
-        return 'text-pink-400';
-      case 'aws':
-        return 'text-cyan-400';
-      case 'devops':
-        return 'text-green-400';
+      case "hr":
+        return "text-blue-400";
+      case "product-manager":
+        return "text-purple-400";
+      case "fullstack":
+        return "text-[#00FFB2]";
+      case "frontend":
+        return "text-yellow-400";
+      case "backend":
+        return "text-red-400";
+      case "sql":
+        return "text-orange-400";
+      case "data-analyst":
+        return "text-pink-400";
+      case "aws":
+        return "text-cyan-400";
+      case "devops":
+        return "text-green-400";
       default:
-        return 'text-gray-400';
+        return "text-gray-400";
     }
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 90) return 'text-green-400';
-    if (score >= 80) return 'text-[#00FFB2]';
-    if (score >= 70) return 'text-yellow-400';
-    return 'text-red-400';
+    if (score >= 90) return "text-green-400";
+    if (score >= 80) return "text-[#00FFB2]";
+    if (score >= 70) return "text-yellow-400";
+    return "text-red-400";
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'text-green-400 bg-green-400/10 border-green-400/20';
-      case 'terminated':
-        return 'text-red-400 bg-red-400/10 border-red-400/20';
-      case 'incomplete':
-        return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20';
+      case "completed":
+        return "text-green-400 bg-green-400/10 border-green-400/20";
+      case "terminated":
+        return "text-red-400 bg-red-400/10 border-red-400/20";
+      case "incomplete":
+        return "text-yellow-400 bg-yellow-400/10 border-yellow-400/20";
       default:
-        return 'text-gray-400 bg-gray-400/10 border-gray-400/20';
+        return "text-gray-400 bg-gray-400/10 border-gray-400/20";
     }
   };
 
   const formatDate = (dateString: string) => {
     const d = new Date(dateString);
-    if (Number.isNaN(d.getTime())) return '';
-    return d.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -194,56 +194,59 @@ export default function InterviewHistoryPage() {
   // ---------- Mock fallback ----------
   const mockInterviews: InterviewRecord[] = [
     {
-      id: '1',
-      category: 'fullstack',
-      level: 'mid',
+      id: "1",
+      category: "fullstack",
+      level: "mid",
       duration: 45,
       overallScore: 87,
       scores: {
         technical: 92,
         communication: 78,
         problemSolving: 85,
-        codeQuality: 89
+        codeQuality: 89,
       },
-      completedAt: '2024-01-20T14:30:00Z',
+      completedAt: "2024-01-20T14:30:00Z",
       timeSpent: 2700,
       tabSwitchCount: 0,
       codeSubmissions: 3,
-      status: 'completed',
+      status: "completed",
       isFreeInterview: true,
-      role: 'Full Stack Developer'
+      role: "Full Stack Developer",
     },
     {
-      id: '2',
-      category: 'frontend',
-      level: 'senior',
+      id: "2",
+      category: "frontend",
+      level: "senior",
       duration: 60,
       overallScore: 92,
       scores: {
         technical: 95,
         communication: 88,
         problemSolving: 90,
-        codeQuality: 94
+        codeQuality: 94,
       },
-      completedAt: '2024-01-18T10:15:00Z',
+      completedAt: "2024-01-18T10:15:00Z",
       timeSpent: 3600,
       tabSwitchCount: 1,
       codeSubmissions: 2,
-      status: 'completed',
+      status: "completed",
       isFreeInterview: true,
-      role: 'Frontend Developer'
-    }
+      role: "Frontend Developer",
+    },
   ];
 
   // ---------- API ----------
   const fetchUsageStats = async () => {
     try {
-      const response = await fetch(`${API_URL}/users/${user?._id}/interview-usage`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      const response = await fetch(
+        `${API_URL}/users/${user?._id}/interview-usage`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         }
-      });
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -251,11 +254,11 @@ export default function InterviewHistoryPage() {
           freeInterviewsUsed: data.freeInterviewsUsed || 0,
           freeInterviewsLimit: data.freeInterviewsLimit || 2,
           totalInterviews: data.totalInterviews || 0,
-          averageScore: data.averageScore || 0
+          averageScore: data.averageScore || 0,
         });
       }
     } catch (error) {
-      console.error('Error fetching usage stats:', error);
+      console.error("Error fetching usage stats:", error);
     }
   };
 
@@ -277,15 +280,22 @@ export default function InterviewHistoryPage() {
         type: filterType,
         sortBy,
         sortOrder,
-        search: searchTerm
+        search: searchTerm,
+        _t: Date.now().toString(), // Prevent caching
       });
 
-      const response = await fetch(`${API_URL}/users/${user._id}/interview-history?${params.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      const response = await fetch(
+        `${API_URL}/users/${user._id}/interview-history?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+          cache: "no-store",
         }
-      });
+      );
 
       if (!response.ok) {
         setInterviews(mockInterviews);
@@ -295,50 +305,101 @@ export default function InterviewHistoryPage() {
 
       const data = await response.json();
 
-      const transformedInterviews: InterviewRecord[] = (data.interviews || []).map((interview: any) => {
-        const scores = interview.scores || {};
-        const overallScore = clampScore(scores.overall ?? interview.score ?? 0);
+      const transformedInterviews: InterviewRecord[] = (data.interviews || [])
+        .filter((interview: any) => interview && typeof interview === "object")
+        .map((interview: any) => {
+          const scores = interview.scores || {};
+          const overallScore = clampScore(
+            scores.overall ?? interview.score ?? 0
+          );
 
-        const durationSeconds = typeof interview.duration === 'number' ? interview.duration : 0;
-        const durationMinutes = Math.max(0, Math.round(durationSeconds / 60));
+          // Prioritize actual timeSpent/totalTimeSpent if available, otherwise fallback to duration
+          const rawTimeSpent =
+            interview.timeSpent ??
+            interview.totalTimeSpent ??
+            interview.duration ??
+            0;
 
-        const prettyRole = interview.role ? humanizeLabel(interview.role) : humanizeLabel(interview.category);
+          // Safely parse timeSpent to number
+          let durationSeconds = 0;
+          if (typeof rawTimeSpent === "number") {
+            durationSeconds = rawTimeSpent;
+          } else if (typeof rawTimeSpent === "string") {
+            // Handle string format like "45" or "45 mins"
+            const parsed = parseFloat(rawTimeSpent);
+            if (!isNaN(parsed)) {
+              // If it's just minutes in string (e.g. "45"), convert to seconds if needed?
+              // The original code assumed rawTimeSpent (if number) is seconds.
+              // But if interview.duration is "45", usually that means minutes in many systems.
+              // Let's stick to existing logic: if it's a number, it's seconds.
+              // If it's a string, we parse it.
+              durationSeconds = parsed;
+            }
+          }
 
-        return {
-          id: interview.sessionId,
-          category: interview.category,
-          level: interview.level,
-          duration: durationMinutes,
-          overallScore: overallScore,
-          scores: {
-            technical: clampScore(scores.technical ?? scores.overall ?? interview.score ?? 0),
-            communication: clampScore(scores.communication ?? scores.overall ?? interview.score ?? 0),
-            problemSolving: clampScore(scores.problemSolving ?? scores.overall ?? interview.score ?? 0),
-            codeQuality: interview.hasCodeEditor
-              ? clampScore(scores.codeQuality ?? scores.technical ?? scores.overall ?? interview.score ?? 0)
-              : undefined
-          },
-          completedAt: interview.endTime || interview.startTime,
-          timeSpent: durationSeconds || 0,
-          tabSwitchCount: interview.tabSwitchCount || 0,
-          codeSubmissions:
-            interview.codeSubmissions ??
-            (interview.hasCodeEditor ? Math.floor(Math.random() * 5) + 1 : undefined),
-          status:
-            interview.status === 'completed'
-              ? 'completed'
-              : interview.status === 'terminated'
-              ? 'terminated'
-              : 'incomplete',
-          isFreeInterview: interview.isFreeInterview || false,
-          role: prettyRole
-        };
-      });
+          const durationMinutes = Math.max(0, Math.round(durationSeconds / 60));
+
+          const prettyRole = interview.role
+            ? humanizeLabel(interview.role)
+            : humanizeLabel(interview.category);
+
+          return {
+            id:
+              interview.sessionId ||
+              interview._id ||
+              `temp-${Date.now()}-${Math.random()}`,
+            category: interview.category || "Unknown",
+            level: interview.level || "entry",
+            duration: durationMinutes,
+            overallScore: overallScore,
+            scores: {
+              technical: clampScore(
+                scores.technical ?? scores.overall ?? interview.score ?? 0
+              ),
+              communication: clampScore(
+                scores.communication ?? scores.overall ?? interview.score ?? 0
+              ),
+              problemSolving: clampScore(
+                scores.problemSolving ?? scores.overall ?? interview.score ?? 0
+              ),
+              codeQuality: interview.hasCodeEditor
+                ? clampScore(
+                    scores.codeQuality ??
+                      scores.technical ??
+                      scores.overall ??
+                      interview.score ??
+                      0
+                  )
+                : undefined,
+            },
+            completedAt:
+              interview.endTime ||
+              interview.startTime ||
+              new Date().toISOString(),
+            timeSpent: durationSeconds || 0,
+            tabSwitchCount: interview.tabSwitchCount || 0,
+            codeSubmissions:
+              interview.codeSubmissions ??
+              (interview.hasCodeEditor
+                ? Math.floor(Math.random() * 5) + 1
+                : undefined),
+            status:
+              interview.status === "completed"
+                ? "completed"
+                : interview.status === "terminated"
+                ? "terminated"
+                : "incomplete",
+            isFreeInterview: interview.isFreeInterview || false,
+            role: prettyRole,
+          };
+        });
 
       setInterviews(transformedInterviews);
-      setTotalInterviews(data.totalInterviews || transformedInterviews.length || 0);
+      setTotalInterviews(
+        data.totalInterviews || transformedInterviews.length || 0
+      );
     } catch (error) {
-      console.warn('Backend API not available, using mock data:', error);
+      console.warn("Backend API not available, using mock data:", error);
       setInterviews(mockInterviews);
       setTotalInterviews(mockInterviews.length);
     } finally {
@@ -351,16 +412,28 @@ export default function InterviewHistoryPage() {
     fetchInterviewHistory();
     if (user && token) fetchUsageStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, token, page, filterCategory, filterLevel, filterType, sortBy, sortOrder, searchTerm]);
+  }, [
+    user,
+    token,
+    page,
+    filterCategory,
+    filterLevel,
+    filterType,
+    sortBy,
+    sortOrder,
+    searchTerm,
+  ]);
 
   // ---------- Page stats ----------
   const averageScore = useMemo(() => {
     if (interviews.length === 0) return 0;
-    return Math.round(interviews.reduce((sum, i) => sum + i.overallScore, 0) / interviews.length);
+    return Math.round(
+      interviews.reduce((sum, i) => sum + i.overallScore, 0) / interviews.length
+    );
   }, [interviews]);
 
   const completedInterviews = useMemo(
-    () => interviews.filter((i) => i.status === 'completed').length,
+    () => interviews.filter((i) => i.status === "completed").length,
     [interviews]
   );
 
@@ -390,17 +463,18 @@ export default function InterviewHistoryPage() {
 
   // ---------- UI classes ----------
   const inputBase =
-    'h-10 w-full bg-[#1A1A1A] border border-gray-600 rounded-md text-sm text-white ' +
-    'focus:outline-none focus:ring-2 focus:ring-[#00FFB2]/60 focus:border-[#00FFB2]/40 transition';
+    "h-10 w-full bg-[#1A1A1A] border border-gray-600 rounded-md text-sm text-white " +
+    "focus:outline-none focus:ring-2 focus:ring-[#00FFB2]/60 focus:border-[#00FFB2]/40 transition";
 
   const selectBase = `${inputBase} px-3`;
   const searchInput = `${inputBase} py-2 pl-9 pr-3`;
 
   const smallBtn =
-    'h-9 px-4 rounded-md border border-[#00FFB2]/50 text-[#00FFB2] bg-black/20 hover:bg-white/5 ' +
-    'transition flex items-center justify-center gap-2 text-sm font-semibold';
+    "h-9 px-4 rounded-md border border-[#00FFB2]/50 text-[#00FFB2] bg-black/20 hover:bg-white/5 " +
+    "transition flex items-center justify-center gap-2 text-sm font-semibold";
 
-  const squareBtn = 'px-3 py-1.5 text-sm border bg-[#1A1A1A] rounded-none transition';
+  const squareBtn =
+    "px-3 py-1.5 text-sm border bg-[#1A1A1A] rounded-none transition";
 
   return (
     <ProtectedRoute>
@@ -413,13 +487,17 @@ export default function InterviewHistoryPage() {
             {/* Header */}
             <div
               className={`transition-all duration-1000 ${
-                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+                isVisible
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-10"
               }`}
             >
               <h1 className="text-3xl md:text-4xl font-bold mb-2">
                 Interview <span className="gradient-text">History</span>
               </h1>
-              <p className="text-gray-400 text-lg">Track your progress and review past interview performances</p>
+              <p className="text-gray-400 text-lg">
+                Track your progress and review past interview performances
+              </p>
             </div>
 
             {/* Usage Stats */}
@@ -432,17 +510,22 @@ export default function InterviewHistoryPage() {
                   </div>
                   <div
                     className={`px-3 py-1 rounded-full text-sm ${
-                      usageStats.freeInterviewsUsed >= usageStats.freeInterviewsLimit
-                        ? 'bg-red-500/20 text-red-400'
-                        : 'bg-green-500/20 text-green-400'
+                      usageStats.freeInterviewsUsed >=
+                      usageStats.freeInterviewsLimit
+                        ? "bg-red-500/20 text-red-400"
+                        : "bg-green-500/20 text-green-400"
                     }`}
                   >
-                    {usageStats.freeInterviewsUsed >= usageStats.freeInterviewsLimit ? 'Limit Reached' : 'Available'}
+                    {usageStats.freeInterviewsUsed >=
+                    usageStats.freeInterviewsLimit
+                      ? "Limit Reached"
+                      : "Available"}
                   </div>
                 </div>
 
                 <div className="text-2xl font-bold mb-2">
-                  {usageStats.freeInterviewsUsed} / {usageStats.freeInterviewsLimit}
+                  {usageStats.freeInterviewsUsed} /{" "}
+                  {usageStats.freeInterviewsLimit}
                 </div>
 
                 <div className="w-full bg-gray-700 rounded-full h-2 mb-3">
@@ -451,16 +534,22 @@ export default function InterviewHistoryPage() {
                     style={{
                       width: `${Math.min(
                         100,
-                        (usageStats.freeInterviewsUsed / usageStats.freeInterviewsLimit) * 100
-                      )}%`
+                        (usageStats.freeInterviewsUsed /
+                          usageStats.freeInterviewsLimit) *
+                          100
+                      )}%`,
                     }}
                   ></div>
                 </div>
 
                 <p className="text-sm text-gray-400">
-                  {usageStats.freeInterviewsUsed >= usageStats.freeInterviewsLimit
-                    ? 'You have used all your free interviews. Purchase credits to continue.'
-                    : `${usageStats.freeInterviewsLimit - usageStats.freeInterviewsUsed} free interviews remaining`}
+                  {usageStats.freeInterviewsUsed >=
+                  usageStats.freeInterviewsLimit
+                    ? "You have used all your free interviews. Purchase credits to continue."
+                    : `${
+                        usageStats.freeInterviewsLimit -
+                        usageStats.freeInterviewsUsed
+                      } free interviews remaining`}
                 </p>
               </div>
 
@@ -469,8 +558,12 @@ export default function InterviewHistoryPage() {
                   <CreditCard size={24} className="text-[#00FFB2]" />
                   <h3 className="text-lg font-semibold">Interview Credits</h3>
                 </div>
-                <div className="text-2xl font-bold mb-2">{interviews.filter((i) => !i.isFreeInterview).length}</div>
-                <p className="text-sm text-gray-400">Total paid interviews completed</p>
+                <div className="text-2xl font-bold mb-2">
+                  {interviews.filter((i) => !i.isFreeInterview).length}
+                </div>
+                <p className="text-sm text-gray-400">
+                  Total paid interviews completed
+                </p>
               </div>
             </div>
 
@@ -484,7 +577,13 @@ export default function InterviewHistoryPage() {
 
               <div className="glass-card p-6 text-center">
                 <Target size={24} className="text-[#00FFB2] mx-auto mb-3" />
-                <div className={`text-2xl font-bold ${getScoreColor(averageScore)}`}>{averageScore}%</div>
+                <div
+                  className={`text-2xl font-bold ${getScoreColor(
+                    averageScore
+                  )}`}
+                >
+                  {averageScore}%
+                </div>
                 <div className="text-sm text-gray-400">Average Score</div>
               </div>
 
@@ -496,7 +595,9 @@ export default function InterviewHistoryPage() {
 
               <div className="glass-card p-6 text-center">
                 <Clock size={24} className="text-[#00FFB2] mx-auto mb-3" />
-                <div className="text-2xl font-bold">{Math.round(totalTimeSpent / 3600)}h</div>
+                <div className="text-2xl font-bold">
+                  {Math.round(totalTimeSpent / 3600)}h
+                </div>
                 <div className="text-sm text-gray-400">Total Time</div>
               </div>
             </div>
@@ -504,18 +605,22 @@ export default function InterviewHistoryPage() {
             {/* Filters (one row, small, smooth) */}
             {/* Filters (perfect, equal-width, smooth, no big buttons) */}
 
-
-
             {/* Interview Records */}
             <div className="space-y-4">
               {interviews.length === 0 ? (
                 <div className="glass-card p-12 text-center">
                   <BarChart3 size={48} className="text-gray-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">No Interview Records Found</h3>
+                  <h3 className="text-xl font-semibold mb-2">
+                    No Interview Records Found
+                  </h3>
                   <p className="text-gray-400 mb-6">
-                    You haven&apos;t taken any interviews yet. Start your first interview to see your progress here.
+                    You haven&apos;t taken any interviews yet. Start your first
+                    interview to see your progress here.
                   </p>
-                  <button onClick={() => router.push('/learner/interview/setup')} className="btn-primary">
+                  <button
+                    onClick={() => router.push("/learner/interview/setup")}
+                    className="btn-primary"
+                  >
                     Start Your First Interview
                   </button>
                 </div>
@@ -523,7 +628,10 @@ export default function InterviewHistoryPage() {
                 interviews.map((interview) => {
                   const IconComponent = getCategoryIcon(interview.category);
                   const categoryColor = getCategoryColor(interview.category);
-                  const prettyTitle = formatInterviewTitle(interview.category, interview.role);
+                  const prettyTitle = formatInterviewTitle(
+                    interview.category,
+                    interview.role
+                  );
 
                   return (
                     <div
@@ -534,7 +642,10 @@ export default function InterviewHistoryPage() {
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-start gap-4">
                           <div className="w-12 h-12 rounded-lg bg-[#1A1A1A] border border-white/10 flex items-center justify-center">
-                            <IconComponent size={22} className={categoryColor} />
+                            <IconComponent
+                              size={22}
+                              className={categoryColor}
+                            />
                           </div>
 
                           <div>
@@ -546,8 +657,8 @@ export default function InterviewHistoryPage() {
                               <div
                                 className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 border ${
                                   interview.isFreeInterview
-                                    ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                                    : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                                    ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                    : "bg-blue-500/20 text-blue-400 border-blue-500/30"
                                 }`}
                               >
                                 {interview.isFreeInterview ? (
@@ -565,9 +676,11 @@ export default function InterviewHistoryPage() {
                             </div>
 
                             <div className="flex items-center text-sm text-gray-400 flex-wrap gap-x-3 gap-y-1">
-                              <span className="capitalize">{humanizeLabel(interview.level)} Level</span>
+                              <span className="capitalize">
+                                {humanizeLabel(interview.level)} Level
+                              </span>
                               <span className="opacity-50">•</span>
-                              <span>{interview.duration} minutes</span>
+                              <span>{formatDuration(interview.timeSpent)}</span>
                               <span className="opacity-50">•</span>
                               <span>{formatDate(interview.completedAt)}</span>
 
@@ -579,10 +692,16 @@ export default function InterviewHistoryPage() {
 
                         <div className="flex items-center gap-4 md:self-auto self-end">
                           <div className="text-right">
-                            <div className={`text-2xl font-bold ${getScoreColor(interview.overallScore)}`}>
+                            <div
+                              className={`text-2xl font-bold ${getScoreColor(
+                                interview.overallScore
+                              )}`}
+                            >
                               {interview.overallScore}%
                             </div>
-                            <div className="text-sm text-gray-400">Overall Score</div>
+                            <div className="text-sm text-gray-400">
+                              Overall Score
+                            </div>
                           </div>
                           <div
                             className={`px-3 py-1 rounded-full border text-xs font-medium capitalize ${getStatusColor(
@@ -598,28 +717,54 @@ export default function InterviewHistoryPage() {
                       <div className="mt-5 rounded-xl border border-white/10 bg-black/20 px-4 py-4">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           <div className="text-center">
-                            <div className={`text-lg font-semibold ${getScoreColor(interview.scores.technical)}`}>
+                            <div
+                              className={`text-lg font-semibold ${getScoreColor(
+                                interview.scores.technical
+                              )}`}
+                            >
                               {interview.scores.technical}%
                             </div>
-                            <div className="text-xs text-gray-400">Technical</div>
+                            <div className="text-xs text-gray-400">
+                              Technical
+                            </div>
                           </div>
                           <div className="text-center">
-                            <div className={`text-lg font-semibold ${getScoreColor(interview.scores.communication)}`}>
+                            <div
+                              className={`text-lg font-semibold ${getScoreColor(
+                                interview.scores.communication
+                              )}`}
+                            >
                               {interview.scores.communication}%
                             </div>
-                            <div className="text-xs text-gray-400">Communication</div>
+                            <div className="text-xs text-gray-400">
+                              Communication
+                            </div>
                           </div>
                           <div className="text-center">
-                            <div className={`text-lg font-semibold ${getScoreColor(interview.scores.problemSolving)}`}>
+                            <div
+                              className={`text-lg font-semibold ${getScoreColor(
+                                interview.scores.problemSolving
+                              )}`}
+                            >
                               {interview.scores.problemSolving}%
                             </div>
-                            <div className="text-xs text-gray-400">Problem Solving</div>
+                            <div className="text-xs text-gray-400">
+                              Problem Solving
+                            </div>
                           </div>
                           <div className="text-center">
-                            <div className={`text-lg font-semibold ${getScoreColor(interview.scores.codeQuality ?? 0)}`}>
-                              {interview.scores.codeQuality !== undefined ? `${interview.scores.codeQuality}%` : '—'}
+                            <div
+                              className={`text-lg font-semibold ${getScoreColor(
+                                interview.scores.codeQuality ?? 0
+                              )}`}
+                            >
+                              {interview.scores.codeQuality !== undefined
+                                ? `${interview.scores.codeQuality}%`
+                                : "—"}
                             </div>
-                            <div className="text-xs text-gray-400">Code Quality</div>
+                            <div className="text-xs text-gray-400">
+                              Code Quality
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -629,38 +774,38 @@ export default function InterviewHistoryPage() {
                         <div className="flex items-center gap-6 text-sm text-gray-400 flex-wrap">
                           <div className="flex items-center gap-2">
                             <Clock size={14} />
-                            <span>Time: {formatDuration(interview.timeSpent)}</span>
+                            <span>
+                              Time: {formatDuration(interview.timeSpent)}
+                            </span>
                           </div>
 
                           {interview.codeSubmissions !== undefined && (
                             <div className="flex items-center gap-2">
                               <Code size={14} />
-                              <span>{interview.codeSubmissions} code submissions</span>
+                              <span>
+                                {interview.codeSubmissions} code submissions
+                              </span>
                             </div>
                           )}
 
                           {interview.tabSwitchCount > 0 && (
-                            <div className="text-yellow-400">⚠️ {interview.tabSwitchCount} tab switches</div>
+                            <div className="text-yellow-400">
+                              ⚠️ {interview.tabSwitchCount} tab switches
+                            </div>
                           )}
                         </div>
 
                         <div className="flex flex-wrap md:flex-nowrap gap-2 w-full md:w-auto">
                           <button
-                            onClick={() => router.push(`/learner/interview/results?id=${interview.id}`)}
+                            onClick={() =>
+                              router.push(
+                                `/learner/interview/results?id=${interview.id}`
+                              )
+                            }
                             className={`${smallBtn} w-full sm:w-auto min-w-[140px]`}
                           >
                             <Eye size={14} />
                             View Details
-                          </button>
-
-                          <button
-                            className={`${smallBtn} w-full sm:w-auto min-w-[140px]`}
-                            onClick={() => {
-                              // TODO: Add real download handler
-                            }}
-                          >
-                            <Download size={14} />
-                            Download
                           </button>
                         </div>
                       </div>
@@ -681,14 +826,16 @@ export default function InterviewHistoryPage() {
                   Prev
                 </button>
 
-                {Array.from({ length: Math.ceil(totalInterviews / PAGE_SIZE) }).map((_, idx) => (
+                {Array.from({
+                  length: Math.ceil(totalInterviews / PAGE_SIZE),
+                }).map((_, idx) => (
                   <button
                     key={idx}
                     onClick={() => setPage(idx + 1)}
                     className={`${squareBtn} ${
                       page === idx + 1
-                        ? 'border-[#00FFB2] text-[#00FFB2]'
-                        : 'border-gray-700 text-gray-300 hover:border-[#00FFB2]/40 hover:text-[#00FFB2]/90'
+                        ? "border-[#00FFB2] text-[#00FFB2]"
+                        : "border-gray-700 text-gray-300 hover:border-[#00FFB2]/40 hover:text-[#00FFB2]/90"
                     }`}
                   >
                     {idx + 1}
@@ -698,7 +845,9 @@ export default function InterviewHistoryPage() {
                 <button
                   disabled={page >= Math.ceil(totalInterviews / PAGE_SIZE)}
                   onClick={() =>
-                    setPage((p) => Math.min(Math.ceil(totalInterviews / PAGE_SIZE), p + 1))
+                    setPage((p) =>
+                      Math.min(Math.ceil(totalInterviews / PAGE_SIZE), p + 1)
+                    )
                   }
                   className={`${squareBtn} border-[#00FFB2]/50 text-[#00FFB2] hover:bg-white/5 disabled:opacity-40`}
                 >
@@ -727,14 +876,18 @@ export default function InterviewHistoryPage() {
                     <div className="text-2xl font-bold text-[#00FFB2] mb-1">
                       {interviews.filter((i) => i.overallScore >= 80).length}
                     </div>
-                    <div className="text-sm text-gray-400">High Scores (80%+)</div>
+                    <div className="text-sm text-gray-400">
+                      High Scores (80%+)
+                    </div>
                   </div>
 
                   <div className="text-center p-4 bg-[#1A1A1A] rounded-lg border border-white/10">
                     <div className="text-2xl font-bold text-[#00FFB2] mb-1">
                       {new Set(interviews.map((i) => i.category)).size}
                     </div>
-                    <div className="text-sm text-gray-400">Categories Explored</div>
+                    <div className="text-sm text-gray-400">
+                      Categories Explored
+                    </div>
                   </div>
                 </div>
               </div>

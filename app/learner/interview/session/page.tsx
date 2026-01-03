@@ -34,6 +34,8 @@ import {
   completeInterview,
   buildUserProfile,
   buildInterviewConfig,
+  getConversationHistory,
+  getInterviewQuestion,
 } from "@/utils/api-helpers";
 import {
   StartInterviewPayload,
@@ -688,6 +690,11 @@ function InterviewSessionContent() {
 
     // Store results for the results page and redirect with sessionId
     const finalSessionId = sessionId || `session_${Date.now()}_${user?._id}`;
+
+    // Clear active session data
+    localStorage.removeItem("active_interview_session");
+    localStorage.removeItem("interview_start_time");
+
     localStorage.setItem("lastInterviewSessionId", finalSessionId);
     router.push(`/learner/interview/results?id=${finalSessionId}`);
   };

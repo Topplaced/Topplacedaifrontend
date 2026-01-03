@@ -112,6 +112,20 @@ export async function getAIResponse(payload: ChatConversationPayload) {
   return await response.json();
 }
 
+
+// 8. Get Current Question
+export async function getInterviewQuestion(sessionId: string) {
+  const response = await fetch(`${API_URL}/interview/question/${sessionId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('token')}`,
+    },
+  });
+  
+  return await response.json();
+}
+
 // Helper function to build user profile from Redux state
 export function buildUserProfile(user: any) {
   return {
