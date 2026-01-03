@@ -21,40 +21,47 @@ export const useAuthPersistence = () => {
         
         if (storedToken) {
           // Validate token by fetching user profile
-          const response = await fetch(`${API_URL}/api/auth/profile`, {
-            headers: {
-              'Authorization': `Bearer ${storedToken}`,
-              'Content-Type': 'application/json'
-            }
-          });
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-          if (response.ok) {
-            const userData = await response.json();
-            // Restore authentication with validated user data
-            dispatch(restoreAuth({ 
-              token: storedToken, 
-              user: {
-                _id: userData._id,
-                name: userData.fullName || userData.name,
-                email: userData.email,
-                role: userData.role,
-                phone: userData.phone,
-                experience: userData.experience,
-                resume_url: userData.resume_url,
-                profile_image: userData.profile_image,
-                goals: userData.goals,
-                tech_stack: userData.tech_stack,
-                profile_completion: userData.profile_completion,
-                linkedin_profile: userData.linkedin_profile,
-                education: userData.education,
-                bio: userData.bio
-              }
-            }));
-          } else {
-            // Token is invalid, remove it
-            localStorage.removeItem('token');
-            document.cookie = 'token=; Max-Age=0; Path=/; SameSite=Lax';
-            dispatch(setHydrated());
+          try {
+            const response = await fetch(`${API_URL}/api/auth/profile`, {
+              headers: {
+                'Authorization': `Bearer ${storedToken}`,
+                'Content-Type': 'application/json'
+              },
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+              const userData = await response.json();
+              // Restore authentication with validated user data
+              dispatch(restoreAuth({ 
+                token: storedToken, 
+                user: {
+                  _id: userData._id,
+                  name: userData.fullName || userData.name,
+                  email: userData.email,
+                  role: userData.role,
+                  phone: userData.phone,
+                  experience: userData.experience,
+                  resume_url: userData.resume_url,
+                  profile_image: userData.profile_image,
+                  goals: userData.goals,
+                  tech_stack: userData.tech_stack,
+                  profile_completion: userData.profile_completion,
+                  linkedin_profile: userData.linkedin_profile,
+                  education: userData.education,
+                  bio: userData.bio
+                }
+              }));
+            } else {
+              throw new Error('Token validation failed');
+            }
+          } catch (fetchError) {
+            clearTimeout(timeoutId);
+            throw fetchError;
           }
         } else {
           // No token found, just mark as hydrated

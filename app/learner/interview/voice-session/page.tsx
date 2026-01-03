@@ -148,6 +148,24 @@ function VoiceInterviewContent() {
     setInterviewProgress(percentage);
   };
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false); // New state for mute functionality
+  const isMutedRef = useRef(false); // Ref for async mute access
+  const isMicOnRef = useRef(isMicOn); // Ref for async mic access
+  const startListeningRef = useRef<() => void>(() => {}); // Ref to hold latest startListening function
+
+  // Sync mute state with ref
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+    if (isMuted) {
+      stopAudio();
+    }
+  }, [isMuted]);
+
+  // Sync mic state with ref
+  useEffect(() => {
+    isMicOnRef.current = isMicOn;
+  }, [isMicOn]);
+
   const [showCodeEditor, setShowCodeEditor] = useState<boolean>(hasCodeEditor); // Show by default if available
   const [recognition, setRecognition] = useState<any>(null);
   const [speechSynthesis, setSpeechSynthesis] = useState<any>(null);
@@ -337,8 +355,71 @@ function VoiceInterviewContent() {
     }
   }, [aiSpeechQueue, isProcessingQueue, processNextInQueue]);
 
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Stop any currently playing audio
+  const stopAudio = useCallback(() => {
+    // Stop browser TTS
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    activeUtteranceRef.current = null;
+
+    // Stop HTML5 Audio
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
+    }
+
+    setIsAISpeaking(false);
+    setIsAudioPlaying(false);
+    setCurrentAudioUrl(null);
+  }, []);
+
   // Direct AI Audio Play (internal function)
-  const playAIAudioDirect = async (audioUrl: string, text: string) => {
+  const playAIAudioDirect = async (audioUrl: string, rawText: string) => {
+    // Stop any existing audio before playing new one
+    stopAudio();
+
+    if (isMutedRef.current) {
+      console.log("🔇 AI audio skipped because mute is enabled:", rawText);
+      return Promise.resolve();
+    }
+
+    // Clean text for TTS - remove scores and analysis
+    let text = rawText || "";
+    // Split by common analysis markers and take the first part
+    const splitMarkers = [
+      "**Score:",
+      "**Detailed Analysis:**",
+      "✅ **Strengths:**",
+      "📊 **Score:",
+    ];
+    for (const marker of splitMarkers) {
+      if (text.includes(marker)) {
+        text = text.split(marker)[0];
+      }
+    }
+
+    // Remove emojis and special characters that shouldn't be read
+    text = text
+      .replace(
+        /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g,
+        ""
+      ) // Remove Emojis
+      .replace(/\*\*/g, "") // Remove Markdown Bold
+      .replace(/__/g, "") // Remove Markdown Italic
+      .replace(/`/g, "") // Remove Code ticks
+      .replace(/^\s*[-•]\s+/gm, "") // Remove list bullets if they start a line (optional, but good for reading)
+      .trim();
+
+    if (!text) {
+      console.log("🔇 AI audio skipped because text is empty after cleaning");
+      return Promise.resolve();
+    }
+
     console.log("🔊 Playing AI audio:", text);
     setIsAISpeaking(true);
     setCurrentAudioUrl(audioUrl);
@@ -346,13 +427,20 @@ function VoiceInterviewContent() {
 
     return new Promise<void>((resolve, reject) => {
       const cleanup = () => {
-        setIsAISpeaking(false);
-        setIsAudioPlaying(false);
+        if (isAISpeaking) setIsAISpeaking(false);
+        if (isAudioPlaying) setIsAudioPlaying(false);
         setCurrentAudioUrl(null);
       };
 
       const handleSuccess = () => {
         cleanup();
+        // Auto-start listening after AI finishes speaking if mic is enabled
+        if (isMicOnRef.current) {
+          setTimeout(() => {
+            console.log("🎤 Auto-starting listening after AI speech...");
+            startListeningRef.current();
+          }, 500);
+        }
         resolve();
       };
 
@@ -369,6 +457,7 @@ function VoiceInterviewContent() {
         speechSynthesis.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
+        activeUtteranceRef.current = utterance;
         utterance.rate = 1.0; // Normal speed
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
@@ -387,9 +476,13 @@ function VoiceInterviewContent() {
           utterance.voice = preferredVoice;
         }
 
-        utterance.onend = handleSuccess;
+        utterance.onend = () => {
+          activeUtteranceRef.current = null;
+          handleSuccess();
+        };
         utterance.onerror = (e) => {
           console.warn("Browser TTS error, falling back to API:", e);
+          activeUtteranceRef.current = null;
           callApiFallback();
         };
 
@@ -401,6 +494,11 @@ function VoiceInterviewContent() {
       callApiFallback();
 
       function callApiFallback() {
+        if (isMutedRef.current) {
+          handleSuccess();
+          return;
+        }
+
         fetch("/api/text-to-speech", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -414,6 +512,14 @@ function VoiceInterviewContent() {
             response.ok ? response.json() : Promise.reject(response)
           )
           .then((data) => {
+            if (isMutedRef.current) {
+              console.log(
+                "🔇 Audio arrived but mute is now on - skipping playback"
+              );
+              handleSuccess();
+              return;
+            }
+
             if (data.audioUrl && data.audioContent) {
               const audio = new Audio(data.audioUrl);
               audio.onended = handleSuccess;
@@ -430,61 +536,6 @@ function VoiceInterviewContent() {
             setTimeout(handleSuccess, duration);
           });
       }
-
-      /*
-      // PREVIOUS ELEVENLABS IMPLEMENTATION (COMMENTED OUT)
-      // Try ElevenLabs TTS API first
-      fetch("/api/text-to-speech", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text,
-          voice_id: "EXAVITQu4vr4xnSDxMaL",
-          model_id: "eleven_monolingual_v1",
-        }),
-      })
-        .then((response) =>
-          response.ok ? response.json() : Promise.reject(response)
-        )
-        .then((data) => {
-          if (data.useBrowserTTS && speechSynthesis) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.rate = 0.9;
-            utterance.pitch = 1;
-            utterance.volume = 1;
-
-            const voices = speechSynthesis.getVoices();
-            const femaleVoice = voices.find(
-              (voice: { name: string | string[]; gender: string }) =>
-                voice.name.includes("Female") ||
-                voice.name.includes("Samantha") ||
-                voice.name.includes("Karen") ||
-                voice.gender === "female"
-            );
-
-            if (femaleVoice) {
-              utterance.voice = femaleVoice;
-            }
-
-            utterance.onend = handleSuccess;
-            utterance.onerror = handleError;
-            speechSynthesis.speak(utterance);
-          } else if (data.audioUrl && data.audioContent) {
-            const audio = new Audio(data.audioUrl);
-            audio.onended = handleSuccess;
-            audio.onerror = handleError;
-            audio.play().catch(handleError);
-          } else {
-            throw new Error("No audio content available");
-          }
-        })
-        .catch((error) => {
-          console.error("TTS error, using fallback:", error);
-          // Fallback simulation - reduce time to avoid long silence on error
-          const duration = Math.random() * 1000 + 1000;
-          setTimeout(handleSuccess, duration);
-        });
-      */
     });
   };
 
@@ -648,6 +699,15 @@ function VoiceInterviewContent() {
     }
   };
 
+  const toggleMute = () => {
+    if (isMuted) {
+      setIsMuted(false);
+    } else {
+      stopAudio();
+      setIsMuted(true);
+    }
+  };
+
   const sendAnswerToAPI = async (answer: string, isCode: boolean = false) => {
     // Calculate response time if tracking started
     let responseTime = 18; // Default response time
@@ -735,10 +795,20 @@ function VoiceInterviewContent() {
           aiResponseContent = displayText;
 
           // Add detailed feedback only for paid interviews
+          // Check for skip artifact: Score 100 but all details are 0 (indicates skipped question)
+          const isSkipArtifact =
+            data.feedback?.score === 100 &&
+            data.detailedScores &&
+            data.detailedScores.correctness === 0 &&
+            data.detailedScores.completeness === 0 &&
+            data.detailedScores.technicalAccuracy === 0 &&
+            data.detailedScores.communicationQuality === 0;
+
           if (
             !isFreeInterview &&
             data.feedback &&
-            data.feedback.score !== undefined
+            data.feedback.score !== undefined &&
+            !isSkipArtifact
           ) {
             const feedbackDetails = `\n\n📊 **Score: ${data.feedback.score}/100**`;
             aiResponseContent += feedbackDetails;
@@ -1212,6 +1282,9 @@ function VoiceInterviewContent() {
   };
 
   const startListening = async () => {
+    stopAudio(); // Ensure AI stops speaking when user starts listening
+    setAiSpeechQueue([]); // Clear any pending AI messages
+
     if (!isMicOn) {
       setWarningMessage("Please enable your microphone to respond.");
       setShowWarning(true);
@@ -1243,6 +1316,11 @@ function VoiceInterviewContent() {
       startFallbackRecording();
     }
   };
+
+  // Sync startListening ref
+  useEffect(() => {
+    startListeningRef.current = startListening;
+  }, [startListening]);
 
   const stopListening = () => {
     console.log("🛑 Stopping speech recognition...");
@@ -1470,6 +1548,9 @@ function VoiceInterviewContent() {
     if (isEndingInterview) {
       return; // Prevent multiple simultaneous end interview calls
     }
+
+    stopAudio(); // Ensure AI voice stops when interview ends
+    setAiSpeechQueue([]); // Clear any pending AI messages
 
     setIsEndingInterview(true);
     console.log("🏁 Ending interview...");
@@ -1997,7 +2078,17 @@ function VoiceInterviewContent() {
                   <li className="flex items-start space-x-2">
                     <span className="text-blue-400 mt-1">•</span>
                     <span>
-                      Click the microphone button to record your answers
+                      Click the microphone button (
+                      <Mic size={14} className="inline mx-1" />) to start
+                      recording your answer
+                    </span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <span className="text-blue-400 mt-1">•</span>
+                    <span>
+                      Click the button again (
+                      <MicOff size={14} className="inline mx-1" />) to stop
+                      recording and send your response
                     </span>
                   </li>
                   <li className="flex items-start space-x-2">
@@ -2007,16 +2098,19 @@ function VoiceInterviewContent() {
                   {hasCodeEditor && (
                     <li className="flex items-start space-x-2">
                       <span className="text-blue-400 mt-1">•</span>
-                      <span>Use the code editor for programming questions</span>
-                    </li>
-                  )}
-                  {hasCodeEditor && (
-                    <li className="flex items-start space-x-2">
-                      <span className="text-blue-400 mt-1">•</span>
                       <span>
-                        For coding: write your code → click Run → after a
-                        successful run, submit your result. The mic is disabled
-                        until you submit.
+                        For coding questions:
+                        <ul className="pl-4 mt-1 space-y-1 list-disc list-inside text-xs text-gray-400">
+                          <li>Type your solution in the code editor</li>
+                          <li>
+                            Click &quot;Run Code&quot; to test your solution
+                          </li>
+                          <li>
+                            Once satisfied, click &quot;Submit&quot; to send it
+                            to the AI
+                          </li>
+                          <li>(Microphone is disabled while coding)</li>
+                        </ul>
                       </span>
                     </li>
                   )}
@@ -2328,6 +2422,121 @@ function VoiceInterviewContent() {
                 {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
               </button>
 
+              <button
+                onClick={toggleMute}
+                className={`p-2 rounded-full ${
+                  !isMuted
+                    ? "bg-[#00FFB2]/20 text-[#00FFB2]"
+                    : "bg-red-500/20 text-red-400"
+                }`}
+                title={isMuted ? "Unmute AI Voice" : "Mute AI Voice"}
+              >
+                {!isMuted ? <Volume2 size={20} /> : <VolumeX size={20} />}
+              </button>
+
+              <button
+                onClick={downloadTranscript}
+                className="p-2 rounded-full bg-[#00FFB2]/20 text-[#00FFB2] hover:bg-[#00FFB2]/30"
+                title="Download Transcript"
+              >
+                <Download size={20} />
+              </button>
+
+              {/* <button
+                onClick={getNextQuestion}
+                className="p-2 rounded-full bg-purple-600/20 text-purple-400 hover:bg-purple-600/30"
+                title="Get Next Question"
+                disabled={!sessionId}
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button> */}
+
+              {/* Conversation History Button */}
+              <button
+                onClick={getConversationHistory}
+                className="p-2 rounded-full bg-green-600/20 text-green-400 hover:bg-green-600/30"
+                title="Load Conversation History"
+                disabled={!sessionId}
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </button>
+
+              {/* Interview Results Button */}
+              <button
+                onClick={getInterviewResults}
+                className="p-2 rounded-full bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30"
+                title="Get Interview Results"
+                disabled={!sessionId}
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </button>
+
+              {/* Debug Panel Toggle */}
+              {/* <button
+                onClick={() => setShowDebugPanel(!showDebugPanel)}
+                className={`p-2 rounded-full transition-colors ${
+                  showDebugPanel
+                    ? "bg-red-600/30 text-red-400"
+                    : "bg-gray-600/20 text-gray-400 hover:bg-gray-600/30"
+                }`}
+                title="Toggle Debug Panel"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </button> */}
               {hasCodeEditor && (
                 <button
                   onClick={() => setShowCodeEditor(!showCodeEditor)}
@@ -2527,6 +2736,18 @@ function VoiceInterviewContent() {
                 )}
 
                 <div className="flex items-center justify-center space-x-3 sm:space-x-4">
+                  <button
+                    onClick={toggleMute}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                      !isMuted
+                        ? "bg-[#1A1A1A] border border-[#00FFB2]/30 text-[#00FFB2] hover:bg-[#00FFB2]/10"
+                        : "bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
+                    }`}
+                    title={isMuted ? "Unmute AI Voice" : "Mute AI Voice"}
+                  >
+                    {!isMuted ? <Volume2 size={20} /> : <VolumeX size={20} />}
+                  </button>
+
                   <button
                     onClick={isListening ? stopListening : startListening}
                     disabled={
