@@ -127,11 +127,43 @@ export default function Navbar() {
 
           <div className="md:hidden">
             {mounted && user ? (
-              <Link href="/learner/profile" className="p-2 rounded-lg">
-                <div className="w-7 h-7 bg-[#00FFB2] rounded-full flex items-center justify-center">
-                  <User size={16} className="text-black" />
-                </div>
-              </Link>
+              <div className="relative">
+                <button
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="p-2 rounded-lg"
+                >
+                  <div className="w-7 h-7 bg-[#00FFB2] rounded-full flex items-center justify-center">
+                    <User size={16} className="text-black" />
+                  </div>
+                </button>
+                {isUserMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-48 glass-card py-2 shadow-lg bg-black/95 border border-[#00FFB2]/20 rounded-lg z-50">
+                    <div className="px-4 py-2 border-b border-[#00FFB2]/10 mb-2">
+                      <p className="text-sm font-semibold text-white truncate">
+                        {user.name}
+                      </p>
+                    </div>
+                    <Link
+                      href="/learner/profile"
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-[#00FFB2]/10 hover:text-[#00FFB2]"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    >
+                      <User size={16} className="mr-3" />
+                      Profile
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        handleLogout();
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm hover:bg-[#00FFB2]/10 text-red-400"
+                    >
+                      <LogOut size={16} className="mr-3" />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <Link href="/auth/login" className="btn-primary px-3 py-1 text-sm">
                 Sign In

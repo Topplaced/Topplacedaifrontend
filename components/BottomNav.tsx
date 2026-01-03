@@ -9,6 +9,7 @@ import {
   History,
   User,
   Settings,
+  CreditCard,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,10 +22,9 @@ type NavItem = {
 const items: NavItem[] = [
   { href: "/learner", label: "Dashboard", icon: Home },
   { href: "/learner/interview/setup", label: "Interview", icon: Play },
-  { href: "/learner/scorecard", label: "Scorecard", icon: Trophy },
+  { href: "/learner/plans", label: "My Plan", icon: CreditCard },
   { href: "/learner/history", label: "History", icon: History },
   { href: "/learner/profile", label: "Profile", icon: User },
-  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function BottomNav() {
