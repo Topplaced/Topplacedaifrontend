@@ -149,6 +149,8 @@ function VoiceInterviewContent() {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false); // New state for mute functionality
   const isMutedRef = useRef(false); // Ref for async mute access
+  const isMicOnRef = useRef(isMicOn); // Ref for async mic access
+  const startListeningRef = useRef<() => void>(() => {}); // Ref to hold latest startListening function
 
   // Sync mute state with ref
   useEffect(() => {
@@ -157,6 +159,11 @@ function VoiceInterviewContent() {
       stopAudio();
     }
   }, [isMuted]);
+
+  // Sync mic state with ref
+  useEffect(() => {
+    isMicOnRef.current = isMicOn;
+  }, [isMicOn]);
 
   const [showCodeEditor, setShowCodeEditor] = useState<boolean>(hasCodeEditor); // Show by default if available
   const [recognition, setRecognition] = useState<any>(null);
@@ -426,6 +433,13 @@ function VoiceInterviewContent() {
 
       const handleSuccess = () => {
         cleanup();
+        // Auto-start listening after AI finishes speaking if mic is enabled
+        if (isMicOnRef.current) {
+          setTimeout(() => {
+            console.log("🎤 Auto-starting listening after AI speech...");
+            startListeningRef.current();
+          }, 500);
+        }
         resolve();
       };
 
@@ -1302,6 +1316,11 @@ function VoiceInterviewContent() {
       startFallbackRecording();
     }
   };
+
+  // Sync startListening ref
+  useEffect(() => {
+    startListeningRef.current = startListening;
+  }, [startListening]);
 
   const stopListening = () => {
     console.log("🛑 Stopping speech recognition...");
