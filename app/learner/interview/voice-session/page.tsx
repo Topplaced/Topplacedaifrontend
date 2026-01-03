@@ -126,6 +126,7 @@ function VoiceInterviewContent() {
   const [isSubmittingCode, setIsSubmittingCode] = useState(false);
   const [isEndingInterview, setIsEndingInterview] = useState(false);
   const [showConfirmEnd, setShowConfirmEnd] = useState(false);
+  const [activeMobileTab, setActiveMobileTab] = useState<"chat" | "code">("chat");
 
   // Response time tracking like testInterview.html
   const [responseStartTime, setResponseStartTime] = useState<number | null>(
@@ -199,25 +200,25 @@ function VoiceInterviewContent() {
             ? JSON.parse(user.education)
             : user.education
           : [
-              {
-                degree: "Bachelor's Degree",
-                institution: "University",
-                year: new Date().getFullYear() - 2,
-              },
-            ],
+            {
+              degree: "Bachelor's Degree",
+              institution: "University",
+              year: new Date().getFullYear() - 2,
+            },
+          ],
         workExperience: user?.experience
           ? typeof user.experience === "string"
             ? JSON.parse(user.experience)
             : user.experience
           : [
-              {
-                title: "Software Developer",
-                company: "Technology Company",
-                duration: "Recent Experience",
-                description:
-                  "Professional software development experience with modern technologies and best practices.",
-              },
-            ],
+            {
+              title: "Software Developer",
+              company: "Technology Company",
+              duration: "Recent Experience",
+              description:
+                "Professional software development experience with modern technologies and best practices.",
+            },
+          ],
         profileCompletion: user?.profile_completion || 85,
       },
       configuration: {
@@ -321,7 +322,7 @@ function VoiceInterviewContent() {
     return () => {
       try {
         recognitionInstance.stop();
-      } catch {}
+      } catch { }
     };
   }, [sessionId, currentQuestionId]);
 
@@ -947,11 +948,10 @@ function VoiceInterviewContent() {
       const errorMessage: Message = {
         id: `error_${Date.now()}`,
         type: "system",
-        content: `❌ Failed to send answer: ${
-          error && typeof error === "object" && "message" in error
-            ? (error as { message: string }).message
-            : String(error)
-        }`,
+        content: `❌ Failed to send answer: ${error && typeof error === "object" && "message" in error
+          ? (error as { message: string }).message
+          : String(error)
+          }`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -1457,11 +1457,9 @@ function VoiceInterviewContent() {
         const resultMessage: Message = {
           id: `result_${Date.now()}`,
           type: "ai",
-          content: `Code Execution Results:\n→ Output: ${
-            result.output || "No output"
-          }\n→ Time: ${executionTime}s\n→ Memory: ${
-            result.memory
-          }\n\n✅ Code ran successfully! You can now submit your solution.`,
+          content: `Code Execution Results:\n→ Output: ${result.output || "No output"
+            }\n→ Time: ${executionTime}s\n→ Memory: ${result.memory
+            }\n\n✅ Code ran successfully! You can now submit your solution.`,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, resultMessage]);
@@ -1477,11 +1475,10 @@ function VoiceInterviewContent() {
       const errorMessage: Message = {
         id: `error_${Date.now()}`,
         type: "system",
-        content: `❌ Code execution failed: ${
-          error && typeof error === "object" && "message" in error
-            ? (error as { message: string }).message
-            : String(error)
-        }`,
+        content: `❌ Code execution failed: ${error && typeof error === "object" && "message" in error
+          ? (error as { message: string }).message
+          : String(error)
+          }`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -1507,8 +1504,7 @@ function VoiceInterviewContent() {
     try {
       // Send code submission to enhanced conversation API with execution results
       await sendAnswerToAPI(
-        `Code submitted and executed. Output: ${
-          lastExecutionResult.output || "No output"
+        `Code submitted and executed. Output: ${lastExecutionResult.output || "No output"
         }`,
         true
       );
@@ -1532,11 +1528,10 @@ function VoiceInterviewContent() {
       const errorMessage: Message = {
         id: `submit_error_${Date.now()}`,
         type: "system",
-        content: `❌ Code submission failed: ${
-          error && typeof error === "object" && "message" in error
-            ? (error as { message: string }).message
-            : String(error)
-        }`,
+        content: `❌ Code submission failed: ${error && typeof error === "object" && "message" in error
+          ? (error as { message: string }).message
+          : String(error)
+          }`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -1584,14 +1579,14 @@ function VoiceInterviewContent() {
         })),
         codeSubmissions: hasCodeEditor
           ? [
-              {
-                questionId: currentQuestionId || "final_code",
-                question: "Code submission",
-                code: code,
-                language: language,
-                submittedAt: new Date().toISOString(),
-              },
-            ]
+            {
+              questionId: currentQuestionId || "final_code",
+              question: "Code submission",
+              code: code,
+              language: language,
+              submittedAt: new Date().toISOString(),
+            },
+          ]
           : [],
         performanceMetrics: {
           averageResponseTime: 8.5,
@@ -1649,9 +1644,8 @@ function VoiceInterviewContent() {
             "Interview",
           level:
             interviewData.configuration?.level || config.level || "Unknown",
-          duration: `${
-            interviewData.configuration?.duration || config.duration || 0
-          } minutes`,
+          duration: `${interviewData.configuration?.duration || config.duration || 0
+            } minutes`,
           completedAt: interviewData.createdAt
             ? new Date(interviewData.createdAt).toLocaleDateString()
             : new Date().toLocaleDateString(),
@@ -1673,9 +1667,9 @@ function VoiceInterviewContent() {
               0,
             codeQuality: showCodeMetrics
               ? interviewData.scores?.codeQuality ||
-                interviewData.statistics?.codeQualityAverage ||
-                interviewData.scoreboard?.detailedScores?.codeQuality ||
-                0
+              interviewData.statistics?.codeQualityAverage ||
+              interviewData.scoreboard?.detailedScores?.codeQuality ||
+              0
               : undefined,
           },
           strengths: interviewData.results?.detailedAnalysis?.strengths ||
@@ -1708,13 +1702,13 @@ function VoiceInterviewContent() {
               "Problem-solving approach and analytical thinking were evaluated.",
             ...(showCodeMetrics
               ? {
-                  codeQuality:
-                    interviewData.results?.detailedAnalysis
-                      ?.codeQualityFeedback ||
-                    interviewData.detailedAnalysis?.codeQualityFeedback ||
-                    interviewData.results?.codeQualityFeedback ||
-                    "Code structure, readability, and best practices were reviewed.",
-                }
+                codeQuality:
+                  interviewData.results?.detailedAnalysis
+                    ?.codeQualityFeedback ||
+                  interviewData.detailedAnalysis?.codeQualityFeedback ||
+                  interviewData.results?.codeQualityFeedback ||
+                  "Code structure, readability, and best practices were reviewed.",
+              }
               : {}),
           },
           codeSubmissions: interviewData.results?.codeSubmissions || [],
@@ -1813,13 +1807,12 @@ function VoiceInterviewContent() {
           const confirmationMessage: Message = {
             id: `history_loaded_${Date.now()}`,
             type: "system",
-            content: `✅ Conversation history loaded: ${
-              data.conversations.length
-            } messages from ${new Date(
-              data.conversations[0]?.timestamp
-            ).toLocaleString()} to ${new Date(
-              data.conversations[data.conversations.length - 1]?.timestamp
-            ).toLocaleString()}`,
+            content: `✅ Conversation history loaded: ${data.conversations.length
+              } messages from ${new Date(
+                data.conversations[0]?.timestamp
+              ).toLocaleString()} to ${new Date(
+                data.conversations[data.conversations.length - 1]?.timestamp
+              ).toLocaleString()}`,
             timestamp: new Date(),
           };
           setMessages((prev) => [...prev, confirmationMessage]);
@@ -1964,8 +1957,7 @@ function VoiceInterviewContent() {
     const transcript = messages
       .map(
         (msg) =>
-          `[${msg.timestamp.toLocaleTimeString()}] ${msg.type.toUpperCase()}: ${
-            msg.content
+          `[${msg.timestamp.toLocaleTimeString()}] ${msg.type.toUpperCase()}: ${msg.content
           }`
       )
       .join("\n\n");
@@ -2009,15 +2001,15 @@ function VoiceInterviewContent() {
       {/* Warning Modal */}
       {showWarning && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center overflow-y-auto">
-          <div className="glass-card p-8 max-w-md w-full mx-4 text-center border-2 border-red-500/50">
-            <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-4 text-red-400">
+          <div className="glass-card p-4 sm:p-6 lg:p-8 max-w-md w-full mx-4 text-center border-2 border-red-500/50">
+            <AlertTriangle size={32} className="text-red-500 mx-auto mb-4 sm:w-12 sm:h-12" />
+            <h3 className="text-xl sm:text-2xl font-bold mb-4 text-red-400">
               Interview Warning
             </h3>
-            <p className="text-gray-300 mb-6">{warningMessage}</p>
+            <p className="text-sm sm:text-base text-gray-300 mb-6">{warningMessage}</p>
             <button
               onClick={() => setShowWarning(false)}
-              className="btn-primary px-6 py-2"
+              className="btn-primary px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base"
             >
               I Understand
             </button>
@@ -2028,14 +2020,14 @@ function VoiceInterviewContent() {
       {/* Instructions Popup */}
       {showInstructionsPopup && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[70] flex items-center justify-center overflow-y-auto">
-          <div className="glass-card p-8 max-w-2xl w-full mx-4 text-center border-2 border-[#00FFB2]/50">
-            <div className="mb-6">
-              <div className="w-16 h-16 mx-auto mb-4 bg-[#00FFB2]/20 rounded-full flex items-center justify-center">
-                <Bot size={32} className="text-[#00FFB2]" />
+          <div className="glass-card p-4 sm:p-6 lg:p-8 max-w-2xl w-full mx-4 text-center border-2 border-[#00FFB2]/50 max-h-[90vh] overflow-y-auto">
+            <div className="mb-4 sm:mb-6">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-[#00FFB2]/20 rounded-full flex items-center justify-center">
+                <Bot size={24} className="text-[#00FFB2] sm:w-8 sm:h-8" />
               </div>
             </div>
 
-            <h2 className="text-3xl font-bold mb-6 text-[#00FFB2]">
+            <h2 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-6 text-[#00FFB2]">
               🎯 AI Interview Instructions
             </h2>
 
@@ -2171,9 +2163,9 @@ function VoiceInterviewContent() {
               </button>
               <button
                 onClick={handleManualStart}
-                className="px-8 py-3 bg-[#00FFB2] hover:bg-[#00FFB2]/80 text-black font-semibold rounded-lg transition-colors flex items-center space-x-2"
+                className="px-6 py-2 sm:px-8 sm:py-3 bg-[#00FFB2] hover:bg-[#00FFB2]/80 text-black font-semibold rounded-lg transition-colors flex items-center space-x-2 text-sm sm:text-base"
               >
-                <Play size={20} />
+                <Play size={16} className="sm:w-5 sm:h-5" />
                 <span>Start Interview</span>
               </button>
             </div>
@@ -2198,7 +2190,7 @@ function VoiceInterviewContent() {
                   </div>
                 </div>
 
-                <h3 className="text-2xl font-bold mb-4 text-[#00FFB2]">
+                <h3 className="text-xl sm:text-2xl font-bold mb-4 text-[#00FFB2]">
                   🚀 Ready to Start Your Interview?
                 </h3>
 
@@ -2284,7 +2276,7 @@ function VoiceInterviewContent() {
                   </div>
                 </div>
 
-                <h3 className="text-2xl font-bold mb-4 text-[#00FFB2]">
+                <h3 className="text-xl sm:text-2xl font-bold mb-4 text-[#00FFB2]">
                   🚀 Starting Your Interview...
                 </h3>
 
@@ -2371,13 +2363,13 @@ function VoiceInterviewContent() {
         <div className="bg-[#0A0A0A] border-b border-[#00FFB2]/20 px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
             <div className="flex flex-col lg:flex-row lg:items-center lg:space-x-6 space-y-2 lg:space-y-0">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 z-10 relative">
                 <Clock size={20} className="text-[#00FFB2]" />
-                <span className="font-mono text-lg">
+                <span className="font-mono text-lg text-white">
                   {formatTime(timeRemaining)}
                 </span>
               </div>
-              <div className="text-sm text-gray-400">
+              <div className="text-sm text-gray-400 text-xs sm:text-sm">
                 Voice Interview • {category?.toUpperCase()} •{" "}
                 {level?.toUpperCase()}
               </div>
@@ -2412,22 +2404,20 @@ function VoiceInterviewContent() {
             <div className="flex items-center flex-wrap gap-2">
               <button
                 onClick={toggleMic}
-                className={`p-2 rounded-full ${
-                  isMicOn
-                    ? "bg-[#00FFB2]/20 text-[#00FFB2]"
-                    : "bg-red-500/20 text-red-400"
-                }`}
+                className={`p-2 rounded-full ${isMicOn
+                  ? "bg-[#00FFB2]/20 text-[#00FFB2]"
+                  : "bg-red-500/20 text-red-400"
+                  }`}
               >
                 {isMicOn ? <Mic size={20} /> : <MicOff size={20} />}
               </button>
 
               <button
                 onClick={toggleCamera}
-                className={`p-2 rounded-full ${
-                  isCameraOn
-                    ? "bg-[#00FFB2]/20 text-[#00FFB2]"
-                    : "bg-red-500/20 text-red-400"
-                }`}
+                className={`p-2 rounded-full ${isCameraOn
+                  ? "bg-[#00FFB2]/20 text-[#00FFB2]"
+                  : "bg-red-500/20 text-red-400"
+                  }`}
               >
                 {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
               </button>
@@ -2547,7 +2537,6 @@ function VoiceInterviewContent() {
                   />
                 </svg>
               </button> */}
-
               {hasCodeEditor && (
                 <button
                   onClick={() => setShowCodeEditor(!showCodeEditor)}
@@ -2568,9 +2557,8 @@ function VoiceInterviewContent() {
                 <button
                   onClick={() => setShowConfirmEnd(true)}
                   disabled={isEndingInterview}
-                  className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 ${
-                    isEndingInterview ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                  className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 text-sm sm:text-base ${isEndingInterview ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                 >
                   <Phone size={16} />
                   <span>
@@ -2581,9 +2569,8 @@ function VoiceInterviewContent() {
                 <button
                   onClick={() => setShowConfirmEnd(true)}
                   disabled={isEndingInterview}
-                  className={`bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 ${
-                    isEndingInterview ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                  className={`bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 text-sm sm:text-base ${isEndingInterview ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                 >
                   <Phone size={16} />
                   <span>
@@ -2595,9 +2582,36 @@ function VoiceInterviewContent() {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+        <div className="flex-1 flex flex-col lg:flex-row min-h-0 relative">
+          {/* Mobile Tab Switcher */}
+          {/* Mobile Tab Switcher */}
+          {hasCodeEditor && (
+            <div className="lg:hidden flex border-b border-[#00FFB2]/20 bg-[#0A0A0A] shrink-0 sticky top-0 z-30">
+              <button
+                onClick={() => setActiveMobileTab("chat")}
+                className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${activeMobileTab === "chat"
+                  ? "text-[#00FFB2] border-b-2 border-[#00FFB2] bg-[#00FFB2]/5"
+                  : "text-gray-400 hover:text-gray-200"
+                  }`}
+              >
+                Interview
+              </button>
+              <button
+                onClick={() => setActiveMobileTab("code")}
+                className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${activeMobileTab === "code"
+                  ? "text-[#00FFB2] border-b-2 border-[#00FFB2] bg-[#00FFB2]/5"
+                  : "text-gray-400 hover:text-gray-200"
+                  }`}
+              >
+                Code Editor
+              </button>
+            </div>
+          )}
+
           {/* Column 1 - Video (20%) */}
-          <div className="w-full lg:w-[20%] flex flex-col border-r-0 lg:border-r border-[#00FFB2]/20">
+          <div
+            className={`w-full lg:w-[20%] flex-col border-r-0 lg:border-r border-[#00FFB2]/20 shrink-0 flex`}
+          >
             <div className="flex-1 bg-[#0A0A0A] p-2 lg:p-4 overflow-y-auto">
               <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-col lg:gap-4 h-full items-stretch">
                 {/* User Video */}
@@ -2636,38 +2650,39 @@ function VoiceInterviewContent() {
           </div>
 
           {/* Column 2 - Chat (50%) */}
-          <div className="w-full lg:w-[50%] flex flex-col border-r-0 lg:border-r border-[#00FFB2]/20 bg-[#0A0A0A]">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div
+            className={`w-full lg:w-[50%] flex-col border-r-0 lg:border-r border-[#00FFB2]/20 bg-[#0A0A0A] ${activeMobileTab === "chat" ? "flex" : "!hidden lg:!flex"
+              }`}
+          >
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-40 lg:pb-4">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${
-                    message.type === "user"
-                      ? "justify-end"
-                      : message.type === "system"
+                  className={`flex ${message.type === "user"
+                    ? "justify-end"
+                    : message.type === "system"
                       ? "justify-center"
                       : "justify-start"
-                  }`}
+                    }`}
                 >
                   <div
-                    className={`max-w-[90%] sm:max-w-[80%] p-2 lg:p-3 rounded-lg text-sm lg:text-base ${
-                      message.type === "user"
-                        ? "bg-[#00FFB2] text-black"
-                        : message.type === "system"
+                    className={`max-w-[95%] sm:max-w-[85%] p-3 rounded-lg text-xs sm:text-sm ${message.type === "user"
+                      ? "bg-[#00FFB2] text-black"
+                      : message.type === "system"
                         ? "bg-yellow-500/20 text-yellow-400 text-center"
                         : "bg-[#1A1A1A] text-white"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center space-x-2">
                         {message.type === "user" ? (
-                          <User size={16} />
+                          <User size={14} className="sm:w-4 sm:h-4" />
                         ) : message.type === "system" ? (
-                          <Bot size={16} className="text-yellow-400" />
+                          <Bot size={14} className="text-yellow-400 sm:w-4 sm:h-4" />
                         ) : (
-                          <Bot size={16} className="text-[#00FFB2]" />
+                          <Bot size={14} className="text-[#00FFB2] sm:w-4 sm:h-4" />
                         )}
-                        <span className="text-xs opacity-70">
+                        <span className="text-[10px] sm:text-xs opacity-70">
                           {message.timestamp.toLocaleTimeString()}
                         </span>
                       </div>
@@ -2681,7 +2696,7 @@ function VoiceInterviewContent() {
                         </button>
                       )}
                     </div>
-                    <div className="whitespace-pre-wrap">{message.content}</div>
+                    <div className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed">{message.content}</div>
                   </div>
                 </div>
               ))}
@@ -2708,8 +2723,8 @@ function VoiceInterviewContent() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Voice Input Section */}
-            <div className="p-3 sm:p-4 border-t border-[#00FFB2]/20">
+            {/* Voice Input Section - Desktop Only (Mobile uses fixed footer) */}
+            <div className="!hidden lg:!block p-3 sm:p-4 border-t border-[#00FFB2]/20">
               <div className="flex flex-col space-y-3">
                 {transcript && (
                   <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#00FFB2]/20">
@@ -2742,13 +2757,12 @@ function VoiceInterviewContent() {
                       submitPhaseActive ||
                       isSubmittingCode
                     }
-                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
-                      isListening
-                        ? "bg-red-500 hover:bg-red-600 animate-pulse"
-                        : interviewCompleted
+                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-300 ${isListening
+                      ? "bg-red-500 hover:bg-red-600 animate-pulse"
+                      : interviewCompleted
                         ? "bg-gray-500"
                         : "bg-[#00FFB2] hover:bg-[#00CC8E]"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {isListening ? (
                       <Square size={24} className="text-white" />
@@ -2761,11 +2775,10 @@ function VoiceInterviewContent() {
                     <button
                       onClick={submitCode}
                       disabled={isSubmittingCode}
-                      className={`bg-green-500 hover:bg-green-600 text-white px-6 py-3 text-base rounded-full flex items-center space-x-2 transition-all shadow-lg ${
-                        isSubmittingCode
-                          ? "opacity-50 cursor-not-allowed"
-                          : "hover:scale-105"
-                      }`}
+                      className={`bg-green-500 hover:bg-green-600 text-white px-6 py-3 text-base rounded-full flex items-center space-x-2 transition-all shadow-lg ${isSubmittingCode
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:scale-105"
+                        }`}
                     >
                       <Send size={18} />
                       <span>
@@ -2779,14 +2792,14 @@ function VoiceInterviewContent() {
                       {!interviewStarted
                         ? "Start interview to begin"
                         : interviewCompleted
-                        ? "Interview completed - Click Submit Interview above"
-                        : isAISpeaking
-                        ? "AI is speaking..."
-                        : isListening
-                        ? "Recording... Click to stop"
-                        : submitPhaseActive
-                        ? "Run successful — you have to submit the result"
-                        : "Click to speak"}
+                          ? "Interview completed - Click Submit Interview above"
+                          : isAISpeaking
+                            ? "AI is speaking..."
+                            : isListening
+                              ? "Recording... Click to stop"
+                              : submitPhaseActive
+                                ? "Run successful — you have to submit the result"
+                                : "Click to speak"}
                     </div>
                     {!isMicOn && (
                       <div className="text-xs text-red-400 mt-1">
@@ -2806,7 +2819,10 @@ function VoiceInterviewContent() {
 
           {/* Column 3 - Code Editor (30%) */}
           {hasCodeEditor && showCodeEditor ? (
-            <div className="w-full lg:w-[30%] flex flex-col">
+            <div
+              className={`w-full lg:w-[30%] flex-col ${activeMobileTab === "code" ? "flex" : "!hidden lg:!flex"
+                }`}
+            >
               <div className="bg-[#0A0A0A] border-b border-[#00FFB2]/20 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
@@ -2835,9 +2851,8 @@ function VoiceInterviewContent() {
                     <button
                       onClick={runCode}
                       disabled={isRunningCode}
-                      className={`btn-primary px-4 py-1 text-sm flex items-center space-x-1 ${
-                        isRunningCode ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
+                      className={`btn-primary px-4 py-1 text-sm flex items-center space-x-1 ${isRunningCode ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
                     >
                       <Terminal size={14} />
                       <span>{isRunningCode ? "Running..." : "Run"}</span>
@@ -2846,7 +2861,7 @@ function VoiceInterviewContent() {
                 </div>
               </div>
 
-              <div className="flex-1">
+              <div className="flex-1 pb-40 lg:pb-0">
                 <CodeEditor
                   value={code}
                   onChange={(newCode) => {
@@ -2863,7 +2878,10 @@ function VoiceInterviewContent() {
               </div>
             </div>
           ) : hasCodeEditor && !showCodeEditor ? (
-            <div className="w-full lg:w-[30%] flex items-center justify-center bg-[#0A0A0A] border-l-0 lg:border-l border-[#00FFB2]/20 min-h-[400px] lg:min-h-0">
+            <div
+              className={`w-full lg:w-[30%] items-center justify-center bg-[#0A0A0A] border-l-0 lg:border-l border-[#00FFB2]/20 min-h-[400px] lg:min-h-0 ${activeMobileTab === "code" ? "flex" : "!hidden lg:!flex"
+                }`}
+            >
               <div className="text-center">
                 <Code size={48} className="text-gray-500 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">
@@ -2903,6 +2921,81 @@ function VoiceInterviewContent() {
               </div>
             </div>
           ) : null}
+
+          {/* Mobile Fixed Controls Footer */}
+          <div className="lg:hidden fixed bottom-[60px] left-0 right-0 p-3 bg-[#0A0A0A] border-t border-[#00FFB2]/20 z-40">
+            <div className="flex flex-col space-y-2">
+              {transcript && (
+                <div className="bg-[#1A1A1A] p-2 rounded-lg border border-[#00FFB2]/20 text-xs truncate">
+                  <span className="text-gray-400 mr-2">Transcript:</span>
+                  <span className="text-white">{transcript}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 flex-1">
+                  <button
+                    onClick={isListening ? stopListening : startListening}
+                    disabled={
+                      !interviewStarted ||
+                      isAISpeaking ||
+                      interviewCompleted ||
+                      submitPhaseActive ||
+                      isSubmittingCode
+                    }
+                    className={`w-12 h-12 shrink-0 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${isListening
+                      ? "bg-red-500 hover:bg-red-600 animate-pulse ring-2 ring-red-500/20"
+                      : interviewCompleted
+                        ? "bg-gray-500"
+                        : "bg-[#00FFB2] hover:bg-[#00CC8E] ring-2 ring-[#00FFB2]/20"
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {isListening ? (
+                      <Square size={20} className="text-white" />
+                    ) : (
+                      <Mic size={20} className="text-black" />
+                    )}
+                  </button>
+
+                  <div className="flex flex-col overflow-hidden">
+                    <span className="text-xs font-semibold text-white truncate">
+                      {isListening
+                        ? "Recording..."
+                        : isAISpeaking
+                          ? "AI Speaking"
+                          : "Your Turn"}
+                    </span>
+                    <span className="text-[10px] text-gray-400 truncate">
+                      {isListening ? "Tap to stop" : "Tap mic to speak"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {codeExecutionSuccess && activeMobileTab === "code" && (
+                    <button
+                      onClick={submitCode}
+                      disabled={isSubmittingCode}
+                      className="bg-green-500 text-white p-3 rounded-full shadow-lg hover:bg-green-600"
+                      title="Submit Solution"
+                    >
+                      <Send size={20} />
+                    </button>
+                  )}
+
+                  {!interviewCompleted && (
+                    <button
+                      onClick={() => setShowConfirmEnd(true)}
+                      className="bg-red-500/10 text-red-400 p-3 rounded-full hover:bg-red-500/20 transition-colors border border-red-500/20"
+                      title="End Interview"
+                    >
+                      <Phone size={20} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Debug Panel like testInterview.html */}
@@ -2944,7 +3037,6 @@ function VoiceInterviewContent() {
           </div>
         )}
       </div>
-      <BottomNav />
     </div>
   );
 }
