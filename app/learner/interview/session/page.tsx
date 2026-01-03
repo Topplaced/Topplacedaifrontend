@@ -19,6 +19,7 @@ import {
   User,
   Bot,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
@@ -98,6 +99,7 @@ function InterviewSessionContent() {
   const [warningMessage, setWarningMessage] = useState("");
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
 
   // Cleanup media streams
   const cleanupMediaStreams = useCallback(() => {
@@ -584,6 +586,9 @@ function InterviewSessionContent() {
   };
 
   const handleEndInterview = async () => {
+    if (isEnding) return;
+    setIsEnding(true);
+
     // Send comprehensive completion payload
     try {
       const completionPayload = {
@@ -1020,6 +1025,19 @@ function InterviewSessionContent() {
                 Start Interview
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Ending Interview Loader */}
+        {isEnding && (
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[70] flex flex-col items-center justify-center">
+            <Loader2 className="w-16 h-16 text-[#00FFB2] animate-spin mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Ending Interview...
+            </h2>
+            <p className="text-gray-400">
+              Please wait while we save your progress.
+            </p>
           </div>
         )}
       </div>
