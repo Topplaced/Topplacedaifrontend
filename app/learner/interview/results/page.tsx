@@ -39,6 +39,16 @@ function InterviewResultsContent() {
 
   const interviewId = searchParams.get("id");
 
+  const humanizeLabel = (value?: string) => {
+    if (!value) return "";
+    return value
+      .toString()
+      .replace(/[_-]+/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .trim();
+  };
+
   useEffect(() => {
     setIsVisible(true);
 
@@ -361,7 +371,7 @@ function InterviewResultsContent() {
                   Interview <span className="gradient-text">Results</span>
                 </h1>
                 <p className="text-gray-400 text-lg">
-                  {results.category} • {results.level} • Completed on{" "}
+                  {humanizeLabel(results.category)} • {humanizeLabel(results.level)} • Completed on{" "}
                   {results.completedAt}
                 </p>
               </div>

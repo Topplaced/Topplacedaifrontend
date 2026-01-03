@@ -233,19 +233,19 @@ export default function MyPlansPage() {
                       <div className="mt-4 grid grid-cols-2 gap-3">
                         <div className="rounded-md border border-gray-800 bg-black/30 p-3">
                           <div className="text-[#00FFB2] text-lg font-bold leading-none">
-                            {g.availableInterviews}/{g.totalPurchases}
+                            {g.availableInterviews}
                           </div>
                           <div className="text-[11px] text-gray-400 mt-1">
-                            Available / Total
+                            Available
                           </div>
                         </div>
 
                         <div className="rounded-md border border-gray-800 bg-black/30 p-3">
                           <div className="text-yellow-400 text-lg font-bold leading-none">
-                            {g.usedPurchases}/{g.totalPurchases}
+                            {g.usedPurchases}
                           </div>
                           <div className="text-[11px] text-gray-400 mt-1">
-                            Used / Total
+                            Used
                           </div>
                         </div>
                       </div>
