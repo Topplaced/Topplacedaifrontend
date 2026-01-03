@@ -49,14 +49,28 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   useEffect(() => {
     // Only redirect if hydration is complete
     if (isHydrated) {
-      if (!auth.token || !auth.user) {
-        router.replace("/auth/login");
-      } else if (isTokenExpired(auth.token)) {
-        // Token is present but expired
-        console.log("⚠️ Token expired, logging out...");
-        dispatch(logout());
-        router.replace("/auth/login");
-      }
+      const checkAuth = () => {
+        if (!auth.token || !auth.user) {
+          router.replace("/auth/login");
+        } else if (isTokenExpired(auth.token)) {
+          // Token is present but expired
+          console.log("⚠️ Token expired, logging out...");
+          dispatch(logout());
+          router.replace("/auth/login");
+        }
+      };
+
+      checkAuth();
+
+      // Check on window focus and visibility change
+      const handleFocus = () => checkAuth();
+      window.addEventListener("focus", handleFocus);
+      window.addEventListener("visibilitychange", handleFocus);
+
+      return () => {
+        window.removeEventListener("focus", handleFocus);
+        window.removeEventListener("visibilitychange", handleFocus);
+      };
     }
   }, [auth, router, isHydrated, dispatch]);
 
@@ -66,14 +80,15 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     </div>
   );
 
+  // If hydrated but no auth, we are redirecting, so show loader or nothing
+  if (isHydrated && (!auth.token || !auth.user)) {
+    return Loader;
+  }
+
   // Always render a stable wrapper to avoid hydration mismatches
   return (
     <div suppressHydrationWarning>
-      {!mounted || !isHydrated
-        ? Loader
-        : auth.token && auth.user
-        ? children
-        : Loader}
+      {!mounted || !isHydrated ? Loader : children}
     </div>
   );
 }

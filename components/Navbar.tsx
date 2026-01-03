@@ -19,7 +19,8 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : "";
       await fetch(`${API_URL}/api/auth/logout`, {
         method: "POST",
         headers: {
@@ -30,7 +31,7 @@ export default function Navbar() {
     } catch (e) {
       // swallow network errors
     } finally {
-      document.cookie = 'token=; Max-Age=0; Path=/; SameSite=Lax';
+      document.cookie = "token=; Max-Age=0; Path=/; SameSite=Lax";
       dispatch(logout());
       router.replace("/auth/login");
     }
@@ -105,7 +106,6 @@ export default function Navbar() {
 
                 {isUserMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 glass-card py-2 shadow-lg">
-                   
                     <button
                       onClick={handleLogout}
                       className="flex items-center w-full px-4 py-2 text-sm hover:bg-[#00FFB2]/10 text-red-400"
@@ -117,11 +117,9 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              mounted && (
-                <Link href="/auth/login" className="btn-primary">
-                  Sign In
-                </Link>
-              )
+              <Link href="/auth/login" className="btn-primary">
+                Sign In
+              </Link>
             )}
           </div>
 
@@ -133,14 +131,15 @@ export default function Navbar() {
                 </div>
               </Link>
             ) : (
-              <Link href="/auth/login" className="btn-primary px-3 py-1 text-sm">
+              <Link
+                href="/auth/login"
+                className="btn-primary px-3 py-1 text-sm"
+              >
                 Sign In
               </Link>
             )}
           </div>
         </div>
-
-        
       </div>
     </nav>
   );
