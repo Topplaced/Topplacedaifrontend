@@ -795,11 +795,27 @@ function VoiceInterviewContent() {
 
         if (data.aiResponse || data.shortResponse) {
           const displayText = data.shortResponse ?? data.aiResponse;
+
+          // Clean text for display - remove scores and analysis markers
+          let cleanedText = displayText || "";
+          const splitMarkers = [
+            "**Score:",
+            "**Detailed Analysis:**",
+            "✅ **Strengths:**",
+            "📊 **Score:",
+          ];
+          for (const marker of splitMarkers) {
+            if (cleanedText.includes(marker)) {
+              cleanedText = cleanedText.split(marker)[0];
+            }
+          }
+          cleanedText = cleanedText.trim();
+
           // Always speak only the display text (shortResponse if available)
-          audioContent = displayText;
+          audioContent = cleanedText;
 
           // For UI, show minimal content for free users, full details for paid users
-          aiResponseContent = displayText;
+          aiResponseContent = cleanedText;
 
           // Add detailed feedback only for paid interviews
           // Check for skip artifact: Score 100 but all details are 0 (indicates skipped question)
