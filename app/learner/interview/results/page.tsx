@@ -98,6 +98,7 @@ function InterviewResultsContent() {
                 codeQualityFeedback: parsedResults.detailedFeedback.codeQuality,
                 codeSubmissions: parsedResults.codeSubmissions,
               },
+              questionAnswers: parsedResults.questionAnswers,
             };
 
             setInterviewData(formattedData);
@@ -313,27 +314,50 @@ function InterviewResultsContent() {
     ],
     detailedFeedback: {
       technical:
+        interviewData.results?.detailedAnalysis?.detailedFeedback?.technical ||
+        interviewData.results?.detailedAnalysis?.technicalFeedback ||
         interviewData.results?.technicalFeedback ||
         "Technical performance was evaluated based on problem-solving approach and code quality.",
       communication:
+        interviewData.results?.detailedAnalysis?.detailedFeedback
+          ?.communication ||
+        interviewData.results?.detailedAnalysis?.communicationFeedback ||
         interviewData.results?.communicationFeedback ||
         "Communication skills were assessed throughout the interview process.",
       problemSolving:
+        interviewData.results?.detailedAnalysis?.detailedFeedback
+          ?.problemSolving ||
+        interviewData.results?.detailedAnalysis?.problemSolvingFeedback ||
         interviewData.results?.problemSolvingFeedback ||
         "Problem-solving approach and analytical thinking were evaluated.",
       ...(showCodeMetrics
         ? {
             codeQuality:
+              interviewData.results?.detailedAnalysis?.detailedFeedback
+                ?.codeQuality ||
+              interviewData.results?.detailedAnalysis?.codeQualityFeedback ||
               interviewData.results?.codeQualityFeedback ||
               "Code structure, readability, and best practices were reviewed.",
           }
         : {}),
     },
     codeSubmissions: interviewData.results?.codeSubmissions || [],
-    questionAnswers: (interviewData.questionAnswers || []).map((qa: any) => ({
+    questionAnswers: (
+      interviewData.questionAnswers ||
+      interviewData.scoreboard?.questionBreakdown ||
+      []
+    ).map((qa: any) => ({
       ...qa,
-      questionText: qa.questionText || qa.aiQuestion,
-      feedback: qa.feedback || qa.aiResponse || qa.shortResponse,
+      questionText: qa.question || qa.questionText || qa.aiQuestion,
+      feedback:
+        qa.feedback ||
+        qa.aiEvaluation?.feedback ||
+        qa.aiResponse ||
+        qa.shortResponse,
+      score: qa.score || qa.aiEvaluation?.score || 0,
+      userAnswer: qa.userAnswer || qa.answer,
+      correctAnswer: qa.correctAnswer,
+      explanation: qa.explanation,
     })),
   };
 
@@ -371,7 +395,8 @@ function InterviewResultsContent() {
                   Interview <span className="gradient-text">Results</span>
                 </h1>
                 <p className="text-gray-400 text-lg">
-                  {humanizeLabel(results.category)} • {humanizeLabel(results.level)} • Completed on{" "}
+                  {humanizeLabel(results.category)} •{" "}
+                  {humanizeLabel(results.level)} • Completed on{" "}
                   {results.completedAt}
                 </p>
               </div>

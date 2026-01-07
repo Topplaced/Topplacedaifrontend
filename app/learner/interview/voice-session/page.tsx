@@ -40,6 +40,7 @@ import {
 } from "@/utils/api-helpers";
 
 // Your backend URL
+const OPENAIVOICE = process.env.NEXT_PUBLIC_OPENAI_VOICE || "YES"; // Set to "YES" to use OpenAI voice, otherwise uses browser speed
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface Message {
@@ -126,7 +127,9 @@ function VoiceInterviewContent() {
   const [isSubmittingCode, setIsSubmittingCode] = useState(false);
   const [isEndingInterview, setIsEndingInterview] = useState(false);
   const [showConfirmEnd, setShowConfirmEnd] = useState(false);
-  const [activeMobileTab, setActiveMobileTab] = useState<"chat" | "code">("chat");
+  const [activeMobileTab, setActiveMobileTab] = useState<"chat" | "code">(
+    "chat"
+  );
 
   // Response time tracking like testInterview.html
   const [responseStartTime, setResponseStartTime] = useState<number | null>(
@@ -200,25 +203,25 @@ function VoiceInterviewContent() {
             ? JSON.parse(user.education)
             : user.education
           : [
-            {
-              degree: "Bachelor's Degree",
-              institution: "University",
-              year: new Date().getFullYear() - 2,
-            },
-          ],
+              {
+                degree: "Bachelor's Degree",
+                institution: "University",
+                year: new Date().getFullYear() - 2,
+              },
+            ],
         workExperience: user?.experience
           ? typeof user.experience === "string"
             ? JSON.parse(user.experience)
             : user.experience
           : [
-            {
-              title: "Software Developer",
-              company: "Technology Company",
-              duration: "Recent Experience",
-              description:
-                "Professional software development experience with modern technologies and best practices.",
-            },
-          ],
+              {
+                title: "Software Developer",
+                company: "Technology Company",
+                duration: "Recent Experience",
+                description:
+                  "Professional software development experience with modern technologies and best practices.",
+              },
+            ],
         profileCompletion: user?.profile_completion || 85,
       },
       configuration: {
@@ -322,7 +325,7 @@ function VoiceInterviewContent() {
     return () => {
       try {
         recognitionInstance.stop();
-      } catch { }
+      } catch {}
     };
   }, [sessionId, currentQuestionId]);
 
@@ -452,7 +455,11 @@ function VoiceInterviewContent() {
       // Strategy: Browser Native TTS (Default) -> OpenAI TTS API (Fallback)
 
       // 1. Try Browser Native TTS first
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      if (
+        OPENAIVOICE !== "YES" &&
+        typeof window !== "undefined" &&
+        "speechSynthesis" in window
+      ) {
         // Cancel any ongoing speech
         speechSynthesis.cancel();
 
@@ -804,38 +811,7 @@ function VoiceInterviewContent() {
             data.detailedScores.technicalAccuracy === 0 &&
             data.detailedScores.communicationQuality === 0;
 
-          if (
-            !isFreeInterview &&
-            data.feedback &&
-            data.feedback.score !== undefined &&
-            !isSkipArtifact
-          ) {
-            const feedbackDetails = `\n\n📊 **Score: ${data.feedback.score}/100**`;
-            aiResponseContent += feedbackDetails;
-
-            // Add detailed scores if available
-            if (data.detailedScores) {
-              const detailsText =
-                `\n\n**Detailed Analysis:**\n` +
-                `• Correctness: ${data.detailedScores.correctness}/100\n` +
-                `• Completeness: ${data.detailedScores.completeness}/100\n` +
-                `• Technical Accuracy: ${data.detailedScores.technicalAccuracy}/100\n` +
-                `• Communication: ${data.detailedScores.communicationQuality}/100`;
-              aiResponseContent += detailsText;
-            }
-
-            // Add strengths and improvements if available
-            if (data.strengths && data.strengths.length > 0) {
-              aiResponseContent += `\n\n✅ **Strengths:** ${data.strengths.join(
-                ", "
-              )}`;
-            }
-            if (data.improvements && data.improvements.length > 0) {
-              aiResponseContent += `\n\n🔄 **Areas for Improvement:** ${data.improvements.join(
-                ", "
-              )}`;
-            }
-          }
+          // Score display logic removed
         }
 
         if (data.currentQuestion) {
@@ -948,10 +924,11 @@ function VoiceInterviewContent() {
       const errorMessage: Message = {
         id: `error_${Date.now()}`,
         type: "system",
-        content: `❌ Failed to send answer: ${error && typeof error === "object" && "message" in error
-          ? (error as { message: string }).message
-          : String(error)
-          }`,
+        content: `❌ Failed to send answer: ${
+          error && typeof error === "object" && "message" in error
+            ? (error as { message: string }).message
+            : String(error)
+        }`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -1457,9 +1434,11 @@ function VoiceInterviewContent() {
         const resultMessage: Message = {
           id: `result_${Date.now()}`,
           type: "ai",
-          content: `Code Execution Results:\n→ Output: ${result.output || "No output"
-            }\n→ Time: ${executionTime}s\n→ Memory: ${result.memory
-            }\n\n✅ Code ran successfully! You can now submit your solution.`,
+          content: `Code Execution Results:\n→ Output: ${
+            result.output || "No output"
+          }\n→ Time: ${executionTime}s\n→ Memory: ${
+            result.memory
+          }\n\n✅ Code ran successfully! You can now submit your solution.`,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, resultMessage]);
@@ -1475,10 +1454,11 @@ function VoiceInterviewContent() {
       const errorMessage: Message = {
         id: `error_${Date.now()}`,
         type: "system",
-        content: `❌ Code execution failed: ${error && typeof error === "object" && "message" in error
-          ? (error as { message: string }).message
-          : String(error)
-          }`,
+        content: `❌ Code execution failed: ${
+          error && typeof error === "object" && "message" in error
+            ? (error as { message: string }).message
+            : String(error)
+        }`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -1504,7 +1484,8 @@ function VoiceInterviewContent() {
     try {
       // Send code submission to enhanced conversation API with execution results
       await sendAnswerToAPI(
-        `Code submitted and executed. Output: ${lastExecutionResult.output || "No output"
+        `Code submitted and executed. Output: ${
+          lastExecutionResult.output || "No output"
         }`,
         true
       );
@@ -1528,10 +1509,11 @@ function VoiceInterviewContent() {
       const errorMessage: Message = {
         id: `submit_error_${Date.now()}`,
         type: "system",
-        content: `❌ Code submission failed: ${error && typeof error === "object" && "message" in error
-          ? (error as { message: string }).message
-          : String(error)
-          }`,
+        content: `❌ Code submission failed: ${
+          error && typeof error === "object" && "message" in error
+            ? (error as { message: string }).message
+            : String(error)
+        }`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -1579,14 +1561,14 @@ function VoiceInterviewContent() {
         })),
         codeSubmissions: hasCodeEditor
           ? [
-            {
-              questionId: currentQuestionId || "final_code",
-              question: "Code submission",
-              code: code,
-              language: language,
-              submittedAt: new Date().toISOString(),
-            },
-          ]
+              {
+                questionId: currentQuestionId || "final_code",
+                question: "Code submission",
+                code: code,
+                language: language,
+                submittedAt: new Date().toISOString(),
+              },
+            ]
           : [],
         performanceMetrics: {
           averageResponseTime: 8.5,
@@ -1644,8 +1626,9 @@ function VoiceInterviewContent() {
             "Interview",
           level:
             interviewData.configuration?.level || config.level || "Unknown",
-          duration: `${interviewData.configuration?.duration || config.duration || 0
-            } minutes`,
+          duration: `${
+            interviewData.configuration?.duration || config.duration || 0
+          } minutes`,
           completedAt: interviewData.createdAt
             ? new Date(interviewData.createdAt).toLocaleDateString()
             : new Date().toLocaleDateString(),
@@ -1667,9 +1650,9 @@ function VoiceInterviewContent() {
               0,
             codeQuality: showCodeMetrics
               ? interviewData.scores?.codeQuality ||
-              interviewData.statistics?.codeQualityAverage ||
-              interviewData.scoreboard?.detailedScores?.codeQuality ||
-              0
+                interviewData.statistics?.codeQualityAverage ||
+                interviewData.scoreboard?.detailedScores?.codeQuality ||
+                0
               : undefined,
           },
           strengths: interviewData.results?.detailedAnalysis?.strengths ||
@@ -1686,31 +1669,86 @@ function VoiceInterviewContent() {
             ],
           detailedFeedback: {
             technical:
+              interviewData.results?.detailedAnalysis?.detailedFeedback
+                ?.technical ||
+              interviewData.detailedAnalysis?.detailedFeedback?.technical ||
               interviewData.results?.detailedAnalysis?.technicalFeedback ||
               interviewData.detailedAnalysis?.technicalFeedback ||
               interviewData.results?.technicalFeedback ||
               "Technical performance was evaluated based on problem-solving approach and code quality.",
             communication:
+              interviewData.results?.detailedAnalysis?.detailedFeedback
+                ?.communication ||
+              interviewData.detailedAnalysis?.detailedFeedback?.communication ||
               interviewData.results?.detailedAnalysis?.communicationFeedback ||
               interviewData.detailedAnalysis?.communicationFeedback ||
               interviewData.results?.communicationFeedback ||
               "Communication skills were assessed throughout the interview process.",
             problemSolving:
+              interviewData.results?.detailedAnalysis?.detailedFeedback
+                ?.problemSolving ||
+              interviewData.detailedAnalysis?.detailedFeedback
+                ?.problemSolving ||
               interviewData.results?.detailedAnalysis?.problemSolvingFeedback ||
               interviewData.detailedAnalysis?.problemSolvingFeedback ||
               interviewData.results?.problemSolvingFeedback ||
               "Problem-solving approach and analytical thinking were evaluated.",
             ...(showCodeMetrics
               ? {
-                codeQuality:
-                  interviewData.results?.detailedAnalysis
-                    ?.codeQualityFeedback ||
-                  interviewData.detailedAnalysis?.codeQualityFeedback ||
-                  interviewData.results?.codeQualityFeedback ||
-                  "Code structure, readability, and best practices were reviewed.",
-              }
+                  codeQuality:
+                    interviewData.results?.detailedAnalysis?.detailedFeedback
+                      ?.codeQuality ||
+                    interviewData.detailedAnalysis?.detailedFeedback
+                      ?.codeQuality ||
+                    interviewData.results?.detailedAnalysis
+                      ?.codeQualityFeedback ||
+                    interviewData.detailedAnalysis?.codeQualityFeedback ||
+                    interviewData.results?.codeQualityFeedback ||
+                    "Code structure, readability, and best practices were reviewed.",
+                }
               : {}),
           },
+          questionAnswers: (() => {
+            const apiQuestions =
+              interviewData.questionAnalysis ||
+              interviewData.results?.questionAnalysis ||
+              interviewData.scoreboard?.questionBreakdown ||
+              [];
+
+            if (apiQuestions.length > 0) {
+              return apiQuestions.map((qa: any) => ({
+                questionText: qa.question || qa.questionText || qa.aiQuestion,
+                userAnswer: qa.userAnswer || qa.answer,
+                feedback:
+                  qa.aiEvaluation?.feedback ||
+                  qa.feedback ||
+                  qa.aiResponse ||
+                  qa.shortResponse,
+                score: qa.aiEvaluation?.score || qa.score || 0,
+                correctAnswer: qa.correctAnswer,
+                explanation: qa.explanation,
+              }));
+            }
+
+            // Fallback: Parse from messages if API returns no questions
+            const parsed: any[] = [];
+            let currentQ: any = null;
+            messages.forEach((msg) => {
+              if (msg.type === "ai") {
+                if (currentQ && currentQ.userAnswer) {
+                  currentQ.feedback = msg.content;
+                  parsed.push(currentQ);
+                  currentQ = { questionText: msg.content };
+                } else if (!currentQ) {
+                  currentQ = { questionText: msg.content };
+                }
+              } else if (msg.type === "user") {
+                if (currentQ) currentQ.userAnswer = msg.content;
+              }
+            });
+            if (currentQ && currentQ.userAnswer) parsed.push(currentQ);
+            return parsed;
+          })(),
           codeSubmissions: interviewData.results?.codeSubmissions || [],
         };
 
@@ -1807,12 +1845,13 @@ function VoiceInterviewContent() {
           const confirmationMessage: Message = {
             id: `history_loaded_${Date.now()}`,
             type: "system",
-            content: `✅ Conversation history loaded: ${data.conversations.length
-              } messages from ${new Date(
-                data.conversations[0]?.timestamp
-              ).toLocaleString()} to ${new Date(
-                data.conversations[data.conversations.length - 1]?.timestamp
-              ).toLocaleString()}`,
+            content: `✅ Conversation history loaded: ${
+              data.conversations.length
+            } messages from ${new Date(
+              data.conversations[0]?.timestamp
+            ).toLocaleString()} to ${new Date(
+              data.conversations[data.conversations.length - 1]?.timestamp
+            ).toLocaleString()}`,
             timestamp: new Date(),
           };
           setMessages((prev) => [...prev, confirmationMessage]);
@@ -1957,7 +1996,8 @@ function VoiceInterviewContent() {
     const transcript = messages
       .map(
         (msg) =>
-          `[${msg.timestamp.toLocaleTimeString()}] ${msg.type.toUpperCase()}: ${msg.content
+          `[${msg.timestamp.toLocaleTimeString()}] ${msg.type.toUpperCase()}: ${
+            msg.content
           }`
       )
       .join("\n\n");
@@ -2002,11 +2042,16 @@ function VoiceInterviewContent() {
       {showWarning && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center overflow-y-auto">
           <div className="glass-card p-4 sm:p-6 lg:p-8 max-w-md w-full mx-4 text-center border-2 border-red-500/50">
-            <AlertTriangle size={32} className="text-red-500 mx-auto mb-4 sm:w-12 sm:h-12" />
+            <AlertTriangle
+              size={32}
+              className="text-red-500 mx-auto mb-4 sm:w-12 sm:h-12"
+            />
             <h3 className="text-xl sm:text-2xl font-bold mb-4 text-red-400">
               Interview Warning
             </h3>
-            <p className="text-sm sm:text-base text-gray-300 mb-6">{warningMessage}</p>
+            <p className="text-sm sm:text-base text-gray-300 mb-6">
+              {warningMessage}
+            </p>
             <button
               onClick={() => setShowWarning(false)}
               className="btn-primary px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base"
@@ -2374,24 +2419,26 @@ function VoiceInterviewContent() {
                 {level?.toUpperCase()}
               </div>
             </div>
-            
+
             <div className="hidden lg:flex items-center flex-wrap gap-2">
               <button
                 onClick={toggleMic}
-                className={`p-2 rounded-full ${isMicOn
-                  ? "bg-[#00FFB2]/20 text-[#00FFB2]"
-                  : "bg-red-500/20 text-red-400"
-                  }`}
+                className={`p-2 rounded-full ${
+                  isMicOn
+                    ? "bg-[#00FFB2]/20 text-[#00FFB2]"
+                    : "bg-red-500/20 text-red-400"
+                }`}
               >
                 {isMicOn ? <Mic size={20} /> : <MicOff size={20} />}
               </button>
 
               <button
                 onClick={toggleCamera}
-                className={`p-2 rounded-full ${isCameraOn
-                  ? "bg-[#00FFB2]/20 text-[#00FFB2]"
-                  : "bg-red-500/20 text-red-400"
-                  }`}
+                className={`p-2 rounded-full ${
+                  isCameraOn
+                    ? "bg-[#00FFB2]/20 text-[#00FFB2]"
+                    : "bg-red-500/20 text-red-400"
+                }`}
               >
                 {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
               </button>
@@ -2478,8 +2525,9 @@ function VoiceInterviewContent() {
                 <button
                   onClick={() => setShowConfirmEnd(true)}
                   disabled={isEndingInterview}
-                  className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 text-sm sm:text-base ${isEndingInterview ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
+                  className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 text-sm sm:text-base ${
+                    isEndingInterview ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 >
                   <Phone size={16} />
                   <span>
@@ -2490,8 +2538,9 @@ function VoiceInterviewContent() {
                 <button
                   onClick={() => setShowConfirmEnd(true)}
                   disabled={isEndingInterview}
-                  className={`bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 text-sm sm:text-base ${isEndingInterview ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
+                  className={`bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 text-sm sm:text-base ${
+                    isEndingInterview ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 >
                   <Phone size={16} />
                   <span>
@@ -2510,19 +2559,21 @@ function VoiceInterviewContent() {
             <div className="lg:hidden flex border-b border-[#00FFB2]/20 bg-[#0A0A0A] shrink-0 sticky top-0 z-30">
               <button
                 onClick={() => setActiveMobileTab("chat")}
-                className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${activeMobileTab === "chat"
-                  ? "text-[#00FFB2] border-b-2 border-[#00FFB2] bg-[#00FFB2]/5"
-                  : "text-gray-400 hover:text-gray-200"
-                  }`}
+                className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
+                  activeMobileTab === "chat"
+                    ? "text-[#00FFB2] border-b-2 border-[#00FFB2] bg-[#00FFB2]/5"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
               >
                 Interview
               </button>
               <button
                 onClick={() => setActiveMobileTab("code")}
-                className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${activeMobileTab === "code"
-                  ? "text-[#00FFB2] border-b-2 border-[#00FFB2] bg-[#00FFB2]/5"
-                  : "text-gray-400 hover:text-gray-200"
-                  }`}
+                className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
+                  activeMobileTab === "code"
+                    ? "text-[#00FFB2] border-b-2 border-[#00FFB2] bg-[#00FFB2]/5"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
               >
                 Code Editor
               </button>
@@ -2531,8 +2582,9 @@ function VoiceInterviewContent() {
 
           {/* Column 1 - Video (20%) */}
           <div
-            className={`w-full lg:w-[20%] flex-col border-r-0 lg:border-r border-[#00FFB2]/20 shrink-0 ${activeMobileTab === "chat" ? "flex" : "!hidden lg:!flex"
-              }`}
+            className={`w-full lg:w-[20%] flex-col border-r-0 lg:border-r border-[#00FFB2]/20 shrink-0 ${
+              activeMobileTab === "chat" ? "flex" : "!hidden lg:!flex"
+            }`}
           >
             <div className="flex-1 bg-[#0A0A0A] p-2 lg:p-4 overflow-y-auto">
               <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-col lg:gap-4 h-full items-stretch">
@@ -2573,36 +2625,45 @@ function VoiceInterviewContent() {
 
           {/* Column 2 - Chat (50%) */}
           <div
-            className={`w-full lg:w-[50%] flex-col border-r-0 lg:border-r border-[#00FFB2]/20 bg-[#0A0A0A] flex-1 min-h-0 ${activeMobileTab === "chat" ? "flex" : "!hidden lg:!flex"
-              }`}
+            className={`w-full lg:w-[50%] flex-col border-r-0 lg:border-r border-[#00FFB2]/20 bg-[#0A0A0A] flex-1 min-h-0 ${
+              activeMobileTab === "chat" ? "flex" : "!hidden lg:!flex"
+            }`}
           >
             <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24 lg:pb-4 scrollbar-thin scrollbar-thumb-[#00FFB2]/20 scrollbar-track-transparent [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-[#00FFB2]/20 [&::-webkit-scrollbar-track]:bg-transparent">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.type === "user"
-                    ? "justify-end"
-                    : message.type === "system"
+                  className={`flex ${
+                    message.type === "user"
+                      ? "justify-end"
+                      : message.type === "system"
                       ? "justify-center"
                       : "justify-start"
-                    }`}
+                  }`}
                 >
                   <div
-                    className={`max-w-[95%] sm:max-w-[85%] p-3 rounded-lg text-xs sm:text-sm ${message.type === "user"
-                      ? "bg-[#00FFB2] text-black"
-                      : message.type === "system"
+                    className={`max-w-[95%] sm:max-w-[85%] p-3 rounded-lg text-xs sm:text-sm ${
+                      message.type === "user"
+                        ? "bg-[#00FFB2] text-black"
+                        : message.type === "system"
                         ? "bg-yellow-500/20 text-yellow-400 text-center"
                         : "bg-[#1A1A1A] text-white"
-                      }`}
+                    }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center space-x-2">
                         {message.type === "user" ? (
                           <User size={14} className="sm:w-4 sm:h-4" />
                         ) : message.type === "system" ? (
-                          <Bot size={14} className="text-yellow-400 sm:w-4 sm:h-4" />
+                          <Bot
+                            size={14}
+                            className="text-yellow-400 sm:w-4 sm:h-4"
+                          />
                         ) : (
-                          <Bot size={14} className="text-[#00FFB2] sm:w-4 sm:h-4" />
+                          <Bot
+                            size={14}
+                            className="text-[#00FFB2] sm:w-4 sm:h-4"
+                          />
                         )}
                         <span className="text-[10px] sm:text-xs opacity-70">
                           {message.timestamp.toLocaleTimeString()}
@@ -2618,7 +2679,9 @@ function VoiceInterviewContent() {
                         </button>
                       )}
                     </div>
-                    <div className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed">{message.content}</div>
+                    <div className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed">
+                      {message.content}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -2679,12 +2742,13 @@ function VoiceInterviewContent() {
                       submitPhaseActive ||
                       isSubmittingCode
                     }
-                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-300 ${isListening
-                      ? "bg-red-500 hover:bg-red-600 animate-pulse"
-                      : interviewCompleted
+                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
+                      isListening
+                        ? "bg-red-500 hover:bg-red-600 animate-pulse"
+                        : interviewCompleted
                         ? "bg-gray-500"
                         : "bg-[#00FFB2] hover:bg-[#00CC8E]"
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {isListening ? (
                       <Square size={24} className="text-white" />
@@ -2697,10 +2761,11 @@ function VoiceInterviewContent() {
                     <button
                       onClick={submitCode}
                       disabled={isSubmittingCode}
-                      className={`bg-green-500 hover:bg-green-600 text-white px-6 py-3 text-base rounded-full flex items-center space-x-2 transition-all shadow-lg ${isSubmittingCode
-                        ? "opacity-50 cursor-not-allowed"
-                        : "hover:scale-105"
-                        }`}
+                      className={`bg-green-500 hover:bg-green-600 text-white px-6 py-3 text-base rounded-full flex items-center space-x-2 transition-all shadow-lg ${
+                        isSubmittingCode
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:scale-105"
+                      }`}
                     >
                       <Send size={18} />
                       <span>
@@ -2714,14 +2779,14 @@ function VoiceInterviewContent() {
                       {!interviewStarted
                         ? "Start interview to begin"
                         : interviewCompleted
-                          ? "Interview completed - Click Submit Interview above"
-                          : isAISpeaking
-                            ? "AI is speaking..."
-                            : isListening
-                              ? "Recording... Click to stop"
-                              : submitPhaseActive
-                                ? "Run successful — you have to submit the result"
-                                : "Click to speak"}
+                        ? "Interview completed - Click Submit Interview above"
+                        : isAISpeaking
+                        ? "AI is speaking..."
+                        : isListening
+                        ? "Recording... Click to stop"
+                        : submitPhaseActive
+                        ? "Run successful — you have to submit the result"
+                        : "Click to speak"}
                     </div>
                     {!isMicOn && (
                       <div className="text-xs text-red-400 mt-1">
@@ -2742,8 +2807,9 @@ function VoiceInterviewContent() {
           {/* Column 3 - Code Editor (30%) */}
           {hasCodeEditor && showCodeEditor ? (
             <div
-              className={`w-full lg:w-[30%] flex-col flex-1 min-h-0 ${activeMobileTab === "code" ? "flex" : "!hidden lg:!flex"
-                }`}
+              className={`w-full lg:w-[30%] flex-col flex-1 min-h-0 ${
+                activeMobileTab === "code" ? "flex" : "!hidden lg:!flex"
+              }`}
             >
               <div className="bg-[#0A0A0A] border-b border-[#00FFB2]/20 p-4">
                 <div className="flex items-center justify-between">
@@ -2773,8 +2839,9 @@ function VoiceInterviewContent() {
                     <button
                       onClick={runCode}
                       disabled={isRunningCode}
-                      className={`btn-primary px-4 py-1 text-sm flex items-center space-x-1 ${isRunningCode ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
+                      className={`btn-primary px-4 py-1 text-sm flex items-center space-x-1 ${
+                        isRunningCode ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
                     >
                       <Terminal size={14} />
                       <span>{isRunningCode ? "Running..." : "Run"}</span>
@@ -2801,8 +2868,9 @@ function VoiceInterviewContent() {
             </div>
           ) : hasCodeEditor && !showCodeEditor ? (
             <div
-              className={`w-full lg:w-[30%] items-center justify-center bg-[#0A0A0A] border-l-0 lg:border-l border-[#00FFB2]/20 min-h-[400px] lg:min-h-0 ${activeMobileTab === "code" ? "flex" : "!hidden lg:!flex"
-                }`}
+              className={`w-full lg:w-[30%] items-center justify-center bg-[#0A0A0A] border-l-0 lg:border-l border-[#00FFB2]/20 min-h-[400px] lg:min-h-0 ${
+                activeMobileTab === "code" ? "flex" : "!hidden lg:!flex"
+              }`}
             >
               <div className="text-center">
                 <Code size={48} className="text-gray-500 mx-auto mb-4" />
@@ -2865,12 +2933,13 @@ function VoiceInterviewContent() {
                       submitPhaseActive ||
                       isSubmittingCode
                     }
-                    className={`w-12 h-12 shrink-0 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${isListening
-                      ? "bg-red-500 hover:bg-red-600 animate-pulse ring-2 ring-red-500/20"
-                      : interviewCompleted
+                    className={`w-12 h-12 shrink-0 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${
+                      isListening
+                        ? "bg-red-500 hover:bg-red-600 animate-pulse ring-2 ring-red-500/20"
+                        : interviewCompleted
                         ? "bg-gray-500"
                         : "bg-[#00FFB2] hover:bg-[#00CC8E] ring-2 ring-[#00FFB2]/20"
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {isListening ? (
                       <Square size={20} className="text-white" />
@@ -2884,8 +2953,8 @@ function VoiceInterviewContent() {
                       {isListening
                         ? "Recording..."
                         : isAISpeaking
-                          ? "AI Speaking"
-                          : "Your Turn"}
+                        ? "AI Speaking"
+                        : "Your Turn"}
                     </span>
                     <span className="text-[10px] text-gray-400 truncate">
                       {isListening ? "Tap to stop" : "Tap mic to speak"}
